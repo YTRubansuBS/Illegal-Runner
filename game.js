@@ -1,0 +1,1 @@
+const files=['config.js','ui.js','engine.js'];function load(i){if(i>=files.length)return;const s=document.createElement('script');s.src=files[i];s.onload=()=>load(i+1);document.body.appendChild(s)}load(0);
