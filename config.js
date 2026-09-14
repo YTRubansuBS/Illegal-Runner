@@ -1,0 +1,3 @@
+window.IR={supabaseUrl:'YOUR_SUPABASE_URL',supabaseAnonKey:'YOUR_SUPABASE_ANON_KEY',adminUsername:'Rubansu1',state:{user:null,profile:null,inventory:[],mode:'infinite',level:1}};
+window.IR.sb=supabase.createClient(window.IR.supabaseUrl,window.IR.supabaseAnonKey);
+window.IR.toast=function(t){let e=document.getElementById('toast');if(!e){e=document.createElement('div');e.id='toast';e.className='toast hidden';document.body.appendChild(e)}e.textContent=t;e.classList.remove('hidden');clearTimeout(window.IR.toast.x);window.IR.toast.x=setTimeout(()=>e.classList.add('hidden'),2200)};
