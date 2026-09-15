@@ -14,8 +14,9 @@
   const saveLocal=p=>localStorage.setItem('irGuest',JSON.stringify(p))
   const guestMode=()=>($('userBadge')?.textContent||'').includes('local')
   const toast=t=>{const e=$('toast');if(!e)return;e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1900)}
+  const refreshCoins=n=>{if(n!==undefined&&$('coins'))$('coins').textContent=String(n)}
   const notifyCustomization=(type,id)=>window.dispatchEvent(new CustomEvent('ir:customizationChanged',{detail:type==='world'?{selected_background:id}:type==='character'?{selected_character:id}:{selected_obstacle_set:id}}))
-  async function getCloud(){if(!sb||guestMode()){cloudUser=null;return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];return false}const {data}=await sb.from('inventory').select('item_type,item_id').eq('user_id',user.id);cloudInventory=data||[];return true}
+  async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];return false}const {data}=await sb.from('inventory').select('item_type,item_id').eq('user_id',user.id);cloudInventory=data||[];return true}
   const owned=(type,id,p)=>type==='world'?(p.owned_worlds||['city']).includes(id):type==='character'?(p.owned_characters||['runner']).includes(id):(p.owned_obstacles||['classic']).includes(id)
   const cloudOwned=(type,id)=>{const map={world:'background',character:'character',obstacle:'obstacle'};return !!cloudInventory?.some(x=>x.item_type===map[type]&&x.item_id===id)}
   async function isOwned(type,id){if(guestMode())return owned(type,id,localProfile());if(!cloudInventory)await getCloud();return cloudOwned(type,id)}
@@ -45,7 +46,7 @@
         const p=localProfile();p.coins=p.coins|0
         if(p.coins<cost)return toast('Pas assez de pièces.')
         if(type==='reward'){
-          const r=100+Math.floor(Math.random()*651);p.coins-=cost;p.coins+=r;saveLocal(p);toast('💎 Récompense reçue : +'+r+' pièces !');await renderCustomizer();return
+          const r=100+Math.floor(Math.random()*651);p.coins-=cost;p.coins+=r;saveLocal(p);refreshCoins(p.coins);toast('💎 Récompense reçue : +'+r+' pièces !');await renderCustomizer();return
         }
         const list=type==='world'?Object.keys(WORLDS):type==='character'?Object.keys(CHARS):Object.keys(OBS)
         const key=type==='world'?'owned_worlds':type==='character'?'owned_characters':'owned_obstacles'
@@ -54,32 +55,20 @@
         const locked=list.filter(x=>!arr.includes(x))
         if(!locked.length)return toast('🎉 Tout est déjà débloqué !')
         const id=locked[Math.floor(Math.random()*locked.length)]
-        p.coins-=cost;p[key]=[...new Set([...arr,id])];saveLocal(p)
+        p.coins-=cost;p[key]=[...new Set([...arr,id])];saveLocal(p);refreshCoins(p.coins)
         toast('🎁 Débloqué : '+(type==='world'?WORLDS[id].name:type==='character'?CHARS[id].name:OBS[id].name))
         await renderCustomizer();return
       }
       if(!sb)return toast('Cloud indisponible.')
       const {data:{user}}=await sb.auth.getUser();if(!user)return toast('Reconnecte-toi.')
-      const {data:prof,error:e1}=await sb.from('profiles').select('coins').eq('id',user.id).single();if(e1)return toast('❌ Profil introuvable.')
-      const coins=prof.coins|0;if(coins<cost)return toast('Pas assez de pièces.')
-      if(type==='reward'){
-        const r=100+Math.floor(Math.random()*651)
-        const {error}=await sb.from('profiles').update({coins:coins-cost+r}).eq('id',user.id)
-        if(error)return toast('❌ Achat impossible.')
-        toast('💎 Récompense reçue : +'+r+' pièces !');await renderCustomizer();return
-      }
-      const map={world:'background',character:'character',obstacle:'obstacle'}
-      const {data:inv,error:ie}=await sb.from('inventory').select('item_id').eq('user_id',user.id).eq('item_type',map[type])
-      if(ie)return toast('❌ Inventaire inaccessible.')
-      const ownedIds=(inv||[]).map(x=>x.item_id)
-      const list=type==='world'?Object.keys(WORLDS):type==='character'?Object.keys(CHARS):Object.keys(OBS)
-      const locked=list.filter(x=>!ownedIds.includes(x))
-      if(!locked.length)return toast('🎉 Tout est déjà débloqué !')
-      const id=locked[Math.floor(Math.random()*locked.length)]
-      const {error:e2}=await sb.from('profiles').update({coins:coins-cost}).eq('id',user.id);if(e2)return toast('❌ Achat impossible.')
-      const {error:e3}=await sb.from('inventory').insert({user_id:user.id,item_type:map[type],item_id:id})
-      if(e3){await sb.from('profiles').update({coins});return toast('❌ Déblocage impossible.')}
-      toast('🎁 Débloqué : '+(type==='world'?WORLDS[id].name:type==='character'?CHARS[id].name:OBS[id].name))
+      const {data,error}=await sb.rpc('buy_pack',{p_type:type})
+      if(error)return toast(error.message.includes('Not enough')?'Pas assez de pièces.':error.message.includes('Everything')?'🎉 Tout est déjà débloqué !':'❌ Achat impossible.')
+      const reward=Number(data?.reward||0)
+      const id=data?.item_id||null
+      if(reward)toast('💎 Récompense reçue : +'+reward+' pièces !')
+      else if(id)toast('🎁 Débloqué : '+(type==='world'?WORLDS[id].name:type==='character'?CHARS[id].name:OBS[id].name))
+      const {data:prof}=await sb.from('profiles').select('coins').eq('id',user.id).single()
+      if(prof)refreshCoins(prof.coins)
       await renderCustomizer();return
     }finally{buying=false}
   }
