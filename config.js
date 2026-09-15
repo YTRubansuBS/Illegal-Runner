@@ -6,9 +6,6 @@
    Vercel : les variables doivent s'appeler exactement :
    SUPABASE_URL
    SUPABASE_ANON_KEY
-
-   Comme le jeu est une page HTML statique, on garde aussi les valeurs
-   publiques directement ici afin que le jeu fonctionne sur GitHub/Vercel.
 */
 window.IR_CONFIG = {
   SUPABASE_URL: 'https://cgodpoxubzrggyezzvth.supabase.co',
@@ -16,9 +13,18 @@ window.IR_CONFIG = {
   ADMIN_USERNAME: 'Rubansu1'
 };
 
-/*
-   NE PAS intercepter les clics de la page ici.
-   Le jeu définit lui-même guest(), auth() et boot().
-   L'ancien système de secours appelait guest() depuis un autre scope
-   et pouvait provoquer : "Cannot access 'isGuest' before initialization".
-*/
+/* Charge le pont UI après le chargement du document.
+   Cela évite le conflit avec l'ancien scope isGuest et rend les boutons
+   de connexion/local réellement cliquables. */
+(() => {
+  const load = () => {
+    if (document.getElementById('ir-ui-fix')) return;
+    const s = document.createElement('script');
+    s.id = 'ir-ui-fix';
+    s.src = 'ui.js?v=3';
+    s.defer = true;
+    document.head.appendChild(s);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', load, {once:true});
+  else load();
+})();
