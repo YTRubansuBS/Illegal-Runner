@@ -15,6 +15,7 @@
   const guestMode=()=>($('userBadge')?.textContent||'').includes('local')
   const toast=t=>{const e=$('toast');if(!e)return;e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1900)}
   const refreshCoins=n=>{if(n!==undefined&&$('coins'))$('coins').textContent=String(n)}
+  const notifyProfile=p=>window.dispatchEvent(new CustomEvent('ir:profileChanged',{detail:p}))
   const notifyCustomization=(type,id)=>window.dispatchEvent(new CustomEvent('ir:customizationChanged',{detail:type==='world'?{selected_background:id}:type==='character'?{selected_character:id}:{selected_obstacle_set:id}}))
   async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];return false}const {data}=await sb.from('inventory').select('item_type,item_id').eq('user_id',user.id);cloudInventory=data||[];return true}
   const owned=(type,id,p)=>type==='world'?(p.owned_worlds||['city']).includes(id):type==='character'?(p.owned_characters||['runner']).includes(id):(p.owned_obstacles||['classic']).includes(id)
@@ -27,7 +28,7 @@
       if(type==='world')p.selected_background=id;
       if(type==='character')p.selected_character=id;
       if(type==='obstacle')p.selected_obstacle_set=id;
-      saveLocal(p);notifyCustomization(type,id)
+      saveLocal(p);notifyCustomization(type,id);notifyProfile(p)
     } else if(cloudUser){
       const field={world:'selected_background',character:'selected_character',obstacle:'selected_obstacle_set'}[type]
       const {error}=await sb.from('profiles').update({[field]:id}).eq('id',cloudUser.id)
@@ -46,7 +47,7 @@
         const p=localProfile();p.coins=p.coins|0
         if(p.coins<cost)return toast('Pas assez de pièces.')
         if(type==='reward'){
-          const r=100+Math.floor(Math.random()*651);p.coins-=cost;p.coins+=r;saveLocal(p);refreshCoins(p.coins);toast('💎 Récompense reçue : +'+r+' pièces !');await renderCustomizer();return
+          const r=100+Math.floor(Math.random()*651);p.coins-=cost;p.coins+=r;saveLocal(p);refreshCoins(p.coins);notifyProfile(p);toast('💎 Récompense reçue : +'+r+' pièces !');await renderCustomizer();return
         }
         const list=type==='world'?Object.keys(WORLDS):type==='character'?Object.keys(CHARS):Object.keys(OBS)
         const key=type==='world'?'owned_worlds':type==='character'?'owned_characters':'owned_obstacles'
@@ -55,7 +56,7 @@
         const locked=list.filter(x=>!arr.includes(x))
         if(!locked.length)return toast('🎉 Tout est déjà débloqué !')
         const id=locked[Math.floor(Math.random()*locked.length)]
-        p.coins-=cost;p[key]=[...new Set([...arr,id])];saveLocal(p);refreshCoins(p.coins)
+        p.coins-=cost;p[key]=[...new Set([...arr,id])];saveLocal(p);refreshCoins(p.coins);notifyProfile(p)
         toast('🎁 Débloqué : '+(type==='world'?WORLDS[id].name:type==='character'?CHARS[id].name:OBS[id].name))
         await renderCustomizer();return
       }
@@ -68,7 +69,7 @@
       if(reward)toast('💎 Récompense reçue : +'+reward+' pièces !')
       else if(id)toast('🎁 Débloqué : '+(type==='world'?WORLDS[id].name:type==='character'?CHARS[id].name:OBS[id].name))
       const {data:prof}=await sb.from('profiles').select('coins').eq('id',user.id).single()
-      if(prof)refreshCoins(prof.coins)
+      if(prof){refreshCoins(prof.coins);notifyProfile({coins:prof.coins})}
       await renderCustomizer();return
     }finally{buying=false}
   }
