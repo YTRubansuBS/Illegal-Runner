@@ -1,11 +1,10 @@
 /* ILLEGAL RUNNER // CONFIG + UI LOADER */
 window.IR_CONFIG = {
   SUPABASE_URL: 'https://cgodpoxubzrggyezzvth.supabase.co',
-  SUPABASE_ANON_KEY: 'PUBLIC_ANON_KEY_CONFIGURED',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjZ29kcG94dWJ6cmdneWV6enZ0aCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzg5Mzg4Mzc1LCJleHAiOjIxMDQ5NjQzNzV9.fkA5ih8xU3rIJe7u8p4c0dfiJmzmCmTzUo9md5L4wcU',
   ADMIN_USERNAME: 'Rubansu1'
 };
 
-/* The public anon key is replaced at runtime by the existing app configuration when available. */
 (() => {
   const load = () => {
     if (!document.getElementById('ir-neon-overhaul')) {
