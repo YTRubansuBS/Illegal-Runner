@@ -9,7 +9,7 @@
   const COSTS={world:250,character:200,obstacle:180,reward:300}
   const cfg=window.IR_CONFIG||{}
   const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
-  let cloudUser=null,cloudInventory=null
+  let cloudUser=null,cloudInventory=null,buying=false
   const localProfile=()=>{try{return JSON.parse(localStorage.getItem('irGuest')||'{}')}catch{return {}}}
   const saveLocal=p=>localStorage.setItem('irGuest',JSON.stringify(p))
   const guestMode=()=>($('userBadge')?.textContent||'').includes('local')
@@ -25,28 +25,35 @@
     toast('✅ '+(type==='world'?'Monde':type==='character'?'Personnage':'Obstacles')+' équipé !');renderCustomizer()
   }
   async function buyPack(type){
-    const cost=COSTS[type]
-    if(guestMode()){
-      const p=localProfile();p.coins=p.coins|0;if(p.coins<cost)return toast('Pas assez de pièces.')
-      if(type==='reward'){p.coins+=100+Math.floor(Math.random()*901);saveLocal(p);toast('💎 Récompense reçue !');location.reload();return}
-      const list=type==='world'?Object.keys(WORLDS):type==='character'?Object.keys(CHARS):Object.keys(OBS);const key=type==='world'?'owned_worlds':type==='character'?'owned_characters':'owned_obstacles';const def=type==='world'?'city':type==='character'?'runner':'classic';const arr=p[key]||[def];const locked=list.filter(x=>!arr.includes(x));if(!locked.length)return toast('🎉 Tout est déjà débloqué !');const id=locked[Math.floor(Math.random()*locked.length)];p.coins-=cost;p[key]=[...new Set([...arr,id])];saveLocal(p);toast('🎁 Débloqué : '+(type==='world'?WORLDS[id].name:type==='character'?CHARS[id].name:OBS[id].name));location.reload();return
-    }
-    if(!sb)return toast('Cloud indisponible.')
-    const {data:{user}}=await sb.auth.getUser();if(!user)return toast('Reconnecte-toi.')
-    const {data:prof,error:e1}=await sb.from('profiles').select('coins').eq('id',user.id).single();if(e1)return toast('❌ Profil introuvable.');if((prof.coins|0)<cost)return toast('Pas assez de pièces.')
-    if(type==='reward'){const r=100+Math.floor(Math.random()*901);const {error}=await sb.from('profiles').update({coins:(prof.coins|0)-cost+r}).eq('id',user.id);if(error)return toast('❌ Achat impossible.');toast('💎 +'+r+' pièces !');location.reload();return}
-    const map={world:'background',character:'character',obstacle:'obstacle'};const {data:inv}=await sb.from('inventory').select('item_id').eq('user_id',user.id).eq('item_type',map[type]);const ownedIds=(inv||[]).map(x=>x.item_id);const list=type==='world'?Object.keys(WORLDS):type==='character'?Object.keys(CHARS):Object.keys(OBS);const locked=list.filter(x=>!ownedIds.includes(x));if(!locked.length)return toast('🎉 Tout est déjà débloqué !');const id=locked[Math.floor(Math.random()*locked.length)];const {error:e2}=await sb.from('profiles').update({coins:(prof.coins|0)-cost}).eq('id',user.id);if(e2)return toast('❌ Achat impossible.');const {error:e3}=await sb.from('inventory').insert({user_id:user.id,item_type:map[type],item_id:id});if(e3)return toast('❌ Déblocage impossible.');toast('🎁 Débloqué : '+(type==='world'?WORLDS[id].name:type==='character'?CHARS[id].name:OBS[id].name));location.reload()
+    if(buying)return
+    buying=true
+    try{
+      const cost=COSTS[type]
+      if(guestMode()){
+        const p=localProfile();p.coins=p.coins|0
+        if(p.coins<cost)return toast('Pas assez de pièces.')
+        if(type==='reward'){const r=100+Math.floor(Math.random()*901);p.coins-=cost;p.coins+=r;saveLocal(p);toast('💎 Récompense reçue !');setTimeout(()=>location.reload(),250);return}
+        const list=type==='world'?Object.keys(WORLDS):type==='character'?Object.keys(CHARS):Object.keys(OBS);const key=type==='world'?'owned_worlds':type==='character'?'owned_characters':'owned_obstacles';const def=type==='world'?'city':type==='character'?'runner':'classic';const arr=p[key]||[def];const locked=list.filter(x=>!arr.includes(x));if(!locked.length)return toast('🎉 Tout est déjà débloqué !');const id=locked[Math.floor(Math.random()*locked.length)];p.coins-=cost;p[key]=[...new Set([...arr,id])];saveLocal(p);toast('🎁 Débloqué : '+(type==='world'?WORLDS[id].name:type==='character'?CHARS[id].name:OBS[id].name));setTimeout(()=>location.reload(),250);return
+      }
+      if(!sb)return toast('Cloud indisponible.')
+      const {data:{user}}=await sb.auth.getUser();if(!user)return toast('Reconnecte-toi.')
+      const {data:prof,error:e1}=await sb.from('profiles').select('coins').eq('id',user.id).single();if(e1)return toast('❌ Profil introuvable.');const coins=prof.coins|0;if(coins<cost)return toast('Pas assez de pièces.')
+      if(type==='reward'){const r=100+Math.floor(Math.random()*901);const {error}=await sb.from('profiles').update({coins:coins-cost+r}).eq('id',user.id);if(error)return toast('❌ Achat impossible.');toast('💎 +'+r+' pièces !');setTimeout(()=>location.reload(),250);return}
+      const map={world:'background',character:'character',obstacle:'obstacle'};const {data:inv,error:ie}=await sb.from('inventory').select('item_id').eq('user_id',user.id).eq('item_type',map[type]);if(ie)return toast('❌ Inventaire inaccessible.');const ownedIds=(inv||[]).map(x=>x.item_id);const list=type==='world'?Object.keys(WORLDS):type==='character'?Object.keys(CHARS):Object.keys(OBS);const locked=list.filter(x=>!ownedIds.includes(x));if(!locked.length)return toast('🎉 Tout est déjà débloqué !');const id=locked[Math.floor(Math.random()*locked.length)];const {error:e2}=await sb.from('profiles').update({coins:coins-cost}).eq('id',user.id);if(e2)return toast('❌ Achat impossible.');const {error:e3}=await sb.from('inventory').insert({user_id:user.id,item_type:map[type],item_id:id});if(e3){await sb.from('profiles').update({coins}).eq('id',user.id);return toast('❌ Déblocage impossible.')}toast('🎁 Débloqué : '+(type==='world'?WORLDS[id].name:type==='character'?CHARS[id].name:OBS[id].name));setTimeout(()=>location.reload(),250)
+    }finally{buying=false}
   }
   const card=html=>`<div class="card">${html}</div>`
   function renderPacks(){
     const shop=$('shop');if(!shop)return
     let root=$('customPacks');if(!root){root=document.createElement('div');root.id='customPacks';shop.querySelector('.panel')?.appendChild(root)}
-    root.innerHTML=`<div class="pack-shop-title"><h3>🎁 PACKS</h3><p class="muted">Ouvre des packs avec tes pièces et débloque de nouveaux éléments.</p></div><div class="grid">
-      ${card('<div class="emoji">🌍</div><h3>PACK MONDE</h3><p class="muted">Débloque un monde aléatoire.</p><button class="primary" data-pack="world">🎁 250 🪙</button>')}
-      ${card('<div class="emoji">🧑</div><h3>PACK PERSONNAGE</h3><p class="muted">Débloque un personnage aléatoire.</p><button class="primary" data-pack="character">🎁 200 🪙</button>')}
-      ${card('<div class="emoji">🔺</div><h3>PACK OBSTACLES</h3><p class="muted">Débloque un set d’obstacles.</p><button class="primary" data-pack="obstacle">🎁 180 🪙</button>')}
-      ${card('<div class="emoji">💎</div><h3>PACK RÉCOMPENSE</h3><p class="muted">Transforme tes pièces en une récompense aléatoire.</p><button data-pack="reward">🎁 300 🪙</button>')}
+    root.innerHTML=`<div class="pack-shop-title"><h3>🎁 PACKS</h3><p class="muted">Ouvre des packs avec tes pièces et débloque de nouveaux éléments.</p></div><div class="grid pack-grid-fixed">
+      ${card('<div class="emoji">🌍</div><h3>PACK MONDE</h3><p class="muted">Débloque un monde aléatoire.</p><button class="primary pack-buy" data-pack="world" type="button">🎁 250 🪙</button>')}
+      ${card('<div class="emoji">🧑</div><h3>PACK PERSONNAGE</h3><p class="muted">Débloque un personnage aléatoire.</p><button class="primary pack-buy" data-pack="character" type="button">🎁 200 🪙</button>')}
+      ${card('<div class="emoji">🔺</div><h3>PACK OBSTACLES</h3><p class="muted">Débloque un set d’obstacles.</p><button class="primary pack-buy" data-pack="obstacle" type="button">🎁 180 🪙</button>')}
+      ${card('<div class="emoji">💎</div><h3>PACK RÉCOMPENSE</h3><p class="muted">Transforme tes pièces en une récompense aléatoire.</p><button class="pack-buy" data-pack="reward" type="button">🎁 300 🪙</button>')}
     </div>`
+    root.querySelectorAll('.pack-buy').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();buyPack(btn.dataset.pack)}))
+    root.querySelectorAll('.card').forEach(c=>{c.style.animation='none';c.style.transition='none'})
   }
   async function renderCustomizer(){
     const root=$('customizerRoot');if(!root)return;await getCloud();const p=localProfile();let selected={world:p.selected_background||'city',character:p.selected_character||'runner',obstacle:p.selected_obstacle_set||'classic'}
@@ -62,13 +69,11 @@
     const wh=document.querySelector('#world h2');if(wh)wh.textContent='🎨 PERSONNALISER'
     $('worldGrid')?.style.setProperty('display','none')
     if(!$('customizerRoot')){const r=document.createElement('div');r.id='customizerRoot';$('world')?.querySelector('.panel')?.appendChild(r)}
-    renderPacks();
+    renderPacks()
     const r=$('customizerRoot');if(r&&!r.dataset.ready){r.dataset.ready='1';renderCustomizer()}
   }
   document.addEventListener('click',async e=>{
     const eq=e.target.closest('[data-equip-type]');if(eq){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();await equip(eq.dataset.equipType,eq.dataset.equipId);return}
-    const pack=e.target.closest('[data-pack]');if(pack){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();await buyPack(pack.dataset.pack);return}
   },true)
-  let scheduled=false;const mo=new MutationObserver(()=>{if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;setup()},80)});mo.observe(document.body,{childList:true,subtree:true})
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setup()
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setTimeout(setup,0)
 })()
