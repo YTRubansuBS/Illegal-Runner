@@ -10,11 +10,12 @@
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
           if (e.detail?.selected_background && typeof G !== 'undefined' && G.world) G.world = WORLDS[e.detail.selected_background] || G.world
         })
+        window.addEventListener('ir:profileChanged', e => {
+          if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
+          if (typeof refreshTop === 'function') refreshTop()
+        })
         const STEP = 1 / 120 // fixed physics step`
       )
-
-      // The database function now saves the whole run atomically. This avoids double-counting
-      // coins/distance/quests and avoids a second profile write after every run.
       code = code.replace(
         `  async function commonSave() {
     profile.coins = (profile.coins || 0) + G.coins
@@ -62,8 +63,6 @@
     }
   }`
       )
-
-      // Free daily pack: one RPC in cloud, localStorage in local mode.
       code = code.replace(
         `  function freePack() {
     const today = new Date().toISOString().slice(0, 10)
@@ -91,8 +90,6 @@
     refreshTop(); renderAll(); SFX.coin(); toast("🎁 +75 pièces gratuites !")
   }`
       )
-
-      // Keep the engine's character/obstacle visuals driven by the equipped selection.
       code = code.replace('    void set\n  }', '    if (G.obs.length) G.obs[G.obs.length - 1].set = set\n  }')
       code = code.replace(
         'ctx.fillStyle = "#ff2f7d"; ctx.shadowBlur = 16; ctx.shadowColor = "#ff2f7d"',
@@ -120,7 +117,7 @@
       s.textContent = code
       document.head.appendChild(s)
       const ext = document.createElement('script')
-      ext.src = 'customizer.js?v=5'
+      ext.src = 'customizer.js?v=6'
       document.body.appendChild(ext)
     })
     .catch(err => {
