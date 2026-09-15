@@ -1,32 +1,232 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>ILLEGAL RUNNER — Ultimate</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#02040a;color:#fff;font-family:Inter,system-ui,Arial,sans-serif}button,input{font:inherit}button{border:0;border-radius:14px;padding:12px 16px;color:#fff;background:#102844;font-weight:900;cursor:pointer;transition:.18s;box-shadow:0 0 0 1px #24517a inset}button:hover{transform:translateY(-2px);filter:brightness(1.15)}button.primary{background:linear-gradient(135deg,#00e5ff,#246cff)}button.pink{background:linear-gradient(135deg,#9c45ff,#ff3d8d)}button.gold{background:linear-gradient(135deg,#ffb62e,#ff5e38)}button.danger{background:#5d1830}.screen{position:absolute;inset:0}.login{display:grid;place-items:center;background:radial-gradient(circle at 20% 20%,#006c9855,transparent 34%),radial-gradient(circle at 90% 80%,#9b2cff33,transparent 35%),linear-gradient(135deg,#02050d,#07182e,#180724);overflow:auto}.loginbox{width:min(480px,92vw);padding:30px;border:1px solid #28628f;border-radius:28px;background:#061426ee;box-shadow:0 30px 100px #000}.logo{font-size:58px;font-weight:1000;font-style:italic;line-height:.78;margin:0 0 25px}.logo span,.cyan{color:#00e5ff}.muted{color:#8da6c7}.loginbox input{width:100%;padding:14px;margin:6px 0;border-radius:12px;border:1px solid #234b73;background:#040b16;color:white;outline:none}.mode{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.mode button{min-height:90px}.mode small{display:block;color:#8da6c7;margin-top:5px}.err{min-height:22px;color:#ff668d;font-size:13px;margin-top:8px}.app{display:none;height:100%;background:radial-gradient(circle at 50% -10%,#153e6d,#02040a 65%);flex-direction:column}.top{height:62px;flex:none;display:flex;align-items:center;gap:10px;padding:0 13px;background:#030a16e8;border-bottom:1px solid #1d4268;z-index:3}.top b{font-size:21px;font-style:italic}.stats{margin-left:auto;color:#d8efff}.content{flex:1;overflow:auto;padding:22px}.panel{max-width:1200px;margin:0 auto;background:#061426d9;border:1px solid #1f456c;border-radius:24px;padding:22px;box-shadow:0 18px 70px #0008}.hero{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:center}.hero h1{font-size:80px;line-height:.78;font-style:italic;margin:5px 0 20px}.art{height:340px;border:1px solid #28618c;border-radius:24px;position:relative;overflow:hidden;background:linear-gradient(#071a39,#153c4e 58%,#05080e)}.moon{position:absolute;right:45px;top:30px;width:95px;height:95px;border-radius:50%;background:#e8fbff;box-shadow:0 0 70px #5de7ff}.city{position:absolute;bottom:70px;width:100%;height:150px;background:linear-gradient(90deg,#06101e 0 12%,transparent 12% 17%,#0b2139 17% 30%,transparent 30% 34%,#102b45 34% 49%,transparent 49% 55%,#0a1c32 55% 70%,transparent 70% 76%,#0e2944 76% 92%,transparent 92%)}.road{position:absolute;bottom:0;width:100%;height:72px;background:#05080d;border-top:2px solid #00e5ff}.fakeRunner{position:absolute;left:30%;bottom:70px;width:65px;height:115px}.fakeRunner:before{content:"";position:absolute;left:17px;width:42px;height:42px;border-radius:50%;background:#111827;border:3px solid #00e5ff}.fakeRunner:after{content:"";position:absolute;top:42px;width:60px;height:73px;border-radius:18px;background:linear-gradient(145deg,#14376c,#00dfff);box-shadow:0 0 25px #00bfff}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.card{padding:16px;border:1px solid #204a70;border-radius:17px;background:#07182be8}.card h3{margin:0 0 7px}.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.tabs{display:flex;gap:7px;overflow:auto;margin-bottom:15px}.tabs button{white-space:nowrap}.tab{display:none}.tab.active{display:block}.item{min-height:150px;position:relative}.item .emoji{font-size:42px}.rarity{font-size:11px;letter-spacing:2px;color:#65ebff}.progress{height:8px;background:#10263d;border-radius:99px;overflow:hidden}.progress i{display:block;height:100%;background:linear-gradient(90deg,#00e5ff,#a14dff)}.small{font-size:12px}.game{display:none;position:fixed;inset:0;background:#02040a;z-index:20}.game canvas{position:absolute;inset:0;width:100%;height:100%}.hud{position:absolute;top:0;left:0;right:0;min-height:66px;z-index:2;display:flex;align-items:center;gap:9px;padding:9px;background:linear-gradient(#020711ee,#02071155,transparent);pointer-events:none}.hud>*{pointer-events:auto}.hud .right{margin-left:auto;display:flex;gap:8px;align-items:center}.hearts{color:#ff4168;font-size:20px}.controls{position:absolute;bottom:18px;left:0;right:0;display:flex;justify-content:space-between;padding:0 18px;z-index:3;pointer-events:none}.controls button{pointer-events:auto;min-width:145px}.overlay{position:absolute;inset:0;z-index:5;display:none;place-items:center;background:#02050ccc}.over{width:min(570px,92vw);padding:28px;text-align:center;border:1px solid #28557f;border-radius:24px;background:#07172a;box-shadow:0 30px 100px #000}.results{display:flex;gap:8px;margin:18px 0}.results div{flex:1;padding:14px;border:1px solid #21476e;border-radius:12px}.results b{display:block;font-size:25px}.toast{position:fixed;left:50%;bottom:25px;transform:translateX(-50%);background:#091b30;border:1px solid #2b6595;padding:10px 16px;border-radius:12px;opacity:0;z-index:50;transition:.2s}.toast.show{opacity:1}.leader{max-height:430px;overflow:auto}.rank{display:flex;gap:10px;align-items:center;padding:10px;border-bottom:1px solid #17334f}.rank strong{width:35px}.levelgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:7px}.locked{opacity:.35}.pack{min-height:190px;background:linear-gradient(145deg,#111d3c,#3c123d);border:1px solid #9c55d6}.settings{max-width:700px}@media(max-width:800px){.hero{grid-template-columns:1fr}.hero h1{font-size:58px}.art{height:230px}.content{padding:12px}.mode{grid-template-columns:1fr}.top b{font-size:17px}.top .stats{font-size:12px}.hud{font-size:12px}.controls button{min-width:125px}}</style></head><body>
-<section id="login" class="screen login"><div class="loginbox"><div class="logo">ILLEGAL<br><span>RUNNER</span></div><p class="muted">Ultimate Cyber Runner • comptes, progression, boutique et 300 niveaux.</p><input id="name" placeholder="Pseudo" maxlength="20"><input id="pass" type="password" placeholder="Mot de passe (6 caractères min.)"><div class="row"><button class="primary" style="flex:1" onclick="auth(false)">SE CONNECTER</button><button style="flex:1" onclick="auth(true)">CRÉER</button></div><div class="mode"><button onclick="guest()">🎮 JOUER EN LOCAL<small>Sauvegarde sur cet appareil.<br>Pas de leaderboard ni d'amis.</small></button><button class="pink" onclick="focusAccount()">☁️ MODE COMPTE<small>Supabase : leaderboard, amis et sauvegarde.</small></button></div><div id="err" class="err"></div></div></section>
-<section id="app" class="app"><header class="top"><b>ILLEGAL <span class="cyan">RUNNER</span></b><div class="stats">🪙 <span id="coins">0</span> • 🏆 <span id="best">0</span>m • LV <span id="lv">1</span></div><button onclick="toggleMute()">🔊</button><button onclick="logout()">↪</button></header><main class="content"><div class="tabs"><button onclick="tab('home')">🏠 Accueil</button><button onclick="tab('play')">🏁 Jouer</button><button onclick="tab('upgrade')">⚡ Améliorer</button><button onclick="tab('shop')">🛒 Boutique</button><button onclick="tab('pack')">🎁 Packs</button><button onclick="tab('world')">🌍 Mondes</button><button onclick="tab('quests')">📋 Quêtes</button><button onclick="tab('leader')">🏆 Classement</button><button onclick="tab('friends')">👥 Amis</button><button id="adminTab" style="display:none" onclick="tab('admin')">🛡️ Admin</button></div>
-<div id="home" class="tab active"><div class="panel hero"><div><small class="cyan">RUSH THE LIMIT</small><h1>RUN<br><span class="cyan">FURTHER.</span></h1><p class="muted">Course infinie, 300 niveaux, 7 mondes, dash, bonus, packs, personnages, obstacles et progression persistante.</p><div class="row"><button class="primary" onclick="start(0)">▶ INFINI</button><button onclick="tab('play')">🏁 NIVEAUX</button></div></div><div class="art"><div class="moon"></div><div class="city"></div><div class="fakeRunner"></div><div class="road"></div></div></div></div>
-<div id="play" class="tab"><div class="panel"><h2>🏁 JOUER</h2><p class="muted">Objectif : atteindre la distance du niveau. Niveau 300 = 🏆 CHAMPION !</p><div class="grid" id="levelButtons"></div></div></div>
-<div id="upgrade" class="tab"><div class="panel"><h2>⚡ AMÉLIORATIONS</h2><div class="grid" id="upgradeGrid"></div></div></div>
-<div id="shop" class="tab"><div class="panel"><h2>🛒 BOUTIQUE</h2><div class="card"><h3>PACK STANDARD</h3><p>Joueurs GÉN 75 ou moins • GRATUIT</p><button class="primary" onclick="freePack()">🎁 OUVRIR GRATUITEMENT</button></div><br><div class="grid"><div class="card"><h3>❤️ Vies</h3><p>Augmente le maximum jusqu'à 5.</p><button onclick="buyUpgrade('lives')">Améliorer</button></div><div class="card"><h3>⚡ Dash</h3><p>Niveau 6 : traverse/détruit les obstacles pendant le dash.</p><button onclick="buyUpgrade('dash')">Améliorer</button></div><div class="card"><h3>🪙 Pièces</h3><p>Augmente les pièces gagnées.</p><button onclick="buyUpgrade('coin')">Améliorer</button></div></div></div></div>
-<div id="pack" class="tab"><div class="panel"><h2>🎁 PACKS & COLLECTION</h2><p class="muted">Ouvre des packs avec les pièces gagnées en jouant. Aucun achat en argent réel.</p><div class="grid"><div class="card pack"><h3>🌍 WORLD PACK</h3><p>Débloque un monde aléatoire.</p><button class="pink" onclick="openPack('world')">🪙 250</button></div><div class="card pack"><h3>🧑 CHARACTER PACK</h3><p>Débloque un personnage.</p><button class="pink" onclick="openPack('character')">🪙 200</button></div><div class="card pack"><h3>☠️ OBSTACLE PACK</h3><p>Nouveau set d'obstacles.</p><button class="pink" onclick="openPack('obstacle')">🪙 180</button></div><div class="card pack"><h3>💎 REWARD PACK</h3><p>Récompense avec rareté aléatoire.</p><button class="gold" onclick="openPack('reward')">🪙 300</button></div></div></div></div>
-<div id="world" class="tab"><div class="panel"><h2>🌍 MONDES</h2><div class="grid" id="worldGrid"></div></div></div>
-<div id="quests" class="tab"><div class="panel"><h2>📋 QUÊTES DU JOUR</h2><div class="grid" id="questGrid"></div><div class="card" style="margin-top:12px"><h3>🎁 Bonus connexion</h3><p id="loginReward"></p><button onclick="claimLogin()">RÉCUPÉRER</button></div></div></div>
-<div id="leader" class="tab"><div class="panel"><h2>🏆 LEADERBOARD</h2><p class="muted" id="leaderInfo">Top joueurs par meilleure distance.</p><div id="leaderList" class="leader"></div></div></div>
-<div id="friends" class="tab"><div class="panel"><h2>👥 AMIS</h2><div class="row"><input id="friendName" placeholder="Pseudo à ajouter" style="flex:1;padding:12px;background:#040b16;color:white;border:1px solid #234b73;border-radius:12px"><button onclick="addFriend()">AJOUTER</button></div><br><div id="friendList"></div></div></div>
-<div id="admin" class="tab"><div class="panel"><h2>🛡️ ADMIN</h2><p class="muted">Compte admin : Rubansu1</p><div class="row"><input id="adminSearch" placeholder="Rechercher un pseudo" style="flex:1;padding:12px;background:#040b16;color:white;border:1px solid #234b73;border-radius:12px"><button onclick="adminSearchUsers()">RECHERCHER</button></div><div id="adminResults"></div></div></div></main></section>
-<section id="game" class="game"><canvas id="c"></canvas><div class="hud"><button onclick="quit()">← MENU</button><div class="hearts" id="hearts">♥</div><b id="objective">INFINI</b><div class="right"><span>📏 <span id="dist">0</span>m</span><span>🪙 <span id="runCoins">0</span></span><span id="dashText">⚡ PRÊT</span></div></div><div class="controls"><button class="primary" id="jump">⬆ SAUT / PLANER</button><button class="pink" onclick="doDash()">⚡ DASH</button></div><div id="over" class="overlay"><div class="over"><div>RUN TERMINÉ</div><h2 id="overTitle">TU ES MORT</h2><div class="results"><div>📏<b id="finalDist">0</b></div><div>🪙<b id="finalCoins">0</b></div><div>⏱️<b id="finalTime">0</b></div></div><button class="primary" onclick="restart()">↻ REJOUER</button><button onclick="quit()">MENU</button></div></div></section><div id="toast" class="toast"></div>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="theme-color" content="#02040a" />
+<title>ILLEGAL RUNNER — Ultimate Cyber Runner</title>
+<meta name="description" content="Course infinie cyberpunk : 7 mondes néon, 300 niveaux, dash, bonus, boutique, packs, quêtes et classement en ligne." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet" />
 <script>
-const CFG=window.IR_CONFIG||{},URL=CFG.SUPABASE_URL||'',KEY=CFG.SUPABASE_ANON_KEY||'';const sb=window.supabase&&URL.startsWith('http')&&!KEY.startsWith('YOUR_')?window.supabase.createClient(URL,KEY):null;const $=id=>document.getElementById(id);let user=null,profile=null,isGuest=false,muted=false,tabName='home';
-const defaults={username:'Invité',coins:0,best_distance:0,total_distance:0,highest_level:1,lives_level:1,distance_level:1,dash_level:1,jump_level:1,coin_level:1,bonus_level:1,daily_login_streak:0,last_login_reward:null,quest_distance:0,quest_coins:0,quest_games:0,quest_distance_claimed:false,quest_coins_claimed:false,quest_games_claimed:false,selected_background:'city',selected_character:'runner',selected_obstacle_set:'classic'};
-const worlds=[['city','🌃','CITY','Ville cyberpunk'],['forest','🌲','FOREST','Forêt néon'],['desert','🏜️','DESERT','Désert synthwave'],['space','🚀','SPACE','Station spatiale'],['dark','🌑','DARK','Dimension sombre'],['volcano','🌋','VOLCANO','Volcan'],['ice','❄️','ICE','Banquise']];const chars=[['runner','🧑','RUNNER'],['ninja','🥷','NINJA'],['robot','🤖','ROBOT'],['ghost','👻','GHOST'],['cyber','🦾','CYBER']];const obsSets=[['classic','🔺','CLASSIC'],['tech','🧱','TECH'],['drone','🚁','DRONES'],['energy','⚡','ENERGY'],['chaos','☠️','CHAOS']];const up=[['lives','❤️','Vies',5],['distance','🏃','Distance',6],['dash','⚡','Dash',6],['jump','⬆️','Saut',6],['coin','🪙','Pièces',6],['bonus','✨','Bonus',6]];
-function toast(t){$('toast').textContent=t;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),1800)}function email(n){return n.toLowerCase().replace(/[^a-z0-9._-]/g,'')+'@illegal-runner.local'}function saveLocal(){localStorage.setItem('irGuest',JSON.stringify(profile))}function focusAccount(){$('name').focus()}
-async function auth(create){if(!sb){$('err').textContent='Supabase non configuré : remplis config.js avec URL + anon key.';return}let n=$('name').value.trim(),p=$('pass').value;if(!n||p.length<6){$('err').textContent='Pseudo + mot de passe de 6 caractères minimum.';return}try{let r=create?await sb.auth.signUp({email:email(n),password:p,options:{data:{username:n}}}):await sb.auth.signInWithPassword({email:email(n),password:p});if(r.error)throw r.error;if(create&&!r.data.session)throw new Error('Compte créé. Désactive Email Confirmations dans Supabase ou confirme le compte.');user=r.data.user;let q=await sb.from('profiles').select('*').eq('id',user.id).single();if(q.error)throw q.error;profile=q.data;await boot()}catch(e){$('err').textContent=e.message}}
-function guest(){isGuest=true;profile={...defaults,...JSON.parse(localStorage.getItem('irGuest')||'{}')};boot()}async function boot(){profile={...defaults,...profile};$('login').style.display='none';$('app').style.display='flex';$('adminTab').style.display=profile.username?.toLowerCase()==='rubansu1'?'block':'none';refresh();renderAll();tab('home');if(!isGuest){await claimAutoLogin();loadFriends()}else{$('leaderInfo').textContent='Mode local : leaderboard et amis indisponibles.';$('leaderList').innerHTML='<div class="card">☁️ Connecte-toi avec un compte pour accéder au leaderboard.</div>';$('friendList').innerHTML='<div class="card">☁️ Les amis sont disponibles uniquement en mode compte.</div>'}}
-function refresh(){$('coins').textContent=profile.coins||0;$('best').textContent=profile.best_distance||0;$('lv').textContent=profile.highest_level||1}function tab(id){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));$(id).classList.add('active');tabName=id;if(id==='leader')loadLeaderboard();if(id==='friends'&&!isGuest)loadFriends();if(id==='admin'&&profile.username.toLowerCase()==='rubansu1')adminSearchUsers()}async function logout(){if(sb&&!isGuest)await sb.auth.signOut();location.reload()}
-function renderAll(){renderLevels();renderUpgrades();renderWorlds();renderQuests()}function renderLevels(){let h='';for(let i=1;i<=300;i++){let unlocked=i<=(profile.highest_level||1);h+=`<button class="${unlocked?'':'locked'}" ${unlocked?`onclick="start(${i})"`:''}>${i===300?'🏆':i}</button>`}$('levelButtons').innerHTML=h}function renderUpgrades(){let h='';for(const [id,em,n,max] of up){let v=profile[id+'_level']||1;let cost=100*v;h+=`<div class="card"><div style="font-size:34px">${em}</div><h3>${n}</h3><p>Niveau ${v}/${max}</p><div class="progress"><i style="width:${v/max*100}%"></i></div><br><button onclick="buyUpgrade('${id}')">🪙 ${cost}</button></div>`}$('upgradeGrid').innerHTML=h}function renderWorlds(){let h='';worlds.forEach((w,i)=>{let unlocked=i===0||(profile.highest_level||1)>=[1,30,70,110,150,200,250][i];h+=`<div class="card item"><div class="emoji">${w[1]}</div><div class="rarity">${w[2]}</div><h3>${w[3]}</h3><p class="muted">Débloqué au niveau ${[1,30,70,110,150,200,250][i]}</p><button ${unlocked?'':'disabled'} onclick="selectWorld('${w[0]}')">${profile.selected_background===w[0]?'✓ ÉQUIPÉ':'ÉQUIPER'}</button></div>`});$('worldGrid').innerHTML=h}
-function renderQuests(){let q=[['distance','🏃','Courir 500 m',profile.quest_distance||0,500,150,profile.quest_distance_claimed],['coins','🪙','Gagner 100 pièces',profile.quest_coins||0,100,120,profile.quest_coins_claimed],['games','🎮','Faire 3 parties',profile.quest_games||0,3,180,profile.quest_games_claimed],['dash','⚡','Utiliser le dash 5 fois',Number(localStorage.getItem('irDashQuest')||0),5,160,localStorage.getItem('irDashClaimed')==='1'],['level','🏁','Terminer un niveau',Number(localStorage.getItem('irLevelQuest')||0),1,250,localStorage.getItem('irLevelClaimed')==='1']];$('questGrid').innerHTML=q.map(x=>`<div class="card"><h3>${x[1]} ${x[2]}</h3><p>${Math.min(x[3],x[4])}/${x[4]}</p><div class="progress"><i style="width:${Math.min(100,x[3]/x[4]*100)}%"></i></div><br><button ${x[3]>=x[4]&&!x[6]?'':'disabled'} onclick="claimQuest('${x[0]}',${x[5]})">🎁 +${x[5]}</button></div>`).join('');$('loginReward').textContent=`Série actuelle : ${profile.daily_login_streak||0} jour(s). Bonus : ${100+(profile.daily_login_streak||0)*25} pièces.`}
-async function persist(){if(isGuest){saveLocal();refresh();return}let r=await sb.from('profiles').update(profile).eq('id',user.id);if(r.error)toast(r.error.message);refresh()}async function buyUpgrade(id){let max=up.find(x=>x[0]===id)[3],key=id+'_level',v=profile[key]||1;if(v>=max){toast('Niveau maximum !');return}let cost=100*v;if((profile.coins||0)<cost){toast('Pas assez de pièces.');return}profile.coins-=cost;profile[key]=v+1;await persist();renderAll();toast('Amélioration achetée !')}async function freePack(){profile.coins+=75;await persist();toast('🎁 Pack gratuit : +75 pièces !')}async function openPack(type){let costs={world:250,character:200,obstacle:180,reward:300},c=costs[type];if(profile.coins<c){toast('Pas assez de pièces.');return}profile.coins-=c;let arr=type==='world'?worlds:type==='character'?chars:obsSets;let x=arr[Math.floor(Math.random()*arr.length)];if(type==='reward'){let r=100+Math.floor(Math.random()*901);profile.coins+=r;toast('💎 RÉCOMPENSE : +'+r+' pièces !')}else{let key=type==='world'?'selected_background':type==='character'?'selected_character':'selected_obstacle_set';profile[key]=x[0];toast('🎉 Débloqué : '+x[2])}await persist();renderAll()}async function selectWorld(id){profile.selected_background=id;await persist();renderWorlds();toast('🌍 Monde équipé !')}
-async function claimQuest(id,reward){if(id==='distance')profile.quest_distance_claimed=true;if(id==='coins')profile.quest_coins_claimed=true;if(id==='games')profile.quest_games_claimed=true;if(id==='dash')localStorage.setItem('irDashClaimed','1');if(id==='level')localStorage.setItem('irLevelClaimed','1');profile.coins+=reward;await persist();renderQuests();toast('🎁 Quête terminée ! +'+reward)}async function claimAutoLogin(){let today=new Date().toISOString().slice(0,10);if(profile.last_login_reward===today)return;let last=profile.last_login_reward,y=last?new Date(last):null,d=y?Math.floor((Date.now()-y.getTime())/86400000):99;profile.daily_login_streak=d===1?(profile.daily_login_streak||0)+1:1;profile.last_login_reward=today;profile.coins+=100+profile.daily_login_streak*25;await persist();renderQuests();toast('🎁 Bonus quotidien récupéré !')}async function claimLogin(){await claimAutoLogin()}
-async function loadLeaderboard(){if(isGuest)return;let q=await sb.from('profiles').select('username,best_distance,highest_level').order('best_distance',{ascending:false}).limit(50);if(q.error){$('leaderList').innerHTML='<div class="card">Erreur leaderboard.</div>';return}$('leaderList').innerHTML=q.data.map((r,i)=>`<div class="rank"><strong>#${i+1}</strong><span style="flex:1">${escapeHtml(r.username)}</span><b>🏆 ${r.best_distance}m</b><span>LV ${r.highest_level}</span></div>`).join('')||'<div class="card">Aucun joueur.</div>'}async function addFriend(){if(isGuest){toast('Connecte-toi pour les amis.');return}let n=$('friendName').value.trim();if(!n)return;let q=await sb.from('profiles').select('id,username').ilike('username',n).limit(1).single();if(q.error){toast('Joueur introuvable.');return}if(q.data.id===user.id){toast('Tu ne peux pas t’ajouter toi-même.');return}let r=await sb.from('friends').upsert({user_id:user.id,friend_id:q.data.id,status:'accepted'},{onConflict:'user_id,friend_id'});if(r.error)toast(r.error.message);else{toast('Ami ajouté !');loadFriends()}}async function loadFriends(){if(isGuest)return;let q=await sb.from('friends').select('friend_id,status,profiles!friends_friend_id_fkey(username)').eq('user_id',user.id);if(q.error){$('friendList').innerHTML='<div class="card">Crée la table friends avec supabase.sql si elle manque.</div>';return}$('friendList').innerHTML=q.data.length?q.data.map(f=>`<div class="friend"><span>👤 ${escapeHtml(f.profiles?.username||'Joueur')}</span><span>${f.status}</span></div>`).join(''):'<div class="card">Aucun ami pour le moment.</div>'}async function adminSearchUsers(){if(profile.username.toLowerCase()!=='rubansu1'||!sb)return;let n=$('adminSearch').value.trim();let q=sb.from('profiles').select('id,username,coins,best_distance,highest_level').order('coins',{ascending:false}).limit(20);if(n)q=q.ilike('username','%'+n+'%');let r=await q;if(r.error){$('adminResults').innerHTML='<div class="card">'+r.error.message+'</div>';return}$('adminResults').innerHTML=r.data.map(x=>`<div class="card"><b>${escapeHtml(x.username)}</b> • 🪙 ${x.coins} • 🏆 ${x.best_distance}m • LV ${x.highest_level}<br><button onclick="gift('${x.id}')">🎁 +1000 pièces</button></div>`).join('')}async function gift(id){if(!sb||profile.username.toLowerCase()!=='rubansu1')return;let r=await sb.from('admin_gifts').insert({target_user:id,amount:1000,created_by:user.id});if(r.error)toast(r.error.message);else{toast('🎁 Cadeau envoyé !');adminSearchUsers()}}function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}function toggleMute(){muted=!muted;toast(muted?'🔇 Son coupé':'🔊 Son activé')}
-let ctx,W,H,dpr=1,raf,run=false,level=0,dist=0,runCoins=0,lives=1,spd=380,spawn=0,coinSpawn=0,dash=0,dashReady=true,gliding=false,last=0,startTime=0,player,obs=[],cs=[],particles=[];function resize(){W=innerWidth;H=innerHeight;dpr=Math.min(devicePixelRatio||1,2);$('c').width=W*dpr;$('c').height=H*dpr;ctx=$('c').getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);function start(l){level=l;$('app').style.display='none';$('game').style.display='block';resize();dist=0;runCoins=0;spd=390+(profile.distance_level||1)*16;spawn=.6;coinSpawn=.5;dash=0;dashReady=true;obs=[];cs=[];particles=[];lives=profile.lives_level||1;player={x:Math.max(80,W*.18),y:H*.45,vy:0,w:42,h:62,ground:false,inv:0,shield:false,run:0};$('objective').textContent=l?'NIVEAU '+l:'INFINI';$('over').style.display='none';drawHearts();let n=3;$('dashText').textContent=n;let t=setInterval(()=>{n--;if(n<=0){clearInterval(t);$('dashText').textContent='⚡ PRÊT';run=true;startTime=performance.now();last=performance.now();raf=requestAnimationFrame(loop)}else $('dashText').textContent=n},450)}function restart(){start(level)}function quit(){run=false;cancelAnimationFrame(raf);$('game').style.display='none';$('app').style.display='flex';refresh();renderAll();tab(tabName==='play'?'play':'home')}function drawHearts(){$('hearts').textContent='♥ '.repeat(Math.max(0,lives))||'♡'}function jump(){if(!run)return;if(player.ground){player.vy=-900-(profile.jump_level||1)*55;player.ground=false}gliding=true}function release(){gliding=false}function doDash(){if(!run||!dashReady)return;dashReady=false;dash=20;player.shield=(profile.dash_level||1)>=6;let q=Number(localStorage.getItem('irDashQuest')||0)+1;localStorage.setItem('irDashQuest',q);toast('⚡ DASH !')}$('jump').onpointerdown=e=>{e.preventDefault();jump()};$('jump').onpointerup=release;$('jump').onpointercancel=release;onkeydown=e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();jump()}if(e.code==='ShiftLeft'||e.code==='ShiftRight')doDash()};onkeyup=e=>{if(e.code==='Space'||e.code==='ArrowUp')release()};function loop(t){if(!run)return;let dt=Math.min(.032,(t-last)/1000);last=t;update(dt);draw();raf=requestAnimationFrame(loop)}function spawnObstacle(){let g=H-120,x=W+80,r=Math.random();if(r<.16)obs.push({t:'spike',x,y:g-44,w:48,h:44});else if(r<.30)obs.push({t:'wall',x,y:g-90,w:50,h:90});else if(r<.44)obs.push({t:'car',x,y:g-42,w:92,h:42});else if(r<.58)obs.push({t:'enemy',x,y:g-70,w:52,h:70});else if(r<.72)obs.push({t:'fly',x,y:H*.22+Math.random()*H*.4,w:58,h:34});else if(r<.86)obs.push({t:'projectile',x,y:H*.35+Math.random()*H*.3,w:35,h:16});else obs.push({t:'gap',x,y:g,w:125,h:30})}function hit(o){if(o.t==='gap')return player.ground&&player.x+player.w*.75>o.x&&player.x+player.w*.25<o.x+o.w;let pad=o.t==='spike'?7:8;return player.x+pad<o.x+o.w&&player.x+player.w-pad>o.x&&player.y+pad<o.y+o.h&&player.y+player.h-5>o.y}function collect(c){let x=Math.max(player.x,Math.min(c.x,player.x+player.w)),y=Math.max(player.y,Math.min(c.y,player.y+player.h));return(x-c.x)**2+(y-c.y)**2<c.r*c.r}function hurt(){if(player.inv>0)return;player.inv=1.2;if(player.shield){toast('🛡️ DASH PROTÈGE !');return}lives--;drawHearts();if(lives<=0)end();else{player.y=H*.3;player.vy=-650;obs=[];toast('❤️ VIE PERDUE')}}
-function update(dt){if(player.inv>0)player.inv-=dt;player.run+=dt;dist+=spd*dt*.064;spd=Math.min(820,390+(profile.distance_level||1)*16+dist*.018+(dash>0?520:0));if(dash>0){dash-=dt;if(dash<=0){dash=0;dashReady=true;player.shield=false}}$('dashText').textContent=dash>0?'⚡ '+Math.ceil(dash)+'s':dashReady?'⚡ PRÊT':'⚡ CHARGE';spawn-=dt;coinSpawn-=dt;if(spawn<=0){spawnObstacle();spawn=Math.max(.48,1.02-dist/9500-Math.random()*.18)}if(coinSpawn<=0){for(let i=0;i<5;i++)cs.push({x:W+50+i*40,y:H*.34+Math.random()*H*.3,r:10});coinSpawn=1.1+Math.random()*.65}let g=H-120;player.vy+=2350*dt;if(gliding&&player.vy>70)player.vy*=Math.pow(.22,dt);player.y+=player.vy*dt;if(player.y+player.h>=g){player.y=g-player.h;player.vy=0;player.ground=true}else player.ground=false;obs.forEach(o=>o.x-=spd*dt);cs.forEach(c=>c.x-=spd*dt);for(let o of obs)if(hit(o)){if((profile.dash_level||1)>=6&&dash>0)o.dead=true;else hurt()}obs=obs.filter(o=>o.x>-180&&!o.dead);cs=cs.filter(c=>c.x>-50&&!c.got);for(let c of cs)if(collect(c)){c.got=true;runCoins+=profile.coin_level||1}if(player.y>H+100)hurt();$('dist').textContent=Math.floor(dist);$('runCoins').textContent=runCoins;if(level&&dist>=420+level*19)finish()}
-function draw(){let bg=profile.selected_background||'city',colors={city:['#06162c','#070914'],forest:['#082d2b','#030c0d'],desert:['#4b2440','#0b0815'],space:['#160b36','#02020a'],dark:['#080812','#000000'],volcano:['#4a100d','#100206'],ice:['#173c55','#020b13']}[bg]||['#06162c','#070914'];let grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,colors[0]);grad.addColorStop(1,colors[1]);ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);let g=H-120;ctx.fillStyle='#04070c';ctx.fillRect(0,g,W,120);ctx.strokeStyle='#00e5ff';ctx.strokeRect(0,g,W,1);for(let x=-(dist*15%150);x<W;x+=150){ctx.fillStyle='#d8fbff55';ctx.fillRect(x,g+42,70,4)}for(let c of cs){if(c.got)continue;ctx.fillStyle='#ffd84a';ctx.shadowBlur=18;ctx.shadowColor='#ffd84a';ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0}for(let o of obs){ctx.fillStyle=o.t==='spike'?'#ff3d6e':o.t==='fly'?'#a14dff':o.t==='projectile'?'#00e5ff':o.t==='car'?'#ff3e63':'#173d68';if(o.t==='spike'){ctx.beginPath();ctx.moveTo(o.x,o.y+o.h);ctx.lineTo(o.x+o.w/2,o.y);ctx.lineTo(o.x+o.w,o.y+o.h);ctx.closePath();ctx.fill()}else if(o.t==='gap'){ctx.fillStyle='#000';ctx.fillRect(o.x,g,o.w,H-g)}else ctx.fillRect(o.x,o.y,o.w,o.h)}ctx.save();ctx.translate(player.x,player.y);if(player.inv>0&&Math.floor(player.inv*10)%2)ctx.globalAlpha=.35;if(player.shield){ctx.strokeStyle='#ffd34e';ctx.lineWidth=4;ctx.beginPath();ctx.arc(23,32,50,0,Math.PI*2);ctx.stroke()}ctx.fillStyle='#111827';ctx.strokeStyle='#00e5ff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(29,18,19,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#0b5bb0';ctx.beginPath();ctx.roundRect(6,36,48,30,12);ctx.fill();ctx.fillStyle='#00e5ff';ctx.fillRect(13,44,30,5);ctx.restore()}
-async function finish(){if(!run)return;run=false;let reward=150+level*12+Math.floor((profile.bonus_level||1)*30);runCoins+=reward;profile.coins+=runCoins;profile.total_distance=(profile.total_distance||0)+Math.floor(dist);profile.best_distance=Math.max(profile.best_distance||0,Math.floor(dist));profile.quest_distance=(profile.quest_distance||0)+Math.floor(dist);profile.quest_coins=(profile.quest_coins||0)+runCoins;profile.quest_games=(profile.quest_games||0)+1;if(level>=profile.highest_level&&level<300)profile.highest_level=level+1;if(level>=300)profile.highest_level=300;await persist();localStorage.setItem('irLevelQuest','1');showEnd(level>=300?'🏆 CHAMPION !':'🏁 NIVEAU '+level+' TERMINÉ !')}async function end(){if(!run)return;run=false;profile.coins+=runCoins;profile.total_distance=(profile.total_distance||0)+Math.floor(dist);profile.best_distance=Math.max(profile.best_distance||0,Math.floor(dist));profile.quest_distance=(profile.quest_distance||0)+Math.floor(dist);profile.quest_coins=(profile.quest_coins||0)+runCoins;profile.quest_games=(profile.quest_games||0)+1;if(!isGuest&&sb)try{await sb.rpc('finish_run',{p_mode:level?'level':'infinite',p_level:level,p_distance:Math.floor(dist),p_coins:runCoins,p_seconds:Math.floor((performance.now()-startTime)/1000)})}catch(e){}await persist();showEnd('RUN TERMINÉ')}function showEnd(title){$('overTitle').textContent=title;$('finalDist').textContent=Math.floor(dist);$('finalCoins').textContent=runCoins;$('finalTime').textContent=Math.floor((performance.now()-startTime)/1000)+'s';$('over').style.display='grid';refresh();renderAll()}
-(async()=>{if(sb){let r=await sb.auth.getSession();if(r.data.session){user=r.data.session.user;let q=await sb.from('profiles').select('*').eq('id',user.id).single();if(!q.error){profile=q.data;await boot()}}}})();</script></body></html>
+  window.IR_CONFIG = {
+    SUPABASE_URL: "https://cgodpoxubzrggyezzvth.supabase.co",
+    SUPABASE_ANON_KEY:
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjZ29kcG94dWJ6cmdneWV6enZ0aCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzg5Mzg4Mzc1LCJleHAiOjIxMDQ5NjQzNzV9.fkA5ih8xU3rIJe7u8p4c0dfiJmzmCmTzUo9md5L4wcU",
+    ADMIN_USERNAME: "Rubansu1",
+  }
+</script>
+<link rel="stylesheet" href="style.css?v=2" />
+</head>
+<body>
+<div id="fx-scanlines"></div>
+<div id="fx-grid"></div>
+
+<!-- ================= LOGIN ================= -->
+<section id="login" class="screen login">
+  <div class="loginbox">
+    <div class="brand">
+      <div class="logo">ILLEGAL<br /><span>RUNNER</span></div>
+      <div class="tagline">// RUN WITHOUT LIMITS</div>
+    </div>
+    <p class="muted">Ultimate Cyber Runner — 7 mondes néon, 300 niveaux, dash, bonus, boutique et classement en ligne.</p>
+    <input id="name" placeholder="Pseudo" maxlength="20" autocomplete="username" />
+    <input id="pass" type="password" placeholder="Mot de passe (6 caractères min.)" autocomplete="current-password" />
+    <div class="row">
+      <button class="primary grow" id="btnLogin">SE CONNECTER</button>
+      <button class="grow" id="btnCreate">CRÉER</button>
+    </div>
+    <div class="mode">
+      <button id="btnGuest" class="mode-card">
+        <b>JOUER EN LOCAL</b>
+        <small>Sauvegarde sur cet appareil. Pas de classement ni d'amis.</small>
+      </button>
+      <button id="btnAccount" class="mode-card pink">
+        <b>MODE COMPTE</b>
+        <small>Cloud : classement, amis et sauvegarde partagée.</small>
+      </button>
+    </div>
+    <div id="err" class="err" role="status" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- ================= APP / MENU ================= -->
+<section id="app" class="app">
+  <header class="top">
+    <b class="brandmini">ILLEGAL <span class="cyan">RUNNER</span><span id="userBadge"></span></b>
+    <div class="stats">
+      <span>🪙 <span id="coins">0</span></span>
+      <span>🏆 <span id="best">0</span>m</span>
+      <span>LV <span id="lv">1</span></span>
+    </div>
+    <div class="topbtns">
+      <button id="btnMute" class="icon" title="Son">🔊</button>
+      <button id="btnLogout" class="icon" title="Déconnexion">↪</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="home">🏠 Accueil</button>
+    <button data-tab="play">🏁 Niveaux</button>
+    <button data-tab="upgrade">⚡ Améliorer</button>
+    <button data-tab="shop">🛒 Boutique</button>
+    <button data-tab="pack">🎁 Packs</button>
+    <button data-tab="world">🌍 Mondes</button>
+    <button data-tab="quests">📋 Quêtes</button>
+    <button data-tab="leader">🏆 Classement</button>
+    <button data-tab="friends">👥 Amis</button>
+    <button data-tab="admin" id="adminTab" style="display:none">🛡️ Admin</button>
+  </nav>
+
+  <main class="content">
+    <div id="home" class="tab active">
+      <div class="panel hero">
+        <div class="hero-copy">
+          <small class="chip">RUSH THE LIMIT</small>
+          <h1>RUN<br /><span class="cyan">FURTHER.</span></h1>
+          <p class="muted">Course infinie, 300 niveaux, 7 mondes, dash à 6 niveaux, bonus, packs et progression persistante.</p>
+          <div class="row">
+            <button class="primary big" id="btnInfinite">▶ INFINI</button>
+            <button class="big" data-goto="play">🏁 NIVEAUX</button>
+          </div>
+        </div>
+        <div class="hero-art">
+          <div class="moon"></div>
+          <div class="sky-city"></div>
+          <div class="fake-runner"></div>
+          <div class="hero-road"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="play" class="tab">
+      <div class="panel">
+        <h2>🏁 NIVEAUX</h2>
+        <p class="muted">Atteins la distance cible pour valider le niveau. Niveau 300 = 👑 CHAMPION !</p>
+        <div class="levels" id="levelButtons"></div>
+      </div>
+    </div>
+
+    <div id="upgrade" class="tab">
+      <div class="panel"><h2>⚡ AMÉLIORATIONS</h2><div class="grid" id="upgradeGrid"></div></div>
+    </div>
+
+    <div id="shop" class="tab">
+      <div class="panel">
+        <h2>🛒 BOUTIQUE</h2>
+        <div class="card highlight">
+          <h3>🎁 PACK STANDARD</h3>
+          <p class="muted">Cadeau de bienvenue — pièces gratuites une fois par jour.</p>
+          <button class="primary" id="btnFreePack">🎁 OUVRIR GRATUITEMENT</button>
+        </div>
+        <div class="grid" id="shopGrid"></div>
+      </div>
+    </div>
+
+    <div id="pack" class="tab">
+      <div class="panel">
+        <h2>🎁 PACKS & COLLECTION</h2>
+        <p class="muted">Ouvre des packs avec tes pièces. Aucun achat en argent réel.</p>
+        <div class="grid" id="packGrid"></div>
+      </div>
+    </div>
+
+    <div id="world" class="tab">
+      <div class="panel"><h2>🌍 MONDES</h2><div class="grid" id="worldGrid"></div></div>
+    </div>
+
+    <div id="quests" class="tab">
+      <div class="panel">
+        <h2>📋 QUÊTES DU JOUR</h2>
+        <div class="grid" id="questGrid"></div>
+        <div class="card" style="margin-top:14px">
+          <h3>🎁 Bonus de connexion</h3>
+          <p id="loginReward" class="muted"></p>
+          <button id="btnClaimLogin">RÉCUPÉRER</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="leader" class="tab">
+      <div class="panel">
+        <h2>🏆 CLASSEMENT</h2>
+        <p class="muted" id="leaderInfo">Top joueurs par meilleure distance.</p>
+        <div id="leaderList" class="leader"></div>
+      </div>
+    </div>
+
+    <div id="friends" class="tab">
+      <div class="panel">
+        <h2>👥 AMIS</h2>
+        <div class="row">
+          <input id="friendName" class="grow" placeholder="Pseudo à ajouter" />
+          <button id="btnAddFriend">AJOUTER</button>
+        </div>
+        <div id="friendList" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <div id="admin" class="tab">
+      <div class="panel">
+        <h2>🛡️ ADMIN</h2>
+        <p class="muted">Console administrateur — <b class="cyan">Rubansu1</b></p>
+        <div class="row">
+          <input id="adminSearch" class="grow" placeholder="Rechercher un pseudo" />
+          <button id="btnAdminSearch">RECHERCHER</button>
+        </div>
+        <div id="adminResults" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </main>
+</section>
+
+<!-- ================= GAME ================= -->
+<section id="game" class="game">
+  <canvas id="c"></canvas>
+
+  <div class="hud">
+    <button id="btnQuit" class="hud-btn">← MENU</button>
+    <div class="hud-center">
+      <div class="hearts" id="hearts">♥</div>
+      <b id="objective">INFINI</b>
+    </div>
+    <div class="hud-right">
+      <span>📏 <span id="dist">0</span>m</span>
+      <span>🪙 <span id="runCoins">0</span></span>
+      <span id="dashText" class="dash-ready">⚡ PRÊT</span>
+    </div>
+  </div>
+
+  <div id="progressWrap" class="progress-wrap"><i id="progressBar"></i></div>
+
+  <div class="controls">
+    <button class="primary" id="btnJump">⬆ SAUT / PLANER</button>
+    <button class="pink" id="btnDash">⚡ DASH</button>
+  </div>
+
+  <div id="countdown" class="countdown"></div>
+
+  <div id="over" class="overlay">
+    <div class="over-card">
+      <div class="over-kicker">RUN TERMINÉ</div>
+      <h2 id="overTitle">TU ES MORT</h2>
+      <div class="results">
+        <div><span>📏</span><b id="finalDist">0</b><small>mètres</small></div>
+        <div><span>🪙</span><b id="finalCoins">0</b><small>pièces</small></div>
+        <div><span>⏱️</span><b id="finalTime">0</b><small>secondes</small></div>
+      </div>
+      <div class="row">
+        <button class="primary grow" id="btnRestart">↻ REJOUER</button>
+        <button class="grow" id="btnOverMenu">MENU</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="game.js?v=2"></script>
+</body>
+</html>
