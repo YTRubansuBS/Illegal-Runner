@@ -93,8 +93,18 @@
     jb.addEventListener("pointercancel", releaseJump)
     $("btnDash").addEventListener("pointerdown", (e) => { e.preventDefault(); dash() })`, `    $("btnDash").addEventListener("pointerdown", (e) => { e.preventDefault(); dash() })`)
 
+      // Fix packs : les boutons ont leur propre handler pour éviter que le listener global du menu bloque l'ouverture.
+      code = code.replace('else if (t.dataset.pack) openPack(t.dataset.pack)', 'else if (t.dataset.pack) { e.preventDefault(); }')
+      code = code.replace('const ext = document.createElement(\'script\'); ext.src = \'customizer.js?v=8\'; document.body.appendChild(ext)', `const packGrid = document.getElementById('packGrid')
+      if (packGrid) packGrid.addEventListener('click', e => {
+        const btn = e.target.closest('button[data-pack]')
+        if (!btn || typeof openPack !== 'function') return
+        e.preventDefault(); e.stopPropagation()
+        openPack(btn.dataset.pack)
+      })
+      const ext = document.createElement('script'); ext.src = 'customizer.js?v=8'; document.body.appendChild(ext)`)
+
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
-      const ext = document.createElement('script'); ext.src = 'customizer.js?v=8'; document.body.appendChild(ext)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
 })()
