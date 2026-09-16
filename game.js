@@ -90,6 +90,69 @@
 `
       )
 
+      // Dash upgrade: 5 levels, from 20s at level 1 to 10s at level 5.
+      code = code.replace(
+        '["dash", "⚡", "Dash", 6, "Niveau 6 = traverse/détruit les obstacles."]',
+        '["dash", "⚡", "Dash", 5, "20s de base → 10s au niveau max. Niveau 5 = traverse les obstacles."]'
+      )
+      code = code.replace(
+        '["dash", "⚡", "Dash", 6, "Niveau 6 = traverse/détruit les obstacles."]',
+        '["dash", "⚡", "Dash", 5, "20s de base → 10s au niveau max. Niveau 5 = traverse les obstacles."]'
+      )
+      code = code.replace(
+        '["dash", "⚡", "Dash", 6, "Niveau 6 = traverse/détruit les obstacles."]',
+        '["dash", "⚡", "Dash", 5, "20s de base → 10s au niveau max. Niveau 5 = traverse les obstacles."]'
+      )
+      code = code.replace(
+        '"Niveau 6 : traverse et détruit les obstacles."',
+        '"Niveau 5 : traverse et détruit les obstacles."'
+      )
+
+      // Dash cooldown: 20s / 17.5s / 15s / 12.5s / 10s.
+      code = code.replace(
+        '  function dash() {\n',
+        `  const getDashCooldown = () => {
+    const level = Math.max(1, Math.min(5, Number(profile.dash_level || 1)))
+    return 20 - (level - 1) * 2.5
+  }
+
+  function dash() {
+`
+      )
+      code = code.replace('    G.dashCd = 1.6', '    G.dashCd = getDashCooldown()')
+
+      // Before max dash upgrade, colliding with an obstacle while dashing kills the run.
+      // At level 5, the dash phases through obstacles and still destroys destructible ones.
+      code = code.replace(
+        `        if (G.dashT > 0 && DESTRUCTIBLE[o.type]) {
+          o.dead = true
+          burst(o.x + o.w / 2, o.y + o.h / 2, G.world.accent, 14)
+          SFX.dash()
+        } else if (G.dashT > 0) {
+          // dash phases through walls/cars: no damage, no destroy
+        } else if (p.inv <= 0) {
+          o.hitDone = true
+          hurt(false)
+        }`,
+        `        const dashMaxed = (profile.dash_level || 1) >= 5
+        if (G.dashT > 0 && dashMaxed && DESTRUCTIBLE[o.type]) {
+          o.dead = true
+          burst(o.x + o.w / 2, o.y + o.h / 2, G.world.accent, 14)
+          SFX.dash()
+        } else if (G.dashT > 0 && dashMaxed) {
+          // Niveau 5 : le dash traverse les obstacles.
+        } else if (G.dashT > 0) {
+          // Avant le niveau max, toucher un obstacle pendant le dash termine le run.
+          o.hitDone = true
+          G.lives = 0
+          drawHearts()
+          end()
+        } else if (p.inv <= 0) {
+          o.hitDone = true
+          hurt(false)
+        }`
+      )
+
       // Keep equipped obstacle set attached to newly spawned obstacles.
       code = code.replace('    void set\n  }', '    if (G.obs.length) G.obs[G.obs.length - 1].set = set\n  }')
       code = code.replace(
@@ -118,7 +181,7 @@
       s.textContent = code
       document.head.appendChild(s)
       const ext = document.createElement('script')
-      ext.src = 'customizer.js?v=7'
+      ext.src = 'customizer.js?v=8'
       document.body.appendChild(ext)
     })
     .catch(err => {
