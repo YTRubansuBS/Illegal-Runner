@@ -89,7 +89,21 @@
       code = code.replace('else if (t.dataset.pack) openPack(t.dataset.pack)', 'else if (t.dataset.pack) { e.preventDefault(); }')
       code = code.replace('const ext = document.createElement(\'script\'); ext.src = \'customizer.js?v=8\'; document.body.appendChild(ext)', `const oldLegacy = document.getElementById('legacyPackBox')
       if (oldLegacy) oldLegacy.style.display = 'none'
-      const ext = document.createElement('script'); ext.src = 'customizer.js?v=9'; document.body.appendChild(ext)`)
+      const ext = document.createElement('script'); ext.src = 'customizer.js?v=10'; document.body.appendChild(ext)`)
+      code = code.replace('    profile = { ...DEFAULTS, ...profile }\n', `    profile = { ...DEFAULTS, ...profile }
+    const todayQuest = new Date().toISOString().slice(0, 10)
+    if (profile.last_quest_reset !== todayQuest) {
+      profile.last_quest_reset = todayQuest
+      profile.quest_distance = 0
+      profile.quest_coins = 0
+      profile.quest_games = 0
+      profile.quest_distance_claimed = false
+      profile.quest_coins_claimed = false
+      profile.quest_games_claimed = false
+      if (isGuest) saveLocal()
+      else if (sb && user) await persist()
+    }
+`)
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
