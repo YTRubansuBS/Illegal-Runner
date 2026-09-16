@@ -76,24 +76,25 @@
           hurt(false)
         }`)
 
-      // Double Saut : niveau 1 = saut normal, niveau 2 = déblocage du double saut pour 5000 pièces.
       code = code.replace('["jump", "⬆️", "Saut", 6, "Hauteur et double-saut renforcés."]', '["jump", "🪽", "Saut", 2, "Niveau 2 : débloque le double saut pour 5000 pièces."]')
-      code = code.replace('lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1, bonus_level: 1,', 'lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1, bonus_level: 1,')
       code = code.replace('const v = profile[id + "_level"] || 1\n      const cost = 100 * v', 'const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[id + "_level"] || 1)\n      const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
       code = code.replace('} else if (G.canDouble) {', '} else if ((profile.jump_level || 1) >= 2 && G.canDouble) {')
       code = code.replace('    const v = profile[key] || 1\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = 100 * v', '    const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[key] || 1)\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
-
-      // Prix des autres améliorations : 100 → 500 → 1000 → 2500 → 5000.
       code = code.replace(/const cost = id === "jump" \? 5000 : 100 \* Math\.max\(1, v\)/g, 'const OTHER_UPGRADE_COSTS = [100, 500, 1000, 2500, 5000]\n      const cost = id === "jump" ? 5000 : OTHER_UPGRADE_COSTS[Math.min(Math.max(0, v - 1), OTHER_UPGRADE_COSTS.length - 1)]')
 
-      // No visible Jump button: canvas click/tap is the jump input; Dash stays visible.
+      // Boutique : aucune amélioration ici. Les 4 améliorations doivent uniquement être dans l'onglet Améliorations.
+      code = code.replace(/  function renderShop\(\) \{[\s\S]*?\n  \}\n(?=\s*function renderPacks)/, `  function renderShop() {
+    const el = $("shopGrid")
+    if (el) el.innerHTML = ""
+  }
+`)
+
       code = code.replace(`    const jb = $("btnJump")
     jb.addEventListener("pointerdown", (e) => { e.preventDefault(); jump() })
     jb.addEventListener("pointerup", releaseJump)
     jb.addEventListener("pointercancel", releaseJump)
     $("btnDash").addEventListener("pointerdown", (e) => { e.preventDefault(); dash() })`, `    $("btnDash").addEventListener("pointerdown", (e) => { e.preventDefault(); dash() })`)
 
-      // Fix packs : les boutons ont leur propre handler pour éviter que le listener global du menu bloque l'ouverture.
       code = code.replace('else if (t.dataset.pack) openPack(t.dataset.pack)', 'else if (t.dataset.pack) { e.preventDefault(); }')
       code = code.replace('const ext = document.createElement(\'script\'); ext.src = \'customizer.js?v=8\'; document.body.appendChild(ext)', `const packGrid = document.getElementById('packGrid')
       if (packGrid) packGrid.addEventListener('click', e => {
