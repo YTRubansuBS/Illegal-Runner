@@ -1,4 +1,4 @@
-/* ILLEGAL RUNNER loader: original engine + live customization + efficient persistence patch. */
+/* ILLEGAL RUNNER loader: original engine + live customization + persistent Supabase progression. */
 (() => {
   const ORIGINAL = 'https://raw.githubusercontent.com/YTRubansuBS/Illegal-Runner/de2f0579d3e51b2b898a9cc3c8c87a1c8e190a26/game.js'
   fetch(ORIGINAL, { cache: 'no-store' })
@@ -13,83 +13,84 @@
         window.addEventListener('ir:profileChanged', e => {
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
           if (typeof refreshTop === 'function') refreshTop()
+          if (typeof renderAll === 'function') renderAll()
         })
         const STEP = 1 / 120 // fixed physics step`
       )
+
+      // One authoritative save at the end of each run: coins + level + distance + quests + history.
       code = code.replace(
+        /  async function commonSave\(\) \{[\s\S]*?\n  \}\n(?=\s*(?:async )?function freePack)/,
         `  async function commonSave() {
-    profile.coins = (profile.coins || 0) + G.coins
-    profile.total_distance = (profile.total_distance || 0) + Math.floor(G.dist)
-    profile.best_distance = Math.max(profile.best_distance || 0, Math.floor(G.dist))
-    profile.quest_distance = (profile.quest_distance || 0) + Math.floor(G.dist)
-    profile.quest_coins = (profile.quest_coins || 0) + G.coins
-    profile.quest_games = (profile.quest_games || 0) + 1
-    if (!isGuest && sb) {
-      try {
-        await sb.rpc("finish_run", {
-          p_mode: G.level ? "level" : "infinite", p_level: G.level,
-          p_distance: Math.floor(G.dist), p_coins: G.coins,
-          p_seconds: Math.floor((performance.now() - G.startTime) / 1000),
-        })
-      } catch (e) {}
-    }
-    await persist()
-  }`,
-        `  async function commonSave() {
-    const distance = Math.floor(G.dist)
+    const distance = Math.floor(G.dist || 0)
+    const runCoins = Math.max(0, Math.floor(G.coins || 0))
+    // A completed level unlocks the next level. Infinite mode never decreases progress.
+    const completedLevel = Number(G.level || 0)
+    if (completedLevel > 0) profile.highest_level = Math.max(profile.highest_level || 1, Math.min(300, completedLevel + 1))
+
     if (isGuest || !sb || !user) {
-      profile.coins = (profile.coins || 0) + G.coins
+      profile.coins = (profile.coins || 0) + runCoins
       profile.total_distance = (profile.total_distance || 0) + distance
       profile.best_distance = Math.max(profile.best_distance || 0, distance)
       profile.quest_distance = (profile.quest_distance || 0) + distance
-      profile.quest_coins = (profile.quest_coins || 0) + G.coins
+      profile.quest_coins = (profile.quest_coins || 0) + runCoins
       profile.quest_games = (profile.quest_games || 0) + 1
-      await persist()
+      saveLocal()
+      refreshTop()
+      renderAll()
       return
     }
+
     try {
-      const r = await sb.rpc("finish_run", {
-        p_mode: G.level ? "level" : "infinite", p_level: G.level,
-        p_distance: distance, p_coins: G.coins,
+      const r = await sb.rpc('finish_run', {
+        p_mode: completedLevel ? 'level' : 'infinite',
+        p_level: completedLevel,
+        p_distance: distance,
+        p_coins: runCoins,
         p_seconds: Math.floor((performance.now() - G.startTime) / 1000),
-        p_highest_level: profile.highest_level || 1,
+        p_highest_level: profile.highest_level || 1
       })
       if (r.error) throw r.error
+      // The database is authoritative: use its returned values immediately in the UI.
       if (r.data) Object.assign(profile, r.data)
       refreshTop()
+      renderAll()
+      window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: r.data || {} }))
     } catch (e) {
-      console.log("[IR] finish_run error:", e.message || e)
-      toast("☁️ Sauvegarde du run impossible.")
+      console.error('[IR] finish_run error:', e)
+      toast('☁️ Sauvegarde du run impossible.')
     }
-  }`
+  }
+`
       )
+
+      // Daily gift: Supabase prevents claiming it twice on the same day.
       code = code.replace(
-        `  function freePack() {
-    const today = new Date().toISOString().slice(0, 10)
-    if (profile._freeToday === today) return toast("Déjà récupéré aujourd'hui.")
-    profile._freeToday = today
-    profile.coins += 75
-    SFX.coin()
-    persist(); toast("🎁 +75 pièces gratuites !")
-  }`,
+        /  function freePack\(\) \{[\s\S]*?\n  \}\n(?=\s*function )/,
         `  async function freePack() {
     const today = new Date().toISOString().slice(0, 10)
     if (isGuest) {
       if (profile._freeToday === today) return toast("Déjà récupéré aujourd'hui.")
       profile._freeToday = today
-      profile.coins += 75
+      profile.coins = (profile.coins || 0) + 75
       SFX.coin()
-      await persist()
-      renderAll()
-      return toast("🎁 +75 pièces gratuites !")
+      saveLocal()
+      refreshTop(); renderAll()
+      return toast('🎁 +75 pièces gratuites !')
     }
-    if (!sb || !user) return toast("Connecte-toi pour utiliser le cloud.")
-    const { data, error } = await sb.rpc("claim_free_pack")
-    if (error) return toast(error.message.includes("Already") ? "Déjà récupéré aujourd'hui." : "❌ Récompense indisponible.")
-    profile.coins = Number(data || profile.coins)
-    refreshTop(); renderAll(); SFX.coin(); toast("🎁 +75 pièces gratuites !")
-  }`
+    if (!sb || !user) return toast('Connecte-toi pour utiliser le cloud.')
+    const { data, error } = await sb.rpc('claim_free_pack')
+    if (error) return toast(String(error.message || '').includes('Already') ? "Déjà récupéré aujourd'hui." : '❌ Récompense indisponible.')
+    profile.coins = Number(data || profile.coins || 0)
+    profile._freeToday = today
+    refreshTop(); renderAll(); SFX.coin()
+    window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: { coins: profile.coins, _freeToday: today } }))
+    toast('🎁 +75 pièces gratuites !')
+  }
+`
       )
+
+      // Keep equipped obstacle set attached to newly spawned obstacles.
       code = code.replace('    void set\n  }', '    if (G.obs.length) G.obs[G.obs.length - 1].set = set\n  }')
       code = code.replace(
         'ctx.fillStyle = "#ff2f7d"; ctx.shadowBlur = 16; ctx.shadowColor = "#ff2f7d"',
@@ -117,7 +118,7 @@
       s.textContent = code
       document.head.appendChild(s)
       const ext = document.createElement('script')
-      ext.src = 'customizer.js?v=6'
+      ext.src = 'customizer.js?v=7'
       document.body.appendChild(ext)
     })
     .catch(err => {
