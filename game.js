@@ -14,7 +14,6 @@
           if (typeof renderAll === 'function') renderAll()
         })
         const STEP = 1 / 120 // fixed physics step`)
-
       code = code.replace(/  async function commonSave\(\) \{[\s\S]*?\n  \}\n(?=\s*(?:async )?function freePack)/, `  async function commonSave() {
     const distance = Math.floor(G.dist || 0), runCoins = Math.max(0, Math.floor(G.coins || 0)), completedLevel = Number(G.level || 0)
     if (completedLevel > 0) profile.highest_level = Math.max(profile.highest_level || 1, Math.min(300, completedLevel + 1))
@@ -32,7 +31,6 @@
     } catch (e) { console.error('[IR] finish_run error:', e); toast('☁️ Sauvegarde du run impossible.') }
   }
 `)
-
       code = code.replace(/  function freePack\(\) \{[\s\S]*?\n  \}\n(?=\s*function )/, `  async function freePack() {
     const today = new Date().toISOString().slice(0, 10)
     if (isGuest) { if (profile._freeToday === today) return toast("Déjà récupéré aujourd'hui."); profile._freeToday = today; profile.coins = (profile.coins || 0) + 75; SFX.coin(); saveLocal(); refreshTop(); renderAll(); return toast('🎁 +75 pièces gratuites !') }
@@ -42,7 +40,6 @@
     profile.coins = Number(data || profile.coins || 0); profile._freeToday = today; refreshTop(); renderAll(); SFX.coin(); window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: { coins: profile.coins, _freeToday: today } })); toast('🎁 +75 pièces gratuites !')
   }
 `)
-
       code = code.replace('["dash", "⚡", "Dash", 6, "Niveau 6 = traverse/détruit les obstacles."]', '["dash", "⚡", "Dash", 5, "20s de base → 10s au niveau max. Niveau 5 = traverse les obstacles."]')
       code = code.replace('"Niveau 6 : traverse et détruit les obstacles."', '"Niveau 5 : traverse et détruit les obstacles."')
       code = code.replace('  function dash() {\n', `  const getDashCooldown = () => { const level = Math.max(1, Math.min(5, Number(profile.dash_level || 1))); return 20 - (level - 1) * 2.5 }
@@ -65,7 +62,6 @@
           burst(o.x + o.w / 2, o.y + o.h / 2, G.world.accent, 14)
           SFX.dash()
         } else if (G.dashT > 0 && dashMaxed) {
-          // Niveau 5 : le dash traverse les obstacles.
         } else if (G.dashT > 0) {
           o.hitDone = true
           G.lives = 0
@@ -75,36 +71,25 @@
           o.hitDone = true
           hurt(false)
         }`)
-
       code = code.replace('["jump", "⬆️", "Saut", 6, "Hauteur et double-saut renforcés."]', '["jump", "🪽", "Saut", 2, "Niveau 2 : débloque le double saut pour 5000 pièces."]')
       code = code.replace('const v = profile[id + "_level"] || 1\n      const cost = 100 * v', 'const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[id + "_level"] || 1)\n      const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
       code = code.replace('} else if (G.canDouble) {', '} else if ((profile.jump_level || 1) >= 2 && G.canDouble) {')
       code = code.replace('    const v = profile[key] || 1\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = 100 * v', '    const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[key] || 1)\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
       code = code.replace(/const cost = id === "jump" \? 5000 : 100 \* Math\.max\(1, v\)/g, 'const OTHER_UPGRADE_COSTS = [100, 500, 1000, 2500, 5000]\n      const cost = id === "jump" ? 5000 : OTHER_UPGRADE_COSTS[Math.min(Math.max(0, v - 1), OTHER_UPGRADE_COSTS.length - 1)]')
-
-      // Boutique : aucune amélioration ici. Les 4 améliorations doivent uniquement être dans l'onglet Améliorations.
       code = code.replace(/  function renderShop\(\) \{[\s\S]*?\n  \}\n(?=\s*function renderPacks)/, `  function renderShop() {
     const el = $("shopGrid")
     if (el) el.innerHTML = ""
   }
 `)
-
       code = code.replace(`    const jb = $("btnJump")
     jb.addEventListener("pointerdown", (e) => { e.preventDefault(); jump() })
     jb.addEventListener("pointerup", releaseJump)
     jb.addEventListener("pointercancel", releaseJump)
     $("btnDash").addEventListener("pointerdown", (e) => { e.preventDefault(); dash() })`, `    $("btnDash").addEventListener("pointerdown", (e) => { e.preventDefault(); dash() })`)
-
       code = code.replace('else if (t.dataset.pack) openPack(t.dataset.pack)', 'else if (t.dataset.pack) { e.preventDefault(); }')
-      code = code.replace('const ext = document.createElement(\'script\'); ext.src = \'customizer.js?v=8\'; document.body.appendChild(ext)', `const packGrid = document.getElementById('packGrid')
-      if (packGrid) packGrid.addEventListener('click', e => {
-        const btn = e.target.closest('button[data-pack]')
-        if (!btn || typeof openPack !== 'function') return
-        e.preventDefault(); e.stopPropagation()
-        openPack(btn.dataset.pack)
-      })
-      const ext = document.createElement('script'); ext.src = 'customizer.js?v=8'; document.body.appendChild(ext)`)
-
+      code = code.replace('const ext = document.createElement(\'script\'); ext.src = \'customizer.js?v=8\'; document.body.appendChild(ext)', `const oldLegacy = document.getElementById('legacyPackBox')
+      if (oldLegacy) oldLegacy.style.display = 'none'
+      const ext = document.createElement('script'); ext.src = 'customizer.js?v=9'; document.body.appendChild(ext)`)
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
