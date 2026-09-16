@@ -76,14 +76,14 @@
           hurt(false)
         }`)
 
-      code = code.replace('["jump", "⬆️", "Saut", 6, "Hauteur et double-saut renforcés."]', '["jump", "🪽", "Double Saut", 5, "Niveau 1 débloque le double saut. Les niveaux suivants renforcent le saut."]')
+      // Double Saut = one single upgrade level, unlocked for 5000 coins.
+      code = code.replace('["jump", "⬆️", "Saut", 6, "Hauteur et double-saut renforcés."]', '["jump", "🪽", "Double Saut", 1, "5000 pièces pour débloquer le double saut."]')
       code = code.replace('lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1, bonus_level: 1,', 'lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 0, coin_level: 1, bonus_level: 1,')
-      code = code.replace('const v = profile[id + "_level"] || 1\n      const cost = 100 * v', 'const v = id === "jump" ? Number(profile.jump_level || 0) : (profile[id + "_level"] || 1)\n      const cost = 100 * Math.max(1, v)')
-      code = code.replace('if (G.player.ground) {\n      G.player.vy = -power', 'if (G.player.ground) {\n      G.player.vy = -power')
+      code = code.replace('const v = profile[id + "_level"] || 1\n      const cost = 100 * v', 'const v = id === "jump" ? Number(profile.jump_level || 0) : (profile[id + "_level"] || 1)\n      const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
       code = code.replace('} else if (G.canDouble) {', '} else if ((profile.jump_level || 0) >= 1 && G.canDouble) {')
 
-      // First Double Saut purchase costs 100; following levels use the normal 100 x current level formula.
-      code = code.replace('    const v = profile[key] || 1\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = 100 * v', '    const v = id === "jump" ? Number(profile.jump_level || 0) : (profile[key] || 1)\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = 100 * Math.max(1, v)')
+      // Double Saut purchase: exactly one level at 5000 coins.
+      code = code.replace('    const v = profile[key] || 1\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = 100 * v', '    const v = id === "jump" ? Number(profile.jump_level || 0) : (profile[key] || 1)\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
 
       // No visible Jump button: canvas click/tap is the jump input; Dash stays visible.
       code = code.replace(`    const jb = $("btnJump")
