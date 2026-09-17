@@ -86,8 +86,8 @@
     const progress = getProgress()
     const running = getComputedStyle(game).display !== 'none' && (!over || getComputedStyle(over).display === 'none')
 
-    // It is an actual in-course finish marker: it starts far ahead and travels
-    // toward the player's position as the player approaches the end.
+    // The flag is only a visual marker; the real engine still decides when the
+    // level is finished using its exact distance goal. This keeps gameplay intact.
     if (!running || !level || progress < 0.50 || progress >= 1) {
       marker.style.display = 'none'
       marker.classList.remove('near')
@@ -95,10 +95,13 @@
     }
 
     const p = Math.max(0, Math.min(1, (progress - 0.50) / 0.50))
-    // Player is roughly on the left side of the course. At 100% the flag reaches
-    // the player's lane, so the player visibly passes it when the level completes.
-    const xPercent = 92 - (p * 73)
-    marker.style.left = `${Math.max(18, xPercent)}vw`
+    const startX = window.innerWidth * 0.92
+    // The original runner starts around 20vw (minimum 80px). At 100% progress,
+    // the flag reaches exactly the player's horizontal lane, so the existing
+    // engine's finish screen appears as the player reaches/passes the flag.
+    const playerX = Math.max(80, window.innerWidth * 0.20)
+    const x = startX + (playerX - startX) * Math.pow(p, 1.7)
+    marker.style.left = `${x}px`
     marker.style.bottom = `${Math.max(88, Math.min(132, window.innerHeight * 0.16))}px`
     marker.style.display = 'block'
     marker.classList.toggle('near', p > 0.82)
