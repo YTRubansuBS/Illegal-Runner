@@ -1,8 +1,8 @@
 (() => {
   'use strict'
 
-  // Isolated add-on: puts the finish flag in the RUN HUD and keeps the existing
-  // game engine untouched. The flag is only visible during a level run.
+  // Isolated add-on: shows a real in-run finish marker ahead of the player.
+  // It does not modify game.js or any gameplay controls.
   const $ = (id) => document.getElementById(id)
   let handled = false
 
@@ -11,8 +11,11 @@
     const s = document.createElement('style')
     s.id = 'levelFinishAddonStyle'
     s.textContent = `
-      #levelFinishRunMarker { position:absolute; right:-7px; top:-34px; z-index:12; font-size:28px; line-height:1; filter:drop-shadow(0 0 8px rgba(0,229,255,.8)); pointer-events:none; display:none; }
-      #progressWrap { position:relative; }
+      #levelFinishCourseFlag { position:absolute; left:90vw; bottom:112px; width:54px; height:112px; z-index:6; pointer-events:none; display:none; filter:drop-shadow(0 0 10px rgba(0,229,255,.55)); transform:translateX(-50%); }
+      #levelFinishCourseFlag .pole { position:absolute; left:25px; bottom:0; width:5px; height:100px; border-radius:4px; background:linear-gradient(#eafcff,#00e5ff 45%,#1677a0); box-shadow:0 0 9px rgba(0,229,255,.8); }
+      #levelFinishCourseFlag .flag { position:absolute; left:29px; top:5px; width:48px; height:31px; border-radius:2px 8px 8px 2px; background:linear-gradient(135deg,#00e5ff,#7df8ff 48%,#008bb8); clip-path:polygon(0 0,100% 0,78% 50%,100% 100%,0 100%); box-shadow:0 0 12px rgba(0,229,255,.8); }
+      #levelFinishCourseFlag .flag:after { content:'IR'; position:absolute; inset:0; display:grid; place-items:center; color:#00141c; font:900 11px/1 Inter,Arial,sans-serif; }
+      #levelFinishCourseFlag .base { position:absolute; left:14px; bottom:0; width:27px; height:7px; border-radius:50%; background:#00e5ff; box-shadow:0 0 12px rgba(0,229,255,.9); }
       #levelFinishReward { margin:10px 0 0; padding:9px 12px; border-radius:12px; background:rgba(0,229,255,.10); border:1px solid rgba(0,229,255,.25); }
       #btnNextLevel { margin-top:10px; }
     `
@@ -25,18 +28,46 @@
     return m ? Number(m[1]) : 0
   }
 
-  function ensureRunFlag() {
+  function getProgress() {
+    const bar = $('progressBar')
+    if (bar) {
+      const w = parseFloat(bar.style.width)
+      if (Number.isFinite(w)) return Math.max(0, Math.min(1, w / 100))
+    }
+    const dist = Number($('dist')?.textContent || 0)
+    const objective = String($('objective')?.textContent || '')
+    const nums = objective.match(/\d+(?:[.,]\d+)?/g)?.map(v => Number(v.replace(',', '.'))) || []
+    const goal = nums.filter(v => v > 100).pop()
+    return goal > 0 ? Math.max(0, Math.min(1, dist / goal)) : 0
+  }
+
+  function ensureCourseFlag() {
     addStyle()
-    const wrap = $('progressWrap')
-    if (!wrap) return
-    let marker = $('levelFinishRunMarker')
+    const game = $('game')
+    if (!game) return
+    let marker = $('levelFinishCourseFlag')
     if (!marker) {
       marker = document.createElement('div')
-      marker.id = 'levelFinishRunMarker'
-      marker.textContent = '🚩'
-      wrap.appendChild(marker)
+      marker.id = 'levelFinishCourseFlag'
+      marker.innerHTML = '<div class="flag"></div><div class="pole"></div><div class="base"></div>'
+      game.appendChild(marker)
     }
-    marker.style.display = getRunLevel() > 0 ? 'block' : 'none'
+
+    const level = getRunLevel()
+    const progress = getProgress()
+    const running = getComputedStyle(game).display !== 'none' && getComputedStyle($('over') || game).display === 'none'
+    if (!running || !level || progress < 0.72) {
+      marker.style.display = 'none'
+      return
+    }
+
+    // The closer the player gets to the end, the closer the finish flag appears,
+    // exactly like an upcoming finish marker inside the course.
+    const p = Math.max(0, Math.min(1, (progress - 0.72) / 0.28))
+    const x = window.innerWidth * (0.94 - p * 0.40)
+    marker.style.left = `${Math.max(110, x)}px`
+    marker.style.bottom = `${Math.max(104, Math.min(145, window.innerHeight * 0.17))}px`
+    marker.style.display = 'block'
   }
 
   function getCurrentLevel() {
@@ -146,12 +177,12 @@
 
   function startObserver() {
     addStyle()
-    ensureRunFlag()
+    ensureCourseFlag()
     const over = $('over')
-    if (over) new MutationObserver(() => { ensureRunFlag(); setTimeout(inspectEnd, 0) }).observe(over, { attributes:true, childList:true, subtree:true })
+    if (over) new MutationObserver(() => { ensureCourseFlag(); setTimeout(inspectEnd, 0) }).observe(over, { attributes:true, childList:true, subtree:true })
     const game = $('game')
-    if (game) new MutationObserver(ensureRunFlag).observe(game, { attributes:true, childList:true, subtree:true })
-    setInterval(ensureRunFlag, 500)
+    if (game) new MutationObserver(ensureCourseFlag).observe(game, { attributes:true, childList:true, subtree:true })
+    setInterval(ensureCourseFlag, 200)
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObserver)
