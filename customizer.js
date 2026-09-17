@@ -6,7 +6,8 @@
   }
   const CHARS = {runner:{emoji:'🧑',name:'RUNNER'},ninja:{emoji:'🥷',name:'NINJA'},robot:{emoji:'🤖',name:'ROBOT'},ghost:{emoji:'👻',name:'GHOST'},cyber:{emoji:'🦾',name:'CYBER'}}
   const OBS = {classic:{emoji:'🔺',name:'CLASSIC'},tech:{emoji:'🧱',name:'TECH'},drone:{emoji:'🚁',name:'DRONES'},energy:{emoji:'⚡',name:'ENERGY'},chaos:{emoji:'☠️',name:'CHAOS'}}
-  const COSTS={world:250,character:200,obstacle:180,reward:300}
+  const COSTS={world:1000,character:1000,obstacle:1000,reward:500}
+  const REWARD_MIN=200, REWARD_MAX=850
   const cfg=window.IR_CONFIG||{}
   const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
   let cloudUser=null,cloudInventory=null,buying=false
@@ -55,6 +56,22 @@
       if(!error)notifyCustomization(type,id)
     }
   }
+  function showPackResult(html,good=true){
+    const root=$('customPacks');if(!root)return
+    let box=$('packResult')
+    if(!box){box=document.createElement('div');box.id='packResult';root.appendChild(box)}
+    box.style.display='block'
+    box.style.marginTop='14px'
+    box.style.padding='18px'
+    box.style.border='1px solid #00e5ff'
+    box.style.borderRadius='14px'
+    box.style.background='linear-gradient(135deg, rgba(0,229,255,.16), rgba(4,7,12,.92))'
+    box.style.boxShadow='0 0 24px rgba(0,229,255,.22)'
+    box.style.textAlign='center'
+    box.innerHTML=`<div style="font-size:12px;letter-spacing:1px;color:#8fe9ff;margin-bottom:8px">${good?'PACK OUVERT':'ACHAT IMPOSSIBLE'}</div>${html}`
+    box.scrollIntoView({behavior:'smooth',block:'nearest'})
+  }
+  function packName(type){return type==='world'?'PACK MONDE':type==='character'?'PACK PERSONNAGE':type==='obstacle'?'PACK OBSTACLES':'PACK RÉCOMPENSE'}
   async function buyPack(type){
     if(buying)return
     buying=true
@@ -62,41 +79,63 @@
       const cost=COSTS[type]
       if(guestMode()){
         const p=localProfile();p.coins=p.coins|0
-        if(p.coins<cost)return toast('Pas assez de pièces.')
+        if(p.coins<cost){showPackResult(`<b>${packName(type)}</b><br><span class="muted">Il te faut <b>${cost.toLocaleString('fr-FR')} 🪙</b>.</span>`,false);return toast('Pas assez de pièces.')}
         if(type==='reward'){
-          const r=100+Math.floor(Math.random()*651);p.coins-=cost;p.coins+=r;saveLocal(p);refreshCoins(p.coins);notifyProfile(p);toast('💎 Récompense reçue : +'+r+' pièces !');await renderCustomizer();return
+          const r=REWARD_MIN+Math.floor(Math.random()*(REWARD_MAX-REWARD_MIN+1))
+          p.coins-=cost;p.coins+=r;saveLocal(p);refreshCoins(p.coins);notifyProfile(p)
+          showPackResult(`<div style="font-size:25px">💎</div><h3>+${r.toLocaleString('fr-FR')} 🪙</h3><span class="muted">Tu as gagné entre 200 et 850 pièces.</span>`)
+          toast('💎 Récompense reçue : +'+r+' pièces !');return
         }
         const list=type==='world'?Object.keys(WORLDS):type==='character'?Object.keys(CHARS):Object.keys(OBS)
         const key=type==='world'?'owned_worlds':type==='character'?'owned_characters':'owned_obstacles'
         const def=type==='world'?'city':type==='character'?'runner':'classic'
         const arr=p[key]||[def]
         const locked=list.filter(x=>!arr.includes(x))
-        if(!locked.length)return toast('🎉 Tout est déjà débloqué !')
+        if(!locked.length){showPackResult(`<b>${packName(type)}</b><br><span class="muted">Tout est déjà débloqué !</span>`,false);return toast('🎉 Tout est déjà débloqué !')}
         const id=locked[Math.floor(Math.random()*locked.length)]
         p.coins-=cost;p[key]=[...new Set([...arr,id])]
         if(type==='world')p.selected_background=id
         if(type==='character')p.selected_character=id
         if(type==='obstacle')p.selected_obstacle_set=id
         saveLocal(p);refreshCoins(p.coins);notifyProfile(p);notifyCustomization(type,id)
-        toast('🎁 '+(type==='world'?'Monde':type==='character'?'Personnage':'Obstacles')+' débloqué et équipé : '+(type==='world'?WORLDS[id].name:type==='character'?CHARS[id].name:OBS[id].name))
+        const label=type==='world'?WORLDS[id]:type==='character'?CHARS[id]:OBS[id]
+        showPackResult(`<div style="font-size:25px">${label.emoji}</div><h3>${label.name}</h3><span class="muted">Débloqué et équipé !</span>`)
+        toast('🎁 '+(type==='world'?'Monde':type==='character'?'Personnage':'Obstacles')+' obtenu : '+label.name)
         await renderCustomizer();return
       }
-      if(!sb)return toast('Cloud indisponible.')
-      const {data:{user}}=await sb.auth.getUser();if(!user)return toast('Reconnecte-toi.')
-      const {data,error}=await sb.rpc('buy_pack',{p_type:type})
-      if(error)return toast(error.message.includes('Not enough')?'Pas assez de pièces.':error.message.includes('Everything')?'🎉 Tout est déjà débloqué !':'❌ Achat impossible.')
-      const reward=Number(data?.reward||0)
-      const id=data?.item_id||null
-      if(reward)toast('💎 Récompense reçue : +'+reward+' pièces !')
-      else if(id){
-        const label=type==='world'?WORLDS[id].name:type==='character'?CHARS[id].name:OBS[id].name
-        await getCloud()
-        await autoEquip(type,id,{})
-        toast('🎁 '+(type==='world'?'Monde':type==='character'?'Personnage':'Obstacles')+' débloqué et équipé : '+label)
+      if(!sb)return showPackResult(`<b>Cloud indisponible.</b><br><span class="muted">Utilise le mode local ou reconnecte ton compte.</span>`,false)
+      const {data:{user}}=await sb.auth.getUser();if(!user)return showPackResult(`<b>Reconnecte-toi pour acheter un pack.</b>`,false)
+      const profQ=await sb.from('profiles').select('coins').eq('id',user.id).single()
+      if(profQ.error||!profQ.data)return showPackResult(`<b>Impossible de lire tes pièces.</b>`,false)
+      const currentCoins=Number(profQ.data.coins||0)
+      if(currentCoins<cost){showPackResult(`<b>${packName(type)}</b><br><span class="muted">Il te faut <b>${cost.toLocaleString('fr-FR')} 🪙</b>.</span>`,false);return toast('Pas assez de pièces.')}
+      if(type==='reward'){
+        const r=REWARD_MIN+Math.floor(Math.random()*(REWARD_MAX-REWARD_MIN+1))
+        const nextCoins=currentCoins-cost+r
+        const {error}=await sb.from('profiles').update({coins:nextCoins}).eq('id',user.id)
+        if(error){showPackResult(`<b>Achat impossible.</b><br><span class="muted">${error.message||'Erreur Supabase.'}</span>`,false);return toast('❌ Achat impossible.')}
+        refreshCoins(nextCoins);notifyProfile({coins:nextCoins})
+        showPackResult(`<div style="font-size:25px">💎</div><h3>+${r.toLocaleString('fr-FR')} 🪙</h3><span class="muted">Récompense obtenue !</span>`)
+        toast('💎 Récompense reçue : +'+r+' pièces !');return
       }
-      const {data:prof}=await sb.from('profiles').select('coins').eq('id',user.id).single()
-      if(prof){refreshCoins(prof.coins);notifyProfile({coins:prof.coins})}
-      await getCloud();await renderCustomizer();return
+      await getCloud()
+      const list=type==='world'?Object.keys(WORLDS):type==='character'?Object.keys(CHARS):Object.keys(OBS)
+      const map={world:'background',character:'character',obstacle:'obstacle'}
+      const key=type==='world'?'world':type==='character'?'character':'obstacle'
+      const locked=list.filter(id=>!cloudOwned(type,id))
+      if(!locked.length){showPackResult(`<b>${packName(type)}</b><br><span class="muted">Tout est déjà débloqué !</span>`,false);return toast('🎉 Tout est déjà débloqué !')}
+      const id=locked[Math.floor(Math.random()*locked.length)]
+      const nextCoins=currentCoins-cost
+      const {error:coinError}=await sb.from('profiles').update({coins:nextCoins}).eq('id',user.id)
+      if(coinError){showPackResult(`<b>Achat impossible.</b><br><span class="muted">${coinError.message||'Impossible de modifier tes pièces.'}</span>`,false);return toast('❌ Achat impossible.')}
+      const {error:invError}=await sb.from('inventory').insert({user_id:user.id,item_type:map[type],item_id:id})
+      if(invError){await sb.from('profiles').update({coins:currentCoins}).eq('id',user.id);showPackResult(`<b>Achat impossible.</b><br><span class="muted">${invError.message||'Impossible d’enregistrer le gain.'}</span>`,false);return toast('❌ Achat impossible.')}
+      refreshCoins(nextCoins);notifyProfile({coins:nextCoins})
+      await getCloud();await autoEquip(type,id,{})
+      const label=type==='world'?WORLDS[id]:type==='character'?CHARS[id]:OBS[id]
+      showPackResult(`<div style="font-size:25px">${label.emoji}</div><h3>${label.name}</h3><span class="muted">Débloqué et équipé !</span>`)
+      toast('🎁 '+(type==='world'?'Monde':type==='character'?'Personnage':'Obstacles')+' obtenu : '+label.name)
+      await renderCustomizer();return
     }finally{buying=false}
   }
   const card=html=>`<div class="card">${html}</div>`
@@ -104,12 +143,13 @@
     const shop=$('shop');if(!shop)return
     let root=$('customPacks');if(!root){root=document.createElement('div');root.id='customPacks';shop.querySelector('.panel')?.appendChild(root)}
     $('shopGrid')?.style.setProperty('display','none')
-    root.innerHTML=`<div class="pack-shop-title"><h3>🎁 PACKS</h3><p class="muted">Ouvre un pack avec tes pièces : l'objet gagné est automatiquement équipé.</p></div><div class="grid pack-grid-fixed">
-      ${card('<div class="emoji">🌍</div><h3>PACK MONDE</h3><p class="muted">Débloque un monde aléatoire.</p><button class="primary pack-buy" data-pack="world" type="button">🎁 250 🪙</button>')}
-      ${card('<div class="emoji">🧑</div><h3>PACK PERSONNAGE</h3><p class="muted">Débloque un personnage aléatoire.</p><button class="primary pack-buy" data-pack="character" type="button">🎁 200 🪙</button>')}
-      ${card('<div class="emoji">🔺</div><h3>PACK OBSTACLES</h3><p class="muted">Débloque un style d’obstacles aléatoire.</p><button class="primary pack-buy" data-pack="obstacle" type="button">🎁 180 🪙</button>')}
-      ${card('<div class="emoji">💎</div><h3>PACK RÉCOMPENSE</h3><p class="muted">Récompense aléatoire : <b>100 à 750 🪙</b>.</p><button class="pack-buy" data-pack="reward" type="button">🎁 300 🪙</button>')}
-    </div>`
+    const standard=$('btnFreePack')?.closest('.card');if(standard)standard.style.display='none'
+    root.innerHTML=`<div class="pack-shop-title"><h3>🎁 PACKS</h3><p class="muted">Choisis un pack et achète-le avec tes pièces.</p></div><div class="grid pack-grid-fixed">
+      ${card('<div class="emoji">🌍</div><h3>PACK MONDE</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="world" type="button">ACHETER</button>')}
+      ${card('<div class="emoji">🧑</div><h3>PACK PERSONNAGE</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="character" type="button">ACHETER</button>')}
+      ${card('<div class="emoji">🔺</div><h3>PACK OBSTACLES</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="obstacle" type="button">ACHETER</button>')}
+      ${card('<div class="emoji">💎</div><h3>PACK RÉCOMPENSE</h3><p><b>🪙 500</b></p><button class="pack-buy" data-pack="reward" type="button">ACHETER</button>')}
+    </div><div id="packResult" class="card" style="display:none"></div>`
     root.querySelectorAll('.pack-buy').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();buyPack(btn.dataset.pack)}))
     root.querySelectorAll('.card').forEach(c=>{c.style.animation='none';c.style.transition='none'})
   }
