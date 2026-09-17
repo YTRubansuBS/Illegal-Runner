@@ -1,12 +1,23 @@
 (() => {
   'use strict'
 
-  // Isolated finish-marker add-on. The runner engine and controls stay untouched.
+  /*
+   * ILLEGAL RUNNER — Level Finish Add-on
+   *
+   * IMPORTANT:
+   * - This file does NOT replace or modify the runner engine.
+   * - It never waits for Supabase before showing the finish screen.
+   * - It uses the already loaded game/profile state when available.
+   * - It safely resets itself between runs so every level can finish normally.
+   */
+
   const $ = (id) => document.getElementById(id)
-  let handled = false
+  let handledRun = false
+  let lastOverState = false
 
   function addStyle() {
     if ($('levelFinishAddonStyle')) return
+
     const s = document.createElement('style')
     s.id = 'levelFinishAddonStyle'
     s.textContent = `
@@ -36,18 +47,41 @@
         position:absolute; left:13px; bottom:0; width:29px; height:8px;
         border-radius:50%; background:#00e5ff; box-shadow:0 0 12px rgba(0,229,255,.9);
       }
-      #levelFinishCourseFlag.near .flag { animation: irFinishWave .45s ease-in-out infinite alternate; }
-      @keyframes irFinishWave { from { transform:skewY(-2deg) } to { transform:skewY(4deg) } }
-      #levelFinishReward { margin:10px 0 0; padding:9px 12px; border-radius:12px; background:rgba(0,229,255,.10); border:1px solid rgba(0,229,255,.25); }
+      #levelFinishCourseFlag.near .flag {
+        animation:irFinishWave .45s ease-in-out infinite alternate;
+      }
+      @keyframes irFinishWave {
+        from { transform:skewY(-2deg) }
+        to { transform:skewY(4deg) }
+      }
+      #levelFinishReward {
+        margin:10px 0 0;
+        padding:9px 12px;
+        border-radius:12px;
+        background:rgba(0,229,255,.10);
+        border:1px solid rgba(0,229,255,.25);
+      }
       #btnNextLevel { margin-top:10px; }
     `
     document.head.appendChild(s)
   }
 
   function getRunLevel() {
-    const text = String($('objective')?.textContent || '')
-    const m = text.match(/NIVEAU\s+(\d+)/i)
+    const objective = String($('objective')?.textContent || '')
+    const m = objective.match(/NIVEAU\s+(\d+)/i)
     return m ? Number(m[1]) : 0
+  }
+
+  function getCurrentLevel() {
+    const title = String($('overTitle')?.textContent || '')
+    const titleMatch = title.match(/NIVEAU\s+(\d+)/i)
+    if (titleMatch) return Number(titleMatch[1])
+
+    const objectiveLevel = getRunLevel()
+    if (objectiveLevel) return objectiveLevel
+
+    if (/CHAMPION/i.test(title)) return 300
+    return 0
   }
 
   function getProgress() {
@@ -55,12 +89,14 @@
     if (bar) {
       const inline = parseFloat(bar.style.width)
       if (Number.isFinite(inline)) return Math.max(0, Math.min(1, inline / 100))
+
       const computed = parseFloat(getComputedStyle(bar).width)
       const parent = parseFloat(getComputedStyle(bar.parentElement || bar).width)
       if (Number.isFinite(computed) && Number.isFinite(parent) && parent > 0) {
         return Math.max(0, Math.min(1, computed / parent))
       }
     }
+
     const dist = Number(String($('dist')?.textContent || '0').replace(/[^0-9.]/g, '')) || 0
     const objective = String($('objective')?.textContent || '')
     const m = objective.match(/(?:\/|de|sur)?\s*(\d+(?:[.,]\d+)?)\s*m\b/i)
@@ -68,10 +104,20 @@
     return goal > 0 ? Math.max(0, Math.min(1, dist / goal)) : 0
   }
 
-  function ensureCourseFlag() {
-    addStyle()
+  function isGameRunning() {
     const game = $('game')
     const over = $('over')
+    if (!game) return false
+
+    const gameVisible = getComputedStyle(game).display !== 'none'
+    const overVisible = over && getComputedStyle(over).display !== 'none'
+    return gameVisible && !overVisible
+  }
+
+  function ensureCourseFlag() {
+    addStyle()
+
+    const game = $('game')
     if (!game) return
 
     let marker = $('levelFinishCourseFlag')
@@ -84,11 +130,8 @@
 
     const level = getRunLevel()
     const progress = getProgress()
-    const running = getComputedStyle(game).display !== 'none' && (!over || getComputedStyle(over).display === 'none')
 
-    // The flag is only a visual marker; the real engine still decides when the
-    // level is finished using its exact distance goal. This keeps gameplay intact.
-    if (!running || !level || progress < 0.50 || progress >= 1) {
+    if (!isGameRunning() || !level || progress < 0.50 || progress >= 1) {
       marker.style.display = 'none'
       marker.classList.remove('near')
       return
@@ -96,76 +139,33 @@
 
     const p = Math.max(0, Math.min(1, (progress - 0.50) / 0.50))
     const startX = window.innerWidth * 0.92
-    // The original runner starts around 20vw (minimum 80px). At 100% progress,
-    // the flag reaches exactly the player's horizontal lane, so the existing
-    // engine's finish screen appears as the player reaches/passes the flag.
     const playerX = Math.max(80, window.innerWidth * 0.20)
     const x = startX + (playerX - startX) * Math.pow(p, 1.7)
+
     marker.style.left = `${x}px`
     marker.style.bottom = `${Math.max(88, Math.min(132, window.innerHeight * 0.16))}px`
     marker.style.display = 'block'
     marker.classList.toggle('near', p > 0.82)
   }
 
-  function getCurrentLevel() {
-    const title = String($('overTitle')?.textContent || '')
-    const m = title.match(/NIVEAU\s+(\d+)/i)
-    if (m) return Number(m[1])
-    if (/CHAMPION/i.test(title)) return 300
-    return 0
-  }
+  function getCollectedCoins() {
+    const finalText = String($('finalCoins')?.textContent || '')
+    const finalCoins = Number(finalText.replace(/[^0-9.-]/g, '')) || 0
 
-  async function getBonusLevel() {
-    try {
-      const local = JSON.parse(localStorage.getItem('irGuest') || '{}')
-      if (local && Number(local.bonus_level)) return Number(local.bonus_level)
-    } catch (_) {}
-    try {
-      const cfg = window.IR_CONFIG || {}
-      if (!window.supabase || !String(cfg.SUPABASE_URL || '').startsWith('http')) return 1
-      const client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY)
-      const session = await client.auth.getSession()
-      const id = session?.data?.session?.user?.id
-      if (!id) return 1
-      const r = await client.from('profiles').select('bonus_level').eq('id', id).single()
-      return Number(r?.data?.bonus_level || 1)
-    } catch (_) { return 1 }
-  }
-
-  async function correctReward(level) {
-    const bonusLevel = await getBonusLevel()
-    const oldReward = 150 + level * 12 + bonusLevel * 30
-    const delta = 100 - oldReward
-    if (!Number.isFinite(delta) || delta === 0) return
-    try {
-      let local = null
-      try { local = JSON.parse(localStorage.getItem('irGuest') || 'null') } catch (_) {}
-      if (local && typeof local === 'object') {
-        local.coins = Math.max(0, Number(local.coins || 0) + delta)
-        localStorage.setItem('irGuest', JSON.stringify(local))
-        if ($('coins')) $('coins').textContent = local.coins
-        return
-      }
-      const cfg = window.IR_CONFIG || {}
-      if (!window.supabase || !String(cfg.SUPABASE_URL || '').startsWith('http')) return
-      const client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY)
-      const session = await client.auth.getSession()
-      const id = session?.data?.session?.user?.id
-      if (!id) return
-      const current = await client.from('profiles').select('coins').eq('id', id).single()
-      if (current.error) return
-      const next = Math.max(0, Number(current.data?.coins || 0) + delta)
-      await client.from('profiles').update({ coins: next }).eq('id', id)
-      if ($('coins')) $('coins').textContent = next
-    } catch (_) {}
+    /*
+     * The main engine owns the real reward/save system. We therefore never
+     * rewrite profile.coins or call Supabase here. The finish add-on only
+     * displays the collected amount and the fixed level reward.
+     */
+    return Math.max(0, Math.floor(finalCoins))
   }
 
   function ensureFinishUI(level, collected) {
+    const over = $('over')
     const card = document.querySelector('#over .over-card')
-    if (!card) return
+    if (!over || !card || getComputedStyle(over).display === 'none') return
+
     addStyle()
-    const oldFlag = $('levelFinishFlag')
-    if (oldFlag) oldFlag.remove()
 
     let reward = $('levelFinishReward')
     if (!reward) {
@@ -173,9 +173,11 @@
       reward.id = 'levelFinishReward'
       card.appendChild(reward)
     }
-    reward.innerHTML = `🎉 Récompense de fin : <b>100 🪙 + ${Math.max(0, collected)} 🪙 ramassées</b>`
+
+    reward.innerHTML = `🎉 Récompense du niveau : <b>100 🪙</b><br>🪙 Pièces ramassées : <b>${Math.max(0, collected)}</b>`
 
     let next = $('btnNextLevel')
+
     if (level < 300) {
       if (!next) {
         next = document.createElement('button')
@@ -183,45 +185,113 @@
         next.className = 'primary'
         next.type = 'button'
         next.textContent = '➡️ NIVEAU SUIVANT'
+
         const row = card.querySelector('.row')
         if (row) row.insertBefore(next, row.firstChild)
         else card.appendChild(next)
       }
-      next.onclick = () => {
+
+      next.style.display = ''
+      next.onclick = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+
         const nextLevel = level + 1
         const btn = document.querySelector(`#levelButtons button[data-level="${nextLevel}"]`)
-        if (btn && !btn.disabled) btn.click()
+
+        if (!btn || btn.disabled) {
+          console.warn('[IR] Niveau suivant indisponible:', nextLevel)
+          return
+        }
+
+        // Let the existing engine handle level loading/startup.
+        btn.click()
       }
-      next.style.display = ''
-    } else if (next) next.style.display = 'none'
+    } else if (next) {
+      next.style.display = 'none'
+    }
   }
 
-  async function inspectEnd() {
+  function resetFinishStateIfNeeded() {
     const over = $('over')
-    if (!over || getComputedStyle(over).display === 'none') return
+    const visible = !!over && getComputedStyle(over).display !== 'none'
+
+    if (!visible && lastOverState) {
+      handledRun = false
+
+      const reward = $('levelFinishReward')
+      if (reward) reward.remove()
+
+      const next = $('btnNextLevel')
+      if (next) next.remove()
+    }
+
+    lastOverState = visible
+  }
+
+  function inspectEnd() {
+    const over = $('over')
+    if (!over || getComputedStyle(over).display === 'none') {
+      resetFinishStateIfNeeded()
+      return
+    }
+
+    if (handledRun) return
+
     const level = getCurrentLevel()
-    if (!level) { handled = false; return }
-    if (handled) return
-    handled = true
-    const finalBefore = Number($('finalCoins')?.textContent || 0)
-    const bonusLevel = await getBonusLevel()
-    const oldReward = 150 + level * 12 + bonusLevel * 30
-    const collected = Math.max(0, finalBefore - oldReward)
-    if ($('finalCoins')) $('finalCoins').textContent = collected + 100
-    await correctReward(level)
+    if (!level) return
+
+    /* Mark handled BEFORE changing the DOM to avoid MutationObserver loops. */
+    handledRun = true
+    lastOverState = true
+
+    const collected = getCollectedCoins()
+
+    // IMPORTANT: show the finish UI immediately. No network request can freeze it.
     ensureFinishUI(level, collected)
   }
 
   function startObserver() {
     addStyle()
     ensureCourseFlag()
+    inspectEnd()
+
     const over = $('over')
-    if (over) new MutationObserver(() => { ensureCourseFlag(); setTimeout(inspectEnd, 0) }).observe(over, { attributes:true, childList:true, subtree:true })
+    if (over) {
+      new MutationObserver(() => {
+        resetFinishStateIfNeeded()
+        ensureCourseFlag()
+        setTimeout(inspectEnd, 0)
+      }).observe(over, {
+        attributes: true,
+        childList: true,
+        subtree: true
+      })
+    }
+
     const game = $('game')
-    if (game) new MutationObserver(ensureCourseFlag).observe(game, { attributes:true, childList:true, subtree:true })
-    setInterval(ensureCourseFlag, 100)
+    if (game) {
+      new MutationObserver(() => {
+        resetFinishStateIfNeeded()
+        ensureCourseFlag()
+      }).observe(game, {
+        attributes: true,
+        childList: true,
+        subtree: true
+      })
+    }
+
+    // Lightweight safety check. It never changes the engine state.
+    setInterval(() => {
+      resetFinishStateIfNeeded()
+      ensureCourseFlag()
+      inspectEnd()
+    }, 250)
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObserver)
-  else setTimeout(startObserver, 0)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startObserver, { once: true })
+  } else {
+    setTimeout(startObserver, 0)
+  }
 })()
