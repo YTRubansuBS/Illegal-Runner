@@ -1,10 +1,9 @@
 (() => {
   'use strict'
 
-  // Add-on isolated from the runner engine: only watches the existing end screen.
+  // Isolated add-on: observes the existing end screen and never replaces game.js.
   const $ = (id) => document.getElementById(id)
   let handled = false
-  let runStartCoins = 0
 
   function addStyle() {
     if ($('levelFinishAddonStyle')) return
@@ -16,14 +15,6 @@
       #levelFinishReward { margin:10px 0 0; padding:9px 12px; border-radius:12px; background:rgba(0,229,255,.10); border:1px solid rgba(0,229,255,.25); }
     `
     document.head.appendChild(s)
-  }
-
-  function captureRunStart() {
-    const game = $('game')
-    if (game && getComputedStyle(game).display !== 'none') {
-      const n = Number($('coins')?.textContent || 0)
-      if (Number.isFinite(n)) runStartCoins = n
-    }
   }
 
   function getCurrentLevel() {
@@ -51,21 +42,21 @@
     } catch (_) { return 1 }
   }
 
-  async function correctReward(level, finalCoins) {
-    // The original engine already saved its reward. Replace only that reward
-    // with the requested 100 + collected coins, leaving collected coins intact.
+  async function correctReward(level) {
+    // The original engine has already saved its reward by the time the end screen appears.
+    // Remove only that old level-completion reward and replace it with exactly 100 coins.
     const bonusLevel = await getBonusLevel()
     const oldReward = 150 + level * 12 + bonusLevel * 30
     const delta = 100 - oldReward
     if (!Number.isFinite(delta) || delta === 0) return
 
     try {
-      const guest = (() => { try { return !!JSON.parse(localStorage.getItem('irGuest') || 'null') } catch (_) { return false } })()
-      if (guest) {
-        const p = JSON.parse(localStorage.getItem('irGuest') || '{}')
-        p.coins = Math.max(0, Number(p.coins || 0) + delta)
-        localStorage.setItem('irGuest', JSON.stringify(p))
-        if ($('coins')) $('coins').textContent = p.coins
+      let local = null
+      try { local = JSON.parse(localStorage.getItem('irGuest') || 'null') } catch (_) {}
+      if (local && typeof local === 'object') {
+        local.coins = Math.max(0, Number(local.coins || 0) + delta)
+        localStorage.setItem('irGuest', JSON.stringify(local))
+        if ($('coins')) $('coins').textContent = local.coins
         return
       }
 
@@ -83,7 +74,7 @@
     } catch (_) {}
   }
 
-  function ensureFinishUI(level) {
+  function ensureFinishUI(level, collected) {
     const card = document.querySelector('#over .over-card')
     if (!card) return
     addStyle()
@@ -103,7 +94,6 @@
       reward.id = 'levelFinishReward'
       card.appendChild(reward)
     }
-    const collected = Math.max(0, Number($('finalCoins')?.textContent || 0))
     reward.innerHTML = `🎉 Récompense de fin : <b>100 🪙 + ${Math.max(0, collected)} 🪙 ramassées</b>`
 
     let next = $('btnNextLevel')
@@ -122,11 +112,6 @@
         const nextLevel = level + 1
         const btn = document.querySelector(`#levelButtons button[data-level="${nextLevel}"]`)
         if (btn && !btn.disabled) btn.click()
-        else {
-          const levels = document.querySelectorAll('#levelButtons button[data-level]')
-          const fallback = Array.from(levels).find(b => Number(b.dataset.level) === nextLevel)
-          if (fallback && !fallback.disabled) fallback.click()
-        }
       }
       next.style.display = ''
     } else if (next) {
@@ -142,20 +127,20 @@
     if (handled) return
     handled = true
 
-    const finalCoinsBefore = Number($('finalCoins')?.textContent || 0)
-    await correctReward(level, finalCoinsBefore)
-    ensureFinishUI(level)
+    const finalBefore = Number($('finalCoins')?.textContent || 0)
+    const bonusLevel = await getBonusLevel()
+    const oldReward = 150 + level * 12 + bonusLevel * 30
+    const collected = Math.max(0, finalBefore - oldReward)
+    const desiredRunTotal = collected + 100
+    if ($('finalCoins')) $('finalCoins').textContent = desiredRunTotal
+    await correctReward(level)
+    ensureFinishUI(level, collected)
   }
 
   function startObserver() {
-    captureRunStart()
     const over = $('over')
     if (!over) return
-    new MutationObserver(() => { setTimeout(inspectEnd, 0) }).observe(over, { attributes:true, childList:true, subtree:true })
-    new MutationObserver(() => {
-      const game = $('game')
-      if (game && getComputedStyle(game).display !== 'none') captureRunStart()
-    }).observe(document.body, { attributes:true, subtree:true, attributeFilter:['style','class'] })
+    new MutationObserver(() => setTimeout(inspectEnd, 0)).observe(over, { attributes:true, childList:true, subtree:true })
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObserver)
