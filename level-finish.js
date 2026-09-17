@@ -1,8 +1,7 @@
 (() => {
   'use strict'
 
-  // Isolated add-on: shows a real in-run finish marker ahead of the player.
-  // It does not modify game.js or any gameplay controls.
+  // Isolated finish-marker add-on. The runner engine and controls stay untouched.
   const $ = (id) => document.getElementById(id)
   let handled = false
 
@@ -11,11 +10,34 @@
     const s = document.createElement('style')
     s.id = 'levelFinishAddonStyle'
     s.textContent = `
-      #levelFinishCourseFlag { position:absolute; left:90vw; bottom:112px; width:54px; height:112px; z-index:6; pointer-events:none; display:none; filter:drop-shadow(0 0 10px rgba(0,229,255,.55)); transform:translateX(-50%); }
-      #levelFinishCourseFlag .pole { position:absolute; left:25px; bottom:0; width:5px; height:100px; border-radius:4px; background:linear-gradient(#eafcff,#00e5ff 45%,#1677a0); box-shadow:0 0 9px rgba(0,229,255,.8); }
-      #levelFinishCourseFlag .flag { position:absolute; left:29px; top:5px; width:48px; height:31px; border-radius:2px 8px 8px 2px; background:linear-gradient(135deg,#00e5ff,#7df8ff 48%,#008bb8); clip-path:polygon(0 0,100% 0,78% 50%,100% 100%,0 100%); box-shadow:0 0 12px rgba(0,229,255,.8); }
-      #levelFinishCourseFlag .flag:after { content:'IR'; position:absolute; inset:0; display:grid; place-items:center; color:#00141c; font:900 11px/1 Inter,Arial,sans-serif; }
-      #levelFinishCourseFlag .base { position:absolute; left:14px; bottom:0; width:27px; height:7px; border-radius:50%; background:#00e5ff; box-shadow:0 0 12px rgba(0,229,255,.9); }
+      #levelFinishCourseFlag {
+        position:absolute; left:92vw; bottom:96px; width:54px; height:122px;
+        z-index:6; pointer-events:none; display:none;
+        transform:translateX(-50%); filter:drop-shadow(0 0 10px rgba(0,229,255,.65));
+        transition:left .08s linear, opacity .12s linear;
+      }
+      #levelFinishCourseFlag .pole {
+        position:absolute; left:25px; bottom:0; width:5px; height:110px;
+        border-radius:4px; background:linear-gradient(#fff,#00e5ff 45%,#1677a0);
+        box-shadow:0 0 9px rgba(0,229,255,.8);
+      }
+      #levelFinishCourseFlag .flag {
+        position:absolute; left:29px; top:4px; width:48px; height:31px;
+        border-radius:2px 8px 8px 2px;
+        background:linear-gradient(135deg,#00e5ff,#7df8ff 48%,#008bb8);
+        clip-path:polygon(0 0,100% 0,78% 50%,100% 100%,0 100%);
+        box-shadow:0 0 12px rgba(0,229,255,.8);
+      }
+      #levelFinishCourseFlag .flag:after {
+        content:'🏁'; position:absolute; inset:0; display:grid; place-items:center;
+        font-size:17px; line-height:1;
+      }
+      #levelFinishCourseFlag .base {
+        position:absolute; left:13px; bottom:0; width:29px; height:8px;
+        border-radius:50%; background:#00e5ff; box-shadow:0 0 12px rgba(0,229,255,.9);
+      }
+      #levelFinishCourseFlag.near .flag { animation: irFinishWave .45s ease-in-out infinite alternate; }
+      @keyframes irFinishWave { from { transform:skewY(-2deg) } to { transform:skewY(4deg) } }
       #levelFinishReward { margin:10px 0 0; padding:9px 12px; border-radius:12px; background:rgba(0,229,255,.10); border:1px solid rgba(0,229,255,.25); }
       #btnNextLevel { margin-top:10px; }
     `
@@ -31,20 +53,27 @@
   function getProgress() {
     const bar = $('progressBar')
     if (bar) {
-      const w = parseFloat(bar.style.width)
-      if (Number.isFinite(w)) return Math.max(0, Math.min(1, w / 100))
+      const inline = parseFloat(bar.style.width)
+      if (Number.isFinite(inline)) return Math.max(0, Math.min(1, inline / 100))
+      const computed = parseFloat(getComputedStyle(bar).width)
+      const parent = parseFloat(getComputedStyle(bar.parentElement || bar).width)
+      if (Number.isFinite(computed) && Number.isFinite(parent) && parent > 0) {
+        return Math.max(0, Math.min(1, computed / parent))
+      }
     }
-    const dist = Number($('dist')?.textContent || 0)
+    const dist = Number(String($('dist')?.textContent || '0').replace(/[^0-9.]/g, '')) || 0
     const objective = String($('objective')?.textContent || '')
-    const nums = objective.match(/\d+(?:[.,]\d+)?/g)?.map(v => Number(v.replace(',', '.'))) || []
-    const goal = nums.filter(v => v > 100).pop()
+    const m = objective.match(/(?:\/|de|sur)?\s*(\d+(?:[.,]\d+)?)\s*m\b/i)
+    const goal = m ? Number(m[1].replace(',', '.')) : 0
     return goal > 0 ? Math.max(0, Math.min(1, dist / goal)) : 0
   }
 
   function ensureCourseFlag() {
     addStyle()
     const game = $('game')
+    const over = $('over')
     if (!game) return
+
     let marker = $('levelFinishCourseFlag')
     if (!marker) {
       marker = document.createElement('div')
@@ -55,19 +84,24 @@
 
     const level = getRunLevel()
     const progress = getProgress()
-    const running = getComputedStyle(game).display !== 'none' && getComputedStyle($('over') || game).display === 'none'
-    if (!running || !level || progress < 0.72) {
+    const running = getComputedStyle(game).display !== 'none' && (!over || getComputedStyle(over).display === 'none')
+
+    // It is an actual in-course finish marker: it starts far ahead and travels
+    // toward the player's position as the player approaches the end.
+    if (!running || !level || progress < 0.50 || progress >= 1) {
       marker.style.display = 'none'
+      marker.classList.remove('near')
       return
     }
 
-    // The closer the player gets to the end, the closer the finish flag appears,
-    // exactly like an upcoming finish marker inside the course.
-    const p = Math.max(0, Math.min(1, (progress - 0.72) / 0.28))
-    const x = window.innerWidth * (0.94 - p * 0.40)
-    marker.style.left = `${Math.max(110, x)}px`
-    marker.style.bottom = `${Math.max(104, Math.min(145, window.innerHeight * 0.17))}px`
+    const p = Math.max(0, Math.min(1, (progress - 0.50) / 0.50))
+    // Player is roughly on the left side of the course. At 100% the flag reaches
+    // the player's lane, so the player visibly passes it when the level completes.
+    const xPercent = 92 - (p * 73)
+    marker.style.left = `${Math.max(18, xPercent)}vw`
+    marker.style.bottom = `${Math.max(88, Math.min(132, window.innerHeight * 0.16))}px`
     marker.style.display = 'block'
+    marker.classList.toggle('near', p > 0.82)
   }
 
   function getCurrentLevel() {
@@ -182,7 +216,7 @@
     if (over) new MutationObserver(() => { ensureCourseFlag(); setTimeout(inspectEnd, 0) }).observe(over, { attributes:true, childList:true, subtree:true })
     const game = $('game')
     if (game) new MutationObserver(ensureCourseFlag).observe(game, { attributes:true, childList:true, subtree:true })
-    setInterval(ensureCourseFlag, 200)
+    setInterval(ensureCourseFlag, 100)
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObserver)
