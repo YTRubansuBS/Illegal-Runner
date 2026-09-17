@@ -1,7 +1,8 @@
 (() => {
   'use strict'
 
-  // Isolated add-on: observes the existing end screen and never replaces game.js.
+  // Isolated add-on: puts the finish flag in the RUN HUD and keeps the existing
+  // game engine untouched. The flag is only visible during a level run.
   const $ = (id) => document.getElementById(id)
   let handled = false
 
@@ -10,11 +11,32 @@
     const s = document.createElement('style')
     s.id = 'levelFinishAddonStyle'
     s.textContent = `
-      #levelFinishFlag { font-size:64px; line-height:1; margin:4px 0 8px; filter:drop-shadow(0 0 12px rgba(0,229,255,.55)); }
-      #btnNextLevel { margin-top:10px; }
+      #levelFinishRunMarker { position:absolute; right:-7px; top:-34px; z-index:12; font-size:28px; line-height:1; filter:drop-shadow(0 0 8px rgba(0,229,255,.8)); pointer-events:none; display:none; }
+      #progressWrap { position:relative; }
       #levelFinishReward { margin:10px 0 0; padding:9px 12px; border-radius:12px; background:rgba(0,229,255,.10); border:1px solid rgba(0,229,255,.25); }
+      #btnNextLevel { margin-top:10px; }
     `
     document.head.appendChild(s)
+  }
+
+  function getRunLevel() {
+    const text = String($('objective')?.textContent || '')
+    const m = text.match(/NIVEAU\s+(\d+)/i)
+    return m ? Number(m[1]) : 0
+  }
+
+  function ensureRunFlag() {
+    addStyle()
+    const wrap = $('progressWrap')
+    if (!wrap) return
+    let marker = $('levelFinishRunMarker')
+    if (!marker) {
+      marker = document.createElement('div')
+      marker.id = 'levelFinishRunMarker'
+      marker.textContent = '🚩'
+      wrap.appendChild(marker)
+    }
+    marker.style.display = getRunLevel() > 0 ? 'block' : 'none'
   }
 
   function getCurrentLevel() {
@@ -43,13 +65,10 @@
   }
 
   async function correctReward(level) {
-    // The original engine has already saved its reward by the time the end screen appears.
-    // Remove only that old level-completion reward and replace it with exactly 100 coins.
     const bonusLevel = await getBonusLevel()
     const oldReward = 150 + level * 12 + bonusLevel * 30
     const delta = 100 - oldReward
     if (!Number.isFinite(delta) || delta === 0) return
-
     try {
       let local = null
       try { local = JSON.parse(localStorage.getItem('irGuest') || 'null') } catch (_) {}
@@ -59,7 +78,6 @@
         if ($('coins')) $('coins').textContent = local.coins
         return
       }
-
       const cfg = window.IR_CONFIG || {}
       if (!window.supabase || !String(cfg.SUPABASE_URL || '').startsWith('http')) return
       const client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY)
@@ -78,15 +96,8 @@
     const card = document.querySelector('#over .over-card')
     if (!card) return
     addStyle()
-
-    let flag = $('levelFinishFlag')
-    if (!flag) {
-      flag = document.createElement('div')
-      flag.id = 'levelFinishFlag'
-      flag.textContent = '🚩'
-      const kicker = card.querySelector('.over-kicker')
-      card.insertBefore(flag, kicker || card.firstChild)
-    }
+    const oldFlag = $('levelFinishFlag')
+    if (oldFlag) oldFlag.remove()
 
     let reward = $('levelFinishReward')
     if (!reward) {
@@ -114,9 +125,7 @@
         if (btn && !btn.disabled) btn.click()
       }
       next.style.display = ''
-    } else if (next) {
-      next.style.display = 'none'
-    }
+    } else if (next) next.style.display = 'none'
   }
 
   async function inspectEnd() {
@@ -126,21 +135,23 @@
     if (!level) { handled = false; return }
     if (handled) return
     handled = true
-
     const finalBefore = Number($('finalCoins')?.textContent || 0)
     const bonusLevel = await getBonusLevel()
     const oldReward = 150 + level * 12 + bonusLevel * 30
     const collected = Math.max(0, finalBefore - oldReward)
-    const desiredRunTotal = collected + 100
-    if ($('finalCoins')) $('finalCoins').textContent = desiredRunTotal
+    if ($('finalCoins')) $('finalCoins').textContent = collected + 100
     await correctReward(level)
     ensureFinishUI(level, collected)
   }
 
   function startObserver() {
+    addStyle()
+    ensureRunFlag()
     const over = $('over')
-    if (!over) return
-    new MutationObserver(() => setTimeout(inspectEnd, 0)).observe(over, { attributes:true, childList:true, subtree:true })
+    if (over) new MutationObserver(() => { ensureRunFlag(); setTimeout(inspectEnd, 0) }).observe(over, { attributes:true, childList:true, subtree:true })
+    const game = $('game')
+    if (game) new MutationObserver(ensureRunFlag).observe(game, { attributes:true, childList:true, subtree:true })
+    setInterval(ensureRunFlag, 500)
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObserver)
