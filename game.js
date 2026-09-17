@@ -42,10 +42,7 @@
 `)
       code = code.replace('["dash", "⚡", "Dash", 6, "Niveau 6 = traverse/détruit les obstacles."]', '["dash", "⚡", "Dash", 5, "20s de base → 10s au niveau max. Niveau 5 = traverse les obstacles."]')
       code = code.replace('"Niveau 6 : traverse et détruit les obstacles."', '"Niveau 5 : traverse et détruit les obstacles."')
-      code = code.replace('  function dash() {\n', `  const getDashCooldown = () => { const level = Math.max(1, Math.min(5, Number(profile.dash_level || 1))); return 20 - (level - 1) * 2.5 }
-
-  function dash() {
-`)
+      code = code.replace('  function dash() {\n', `  const getDashCooldown = () => { const level = Math.max(1, Math.min(5, Number(profile.dash_level || 1))); return 20 - (level - 1) * 2.5 }\n\n  function dash() {\n`)
       code = code.replace('    G.dashCd = 1.6', '    G.dashCd = getDashCooldown()')
       code = code.replace(`        if (G.dashT > 0 && DESTRUCTIBLE[o.type]) {
           o.dead = true
@@ -76,11 +73,7 @@
       code = code.replace('} else if (G.canDouble) {', '} else if ((profile.jump_level || 1) >= 2 && G.canDouble) {')
       code = code.replace('    const v = profile[key] || 1\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = 100 * v', '    const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[key] || 1)\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
       code = code.replace(/const cost = id === "jump" \? 5000 : 100 \* Math\.max\(1, v\)/g, 'const OTHER_UPGRADE_COSTS = [100, 500, 1000, 2500, 5000]\n      const cost = id === "jump" ? 5000 : OTHER_UPGRADE_COSTS[Math.min(Math.max(0, v - 1), OTHER_UPGRADE_COSTS.length - 1)]')
-      code = code.replace(/  function renderShop\(\) \{[\s\S]*?\n  \}\n(?=\s*function renderPacks)/, `  function renderShop() {
-    const el = $("shopGrid")
-    if (el) el.innerHTML = ""
-  }
-`)
+      code = code.replace(/  function renderShop\(\) \{[\s\S]*?\n  \}\n(?=\s*function renderPacks)/, `  function renderShop() {\n    const el = $("shopGrid")\n    if (el) el.innerHTML = ""\n  }\n`)
       code = code.replace(`    const jb = $("btnJump")
     jb.addEventListener("pointerdown", (e) => { e.preventDefault(); jump() })
     jb.addEventListener("pointerup", releaseJump)
@@ -89,21 +82,7 @@
       code = code.replace('else if (t.dataset.pack) openPack(t.dataset.pack)', 'else if (t.dataset.pack) { e.preventDefault(); }')
       code = code.replace('const ext = document.createElement(\'script\'); ext.src = \'customizer.js?v=8\'; document.body.appendChild(ext)', `const oldLegacy = document.getElementById('legacyPackBox')
       if (oldLegacy) oldLegacy.style.display = 'none'
-      const ext = document.createElement('script'); ext.src = 'customizer.js?v=10'; document.body.appendChild(ext)`)
-      code = code.replace('    profile = { ...DEFAULTS, ...profile }\n', `    profile = { ...DEFAULTS, ...profile }
-    const todayQuest = new Date().toISOString().slice(0, 10)
-    if (profile.last_quest_reset !== todayQuest) {
-      profile.last_quest_reset = todayQuest
-      profile.quest_distance = 0
-      profile.quest_coins = 0
-      profile.quest_games = 0
-      profile.quest_distance_claimed = false
-      profile.quest_coins_claimed = false
-      profile.quest_games_claimed = false
-      if (isGuest) saveLocal()
-      else if (sb && user) await persist()
-    }
-`)
+      const ext = document.createElement('script'); ext.src = 'customizer.js?v=9'; document.body.appendChild(ext)`)
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
