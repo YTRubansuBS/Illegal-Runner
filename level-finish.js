@@ -24,10 +24,38 @@
     const t=Math.max(0,Math.min(1,(p-0.45)/0.55)),farX=innerWidth*.92,playerX=Math.max(80,innerWidth*.20)
     flag.style.left=`${farX+(playerX-farX)*Math.pow(t,1.65)}px`;flag.style.bottom=`${Math.max(88,Math.min(132,innerHeight*.16))}px`;flag.style.display='block';flag.classList.toggle('near',t>.8)
   }
+  async function getRewardIdentity(){
+    try{
+      const isLocal = ($('userBadge')?.textContent||'').toLowerCase().includes('local')
+      if(isLocal) return 'local'
+      const cfg=window.IR_CONFIG||{},sup=window.supabase
+      if(sup&&cfg.SUPABASE_URL&&cfg.SUPABASE_ANON_KEY){
+        const client=sup.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY)
+        const {data:{user}}=await client.auth.getUser()
+        if(user?.id) return 'user:'+user.id
+      }
+    }catch{}
+    return 'local'
+  }
+  async function rewardAlreadyPaid(lv){
+    const identity=await getRewardIdentity()
+    const key=`illegalRunner.finishRewards.v3:${identity}`
+    let list=[]
+    try{list=JSON.parse(localStorage.getItem(key)||'[]')}catch{}
+    return Array.isArray(list)&&list.includes(Number(lv))
+  }
+  async function markRewardPaid(lv){
+    const identity=await getRewardIdentity()
+    const key=`illegalRunner.finishRewards.v3:${identity}`
+    let list=[]
+    try{list=JSON.parse(localStorage.getItem(key)||'[]')}catch{}
+    list=Array.isArray(list)?list.map(Number).filter(Number.isFinite):[]
+    if(!list.includes(Number(lv))) list.push(Number(lv))
+    localStorage.setItem(key,JSON.stringify([...new Set(list)].sort((a,b)=>a-b)))
+  }
   async function grantRewardOnce(lv,reward){
     if(rewardBusy)return false
-    const key=`illegalRunner.finishReward.v2:${lv}`
-    if(localStorage.getItem(key)==='paid')return false
+    if(await rewardAlreadyPaid(lv))return false
     rewardBusy=true
     try{
       const isLocal=($('userBadge')?.textContent||'').toLowerCase().includes('local')
@@ -35,8 +63,8 @@
         let p={};try{p=JSON.parse(localStorage.getItem('irGuest')||'{}')}catch{}
         p.coins=Math.max(0,Number(p.coins||0))+reward
         localStorage.setItem('irGuest',JSON.stringify(p))
-        localStorage.setItem(key,'paid')
-        window.dispatchEvent(new CustomEvent('ir:profileChanged',{detail:p}))
+        await markRewardPaid(lv)
+        window.dispatchEvent(new CustomEvent('ir:profileChanged',{detail:{coins:p.coins}}))
         return true
       }
       const cfg=window.IR_CONFIG||{},sup=window.supabase
@@ -48,7 +76,7 @@
           if(!error&&prof){
             const next=Math.max(0,Number(prof.coins||0))+reward
             const upd=await client.from('profiles').update({coins:next}).eq('id',user.id)
-            if(!upd.error){localStorage.setItem(key,'paid');window.dispatchEvent(new CustomEvent('ir:profileChanged',{detail:{coins:next}}));return true}
+            if(!upd.error){await markRewardPaid(lv);window.dispatchEvent(new CustomEvent('ir:profileChanged',{detail:{coins:next}}));return true}
           }
         }
       }
@@ -64,16 +92,18 @@
     if(isInfinite()){hideNextInInfinite();return}
     if(finishShown||getLevel()<1||getProgress()<0.995)return
     const lv=getLevel(),reward=rewardForLevel(lv)
+    const alreadyPaid=await rewardAlreadyPaid(lv)
+    const payableReward=alreadyPaid?0:reward
     finishShown=true
     const dist=Math.floor(Number(String($('dist')?.textContent||'0').replace(/[^0-9.]/g,''))||0)
     const collected=Math.max(0,Math.floor(Number(String($('runCoins')?.textContent||'0').replace(/[^0-9.]/g,''))||0))
     $('overTitle').textContent=lv>=300?'👑 CHAMPION !':`NIVEAU ${lv} TERMINÉ`
     $('finalDist').textContent=dist
-    $('finalCoins').textContent=collected+reward
+    $('finalCoins').textContent=collected+payableReward
     $('finalTime').textContent='—'
     over.style.display='grid'
     let box=$('levelFinishReward');if(!box){box=document.createElement('div');box.id='levelFinishReward';card.appendChild(box)}
-    box.innerHTML=`🎉 Récompense de réussite : <b>+${reward} 🪙</b><br>🪙 Pièces ramassées : <b>${collected}</b>`
+    box.innerHTML=alreadyPaid?`✅ Bonus de niveau déjà récupéré.<br>🪙 Pièces ramassées : <b>${collected}</b>`:`🎉 Récompense de réussite : <b>+${reward} 🪙</b><br>🪙 Pièces ramassées : <b>${collected}</b>`
     await grantRewardOnce(lv,reward)
     if(lv<300){
       let next=$('btnNextLevel')
