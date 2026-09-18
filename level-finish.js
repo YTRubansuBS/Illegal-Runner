@@ -35,7 +35,7 @@
     over.style.display='grid'
     let reward=$('levelFinishReward');if(!reward){reward=document.createElement('div');reward.id='levelFinishReward';card.appendChild(reward)}
     reward.innerHTML=`🎉 Récompense de réussite : <b>+100 🪙</b><br>🪙 Pièces ramassées : <b>${collected}</b>`
-    if(lv<300){let next=$('btnNextLevel');if(!next){next=document.createElement('button');next.id='btnNextLevel';next.className='primary';next.type='button';next.textContent='➡️ NIVEAU SUIVANT';const row=card.querySelector('.row');if(row)row.insertBefore(next,row.firstChild);else card.appendChild(next)}next.onclick=(e)=>{e.preventDefault();e.stopPropagation();const b=document.querySelector(`#levelButtons button[data-level="${lv+1}"]`);if(b&&!b.disabled)b.click()}}
+    if(lv<300){let next=$('btnNextLevel');if(!next){next=document.createElement('button');next.id='btnNextLevel';next.className='primary';next.type='button';next.textContent='➡️ NIVEAU SUIVANT';const row=card.querySelector('.row');if(row)row.insertBefore(next,row.firstChild);else card.appendChild(next)}next.onclick=(e)=>{e.preventDefault();e.stopPropagation();finishShown=false;const overNow=$('over');if(overNow)overNow.style.display='none';const flagNow=$('levelFinishCourseFlag');if(flagNow)flagNow.style.display='none';const progressNow=$('progressBar');if(progressNow)progressNow.style.width='0%';const b=document.querySelector(`#levelButtons button[data-level="${lv+1}"]`);if(b&&!b.disabled){setTimeout(()=>b.click(),50)}}}
   }
   function reset(){const over=$('over');if(over&&getComputedStyle(over).display==='none')finishShown=false}
   function start(){styles();setInterval(()=>{reset();updateFlag();showFinishAtFlag()},50)}
