@@ -1,3 +1,4 @@
+/* Illegal Runner - finish screen + one-time level reward */
 (() => {
   'use strict'
   const $ = id => document.getElementById(id)
@@ -23,20 +24,22 @@
     const t=Math.max(0,Math.min(1,(p-0.45)/0.55)),farX=innerWidth*.92,playerX=Math.max(80,innerWidth*.20)
     flag.style.left=`${farX+(playerX-farX)*Math.pow(t,1.65)}px`;flag.style.bottom=`${Math.max(88,Math.min(132,innerHeight*.16))}px`;flag.style.display='block';flag.classList.toggle('near',t>.8)
   }
-  async function grantReward(lv,reward){
+  async function grantRewardOnce(lv,reward){
     if(rewardBusy)return false
+    const key=`illegalRunner.finishReward.v2:${lv}`
+    if(localStorage.getItem(key)==='paid')return false
     rewardBusy=true
     try{
-      const cfg=window.IR_CONFIG||{}
       const isLocal=($('userBadge')?.textContent||'').toLowerCase().includes('local')
       if(isLocal){
         let p={};try{p=JSON.parse(localStorage.getItem('irGuest')||'{}')}catch{}
         p.coins=Math.max(0,Number(p.coins||0))+reward
         localStorage.setItem('irGuest',JSON.stringify(p))
-        window.dispatchEvent(new CustomEvent('ir:profileChanged',{detail:{coins:p.coins}}))
+        localStorage.setItem(key,'paid')
+        window.dispatchEvent(new CustomEvent('ir:profileChanged',{detail:p}))
         return true
       }
-      const sup=window.supabase
+      const cfg=window.IR_CONFIG||{},sup=window.supabase
       if(sup&&cfg.SUPABASE_URL&&cfg.SUPABASE_ANON_KEY){
         const client=sup.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY)
         const {data:{user}}=await client.auth.getUser()
@@ -45,7 +48,7 @@
           if(!error&&prof){
             const next=Math.max(0,Number(prof.coins||0))+reward
             const upd=await client.from('profiles').update({coins:next}).eq('id',user.id)
-            if(!upd.error){window.dispatchEvent(new CustomEvent('ir:profileChanged',{detail:{coins:next}}));return true}
+            if(!upd.error){localStorage.setItem(key,'paid');window.dispatchEvent(new CustomEvent('ir:profileChanged',{detail:{coins:next}}));return true}
           }
         }
       }
@@ -71,7 +74,7 @@
     over.style.display='grid'
     let box=$('levelFinishReward');if(!box){box=document.createElement('div');box.id='levelFinishReward';card.appendChild(box)}
     box.innerHTML=`🎉 Récompense de réussite : <b>+${reward} 🪙</b><br>🪙 Pièces ramassées : <b>${collected}</b>`
-    await grantReward(lv,reward)
+    await grantRewardOnce(lv,reward)
     if(lv<300){
       let next=$('btnNextLevel')
       if(!next){next=document.createElement('button');next.id='btnNextLevel';next.className='primary';next.type='button';next.textContent='➡️ NIVEAU SUIVANT';const row=card.querySelector('.row');if(row)row.insertBefore(next,row.firstChild);else card.appendChild(next)}
