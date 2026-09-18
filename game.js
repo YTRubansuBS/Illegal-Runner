@@ -40,7 +40,26 @@
     profile.coins = Number(data || profile.coins || 0); profile._freeToday = today; refreshTop(); renderAll(); SFX.coin(); window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: { coins: profile.coins, _freeToday: today } })); toast('🎁 +75 pièces gratuites !')
   }
 `)
-      code = code.replace(/  async function loadLeaderboard\(\) \{[\s\S]*?\n  \}\n(?=  async function loadFriends)/, "  async function loadLeaderboard() {\\n    const box = $(\\\"leaderList\\\")\\n    if (isGuest || !sb) { $(\\\"leaderInfo\\\").textContent = \\"Mode local : connecte-toi pour le classement en ligne.\\"; box.innerHTML = '<div class=\\\"card\\\">☁️ Classement disponible en MODE COMPTE.</div>'; return }\\n    const q = await sb.rpc(\\\"get_leaderboard\\\")\\n    if (q.error) { box.innerHTML = '<div class=\\\"card\\\">❌ Erreur de chargement du classement.</div>'; return }\\n    const rows = Array.isArray(q.data) ? q.data : []\\n    $(\\\"leaderInfo\\\").textContent = \\"Classement complet — \\" + rows.length + \\" joueur(s).\\"\\n    box.innerHTML = rows.map((r,i) => '<div class=\\\"rank\\\"><strong>#'+(i+1)+'</strong><span style=\\\"flex:1\\\">'+escapeHtml(r.username)+'</span><b>🏆 '+Number(r.best_distance||0)+'m</b><span class=\\\"muted\\\">LV '+Number(r.highest_level||1)+'</span></div>').join('') || '<div class=\\\"card\\\">Aucun joueur.</div>'\\n  }")
+      code = code.replace(/  async function loadLeaderboard\\(\\) \\{[\\s\\S]*?\\n  \\}\\n(?=  async function loadFriends)/, \`
+  async function loadLeaderboard() {
+    const box = $("leaderList")
+    if (isGuest || !sb) {
+      $("leaderInfo").textContent = "Mode local : connecte-toi pour le classement en ligne."
+      box.innerHTML = '<div class="card">☁️ Classement disponible en MODE COMPTE.</div>'
+      return
+    }
+    const q = await sb.rpc("get_leaderboard")
+    if (q.error) {
+      box.innerHTML = '<div class="card">❌ Erreur de chargement du classement.</div>'
+      return
+    }
+    const rows = Array.isArray(q.data) ? q.data : []
+    $("leaderInfo").textContent = "Classement complet — " + rows.length + " joueur(s)."
+    box.innerHTML = rows.map((r,i) =>
+      '<div class="rank"><strong>#'+(i+1)+'</strong><span style="flex:1">'+escapeHtml(r.username)+'</span><b>🏆 '+Number(r.best_distance||0)+'m</b><span class="muted">LV '+Number(r.highest_level||1)+'</span></div>'
+    ).join('') || '<div class="card">Aucun joueur.</div>'
+  }
+\`)
       code = code.replace('["dash", "⚡", "Dash", 6, "Niveau 6 = traverse/détruit les obstacles."]', '["dash", "⚡", "Dash", 5, "20s de base → 10s au niveau max. Niveau 5 = traverse les obstacles."]')
       code = code.replace('"Niveau 6 : traverse et détruit les obstacles."', '"Niveau 5 : traverse et détruit les obstacles."')
       code = code.replace('  function dash() {\n', `  const getDashCooldown = () => { const level = Math.max(1, Math.min(5, Number(profile.dash_level || 1))); return 20 - (level - 1) * 2.5 }\n\n  function dash() {\n`)
