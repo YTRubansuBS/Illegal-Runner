@@ -111,9 +111,9 @@
       const other = r.user_id === user.id ? r.friend_id : r.user_id
       const name = escapeHtml(byId[other]?.username || "Joueur")
       const dist = Number(byId[other]?.best_distance || 0)
-      if (r.status === "pending" && r.friend_id === user.id) return \`<div class="friend"><span style="flex:1">👤 ${name}<br><small class="muted">veut être ton ami</small></span><button data-friend-action="accept" data-friend-id="${r.id}">✅ ACCEPTER</button><button data-friend-action="decline" data-friend-id="${r.id}">❌ REFUSER</button></div>\`
-      if (r.status === "pending") return \`<div class="friend"><span style="flex:1">👤 ${name}<br><small class="muted">demande envoyée</small></span><button data-friend-action="delete" data-friend-id="${r.id}">↩️ ANNULER</button></div>\`
-      return \`<div class="friend"><span style="flex:1">👤 ${name}<br><small class="muted">🏆 ${dist}m · ami</small></span><button data-friend-action="delete" data-friend-id="${r.id}">🗑️ SUPPRIMER</button></div>\`
+      if (r.status === "pending" && r.friend_id === user.id) return \`<div class="friend"><span style="flex:1">👤 \${name}<br><small class="muted">veut être ton ami</small></span><button data-friend-action="accept" data-friend-id="\${r.id}">✅ ACCEPTER</button><button data-friend-action="decline" data-friend-id="\${r.id}">❌ REFUSER</button></div>\`
+      if (r.status === "pending") return \`<div class="friend"><span style="flex:1">👤 \${name}<br><small class="muted">demande envoyée</small></span><button data-friend-action="delete" data-friend-id="\${r.id}">↩️ ANNULER</button></div>\`
+      return \`<div class="friend"><span style="flex:1">👤 \${name}<br><small class="muted">🏆 \${dist}m · ami</small></span><button data-friend-action="delete" data-friend-id="\${r.id}">🗑️ SUPPRIMER</button></div>\`
     }).join("")
   }
   async function addFriend() {
