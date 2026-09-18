@@ -19,7 +19,8 @@
     if (completedLevel > 0) profile.highest_level = Math.max(profile.highest_level || 1, Math.min(300, completedLevel + 1))
     if (isGuest || !sb || !user) {
       profile.coins = (profile.coins || 0) + runCoins; profile.total_distance = (profile.total_distance || 0) + distance
-      profile.best_distance = Math.max(profile.best_distance || 0, distance); profile.quest_distance = (profile.quest_distance || 0) + distance
+      profile.best_distance = Math.max(profile.best_distance || 0, distance); profile.total_distance = (profile.total_distance || 0) + distance
+      profile.quest_distance = (profile.quest_distance || 0) + distance
       profile.quest_coins = (profile.quest_coins || 0) + runCoins; profile.quest_games = (profile.quest_games || 0) + 1
       saveLocal(); refreshTop(); renderAll(); return
     }
@@ -40,29 +41,13 @@
     profile.coins = Number(data || profile.coins || 0); profile._freeToday = today; refreshTop(); renderAll(); SFX.coin(); window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: { coins: profile.coins, _freeToday: today } })); toast('🎁 +75 pièces gratuites !')
   }
 `)
-      code = code.replace(/  async function loadLeaderboard\\(\\) \\{[\\s\\S]*?\\n  \\}\\n(?=  async function loadFriends)/, \`
-  async function loadLeaderboard() {
-    const box = $("leaderList")
-    if (isGuest || !sb) {
-      $("leaderInfo").textContent = "Mode local : connecte-toi pour le classement en ligne."
-      box.innerHTML = '<div class="card">☁️ Classement disponible en MODE COMPTE.</div>'
-      return
-    }
-    const q = await sb.rpc("get_leaderboard")
-    if (q.error) {
-      box.innerHTML = '<div class="card">❌ Erreur de chargement du classement.</div>'
-      return
-    }
-    const rows = Array.isArray(q.data) ? q.data : []
-    $("leaderInfo").textContent = "Classement complet — " + rows.length + " joueur(s)."
-    box.innerHTML = rows.map((r,i) =>
-      '<div class="rank"><strong>#'+(i+1)+'</strong><span style="flex:1">'+escapeHtml(r.username)+'</span><b>🏆 '+Number(r.best_distance||0)+'m</b><span class="muted">LV '+Number(r.highest_level||1)+'</span></div>'
-    ).join('') || '<div class="card">Aucun joueur.</div>'
-  }
-\`)
+      code = code.replace(/  async function loadLeaderboard\(\) \{[\s\S]*?\n  \}\n(?=  async function loadFriends)/, "  async function loadLeaderboard() {\n    const box = $(\"leaderList\")\n    if (isGuest || !sb) { $(\"leaderInfo\").textContent = \"Mode local : connecte-toi pour le classement en ligne.\"; box.innerHTML = '<div class=\"card\">☁️ Classement disponible en MODE COMPTE.</div>'; return }\n    const q = await sb.rpc(\"get_leaderboard\")\n    if (q.error) { box.innerHTML = '<div class=\"card\">❌ Erreur de chargement du classement.</div>'; return }\n    const rows = Array.isArray(q.data) ? q.data : []\n    $(\"leaderInfo\").textContent = \"Classement complet — \" + rows.length + \" joueur(s).\"\n    box.innerHTML = rows.map((r,i) => '<div class=\"rank\"><strong>#'+(i+1)+'</strong><span style=\"flex:1\">'+escapeHtml(r.username)+'</span><b>🏆 '+Number(r.best_distance||0)+'m</b><span class=\"muted\">LV '+Number(r.highest_level||1)+'</span></div>').join('') || '<div class=\"card\">Aucun joueur.</div>'\n  }")
       code = code.replace('["dash", "⚡", "Dash", 6, "Niveau 6 = traverse/détruit les obstacles."]', '["dash", "⚡", "Dash", 5, "20s de base → 10s au niveau max. Niveau 5 = traverse les obstacles."]')
       code = code.replace('"Niveau 6 : traverse et détruit les obstacles."', '"Niveau 5 : traverse et détruit les obstacles."')
-      code = code.replace('  function dash() {\n', `  const getDashCooldown = () => { const level = Math.max(1, Math.min(5, Number(profile.dash_level || 1))); return 20 - (level - 1) * 2.5 }\n\n  function dash() {\n`)
+      code = code.replace('  function dash() {\n', `  const getDashCooldown = () => { const level = Math.max(1, Math.min(5, Number(profile.dash_level || 1))); return 20 - (level - 1) * 2.5 }
+
+  function dash() {
+`)
       code = code.replace('    G.dashCd = 1.6', '    G.dashCd = getDashCooldown()')
       code = code.replace(`        if (G.dashT > 0 && DESTRUCTIBLE[o.type]) {
           o.dead = true
@@ -93,7 +78,11 @@
       code = code.replace('} else if (G.canDouble) {', '} else if ((profile.jump_level || 1) >= 2 && G.canDouble) {')
       code = code.replace('    const v = profile[key] || 1\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = 100 * v', '    const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[key] || 1)\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
       code = code.replace(/const cost = id === "jump" \? 5000 : 100 \* Math\.max\(1, v\)/g, 'const OTHER_UPGRADE_COSTS = [100, 500, 1000, 2500, 5000]\n      const cost = id === "jump" ? 5000 : OTHER_UPGRADE_COSTS[Math.min(Math.max(0, v - 1), OTHER_UPGRADE_COSTS.length - 1)]')
-      code = code.replace(/  function renderShop\(\) \{[\s\S]*?\n  \}\n(?=\s*function renderPacks)/, `  function renderShop() {\n    const el = $("shopGrid")\n    if (el) el.innerHTML = ""\n  }\n`)
+      code = code.replace(/  function renderShop\(\) \{[\s\S]*?\n  \}\n(?=\s*function renderPacks)/, `  function renderShop() {
+    const el = $("shopGrid")
+    if (el) el.innerHTML = ""
+  }
+`)
       code = code.replace(`    const jb = $("btnJump")
     jb.addEventListener("pointerdown", (e) => { e.preventDefault(); jump() })
     jb.addEventListener("pointerup", releaseJump)
