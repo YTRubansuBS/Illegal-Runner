@@ -155,7 +155,7 @@ end;
 $$;
 
 drop function if exists public.finish_run(text,integer,integer,integer,integer);
-grant execute on function public.finish_run(text,integer,integer,integer,integer,integer) to authenticated;
+grant execute on function public.finish_run(text,integer,integer,integer,integer,integer) to authenticated;\n\n-- Classement complet pour tous les comptes connectés.\ncreate or replace function public.get_leaderboard()\nreturns table(username text,best_distance integer,highest_level integer)\nlanguage sql security definer set search_path=public\nas $\n  select p.username,p.best_distance,p.highest_level\n  from public.profiles p\n  order by p.best_distance desc,p.highest_level desc,p.username asc;\n$;\nrevoke all on function public.get_leaderboard() from public;\ngrant execute on function public.get_leaderboard() to authenticated;\n
 
 create or replace function public.buy_pack(p_type text)
 returns jsonb language plpgsql security invoker set search_path=public as $$
