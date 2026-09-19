@@ -22,7 +22,6 @@
     const levelReward = firstCompletion ? 100 * Math.ceil(completedLevel / 10) : 0
     const runCoins = collectedCoins + levelReward
     const newHighest = completedLevel > 0 ? Math.max(currentHighest, Math.min(300, completedLevel + 1)) : currentHighest
-    window.dispatchEvent(new CustomEvent('ir:levelCompletion', { detail: { level: completedLevel, collected: collectedCoins, reward: levelReward, firstCompletion } }))
     if (isGuest || !sb || !user) {
       profile.coins = (profile.coins || 0) + runCoins
       profile.total_distance = (profile.total_distance || 0) + distance
@@ -31,13 +30,16 @@
       profile.quest_coins = (profile.quest_coins || 0) + runCoins
       profile.quest_games = (profile.quest_games || 0) + 1
       profile.highest_level = newHighest
-      saveLocal(); refreshTop(); renderAll(); return
+      saveLocal(); refreshTop(); renderAll()
+      if (completedLevel > 0) window.dispatchEvent(new CustomEvent('ir:levelCompletion', { detail: { level: completedLevel, collected: collectedCoins, reward: levelReward, firstCompletion, highestLevel: newHighest } }))
+      return
     }
     try {
       const r = await sb.rpc('finish_run', { p_mode: completedLevel ? 'level' : 'infinite', p_level: completedLevel, p_distance: distance, p_coins: runCoins, p_seconds: Math.floor((performance.now() - G.startTime) / 1000), p_highest_level: newHighest })
       if (r.error) throw r.error
       if (r.data) Object.assign(profile, r.data)
       refreshTop(); renderAll(); window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: r.data || {} }))
+      if (completedLevel > 0) window.dispatchEvent(new CustomEvent('ir:levelCompletion', { detail: { level: completedLevel, collected: collectedCoins, reward: levelReward, firstCompletion, highestLevel: Number(profile.highest_level || newHighest) } }))
     } catch (e) { console.error('[IR] finish_run error:', e); toast('☁️ Sauvegarde du run impossible.') }
   }
 `)
