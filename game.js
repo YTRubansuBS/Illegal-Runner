@@ -975,8 +975,6 @@
     if (!G.running) return
     G.running = false
     cancelAnimationFrame(G.raf)
-    const reward = 150 + G.level * 12 + (profile.bonus_level || 1) * 30
-    G.coins += reward
     if (G.level >= (profile.highest_level || 1) && G.level < 300) profile.highest_level = G.level + 1
     if (G.level >= 300) profile.highest_level = 300
     await commonSave()
