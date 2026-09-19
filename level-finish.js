@@ -99,8 +99,13 @@
       flag.style.display = 'none'
       return
     }
-    flag.style.left = '82vw'
-    flag.style.bottom = '16vh'
+    // The flag advances toward the player as the runner approaches the finish.
+    // It is driven by level progress, not by the player's position, so it never follows the player.
+    const t = Math.max(0, Math.min(1, (p - 0.45) / 0.55))
+    const startX = innerWidth * 0.90
+    const endX = innerWidth * 0.27
+    flag.style.left = (startX + (endX - startX) * t) + 'px'
+    flag.style.bottom = Math.max(88, Math.min(132, innerHeight * 0.16)) + 'px'
     flag.style.display = 'block'
   }
 
