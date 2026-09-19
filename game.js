@@ -14,7 +14,7 @@
           if (typeof renderAll === 'function') renderAll()
         })
         const STEP = 1 / 120 // fixed physics step`)
-      code = code.replace(/  async function commonSave\\(\\) \\{[\\s\\S]*?\\n  \\}\\n(?=\\s*(?:async )?function freePack)/, [
+      code = code.replace(/  async function commonSave\(\) \{[\s\S]*?\n  \}\n(?=\\s*(?:async )?function freePack)/, [
         '  async function commonSave() {',
         '    const distance = Math.floor(G.dist || 0)',
         '    const collectedCoins = Math.max(0, Math.floor(G.coins || 0))',
@@ -47,7 +47,7 @@
         '  }',
       ].join('\\n'))
       code = code.replace('    $("dist").textContent = Math.floor(G.dist)', '    window.__IR_RUNTIME = { dist:G.dist, goal:G.goal, level:G.level, running:G.running, speed:G.speed, coins:G.coins }; $("dist").textContent = Math.floor(G.dist)')
-      code = code.replace(/  async function finish\\(\\) \\{[\\s\\S]*?\\n  \\}\\n(?=  async function end)/, [
+      code = code.replace(/  async function finish\(\) \{[\s\S]*?\n  \}\n(?=  async function end)/, [
         '  async function finish() {',
         '    if (!G.running) return',
         '    G.running = false',
