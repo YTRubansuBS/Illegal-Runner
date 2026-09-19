@@ -25,7 +25,7 @@
   function getLevel(){const m=String($('objective')?.textContent||'').match(/NIVEAU\s+(\d+)/i);return m?Number(m[1]):0}
   function isInfinite(){return /\bINFINI\b/i.test(String($('objective')?.textContent||''))}
   function getProgress(){const b=$('progressBar');if(!b)return 0;const w=parseFloat(b.style.width);return Number.isFinite(w)?Math.max(0,Math.min(1,w/100)):0}
-  function rewardForLevel(lv){return Math.max(0,100*Math.ceil(lv/10))}
+  function rewardForLevel(lv){const n=Number(lv)||0;return n>0?Math.ceil(n/10)*100:0}
   function rewardKey(identity){return `illegalRunner.finishRewards.v4:${identity}`}
   async function getIdentity(){try{const cfg=window.IR_CONFIG||{},sup=window.supabase;if(sup&&cfg.SUPABASE_URL&&cfg.SUPABASE_ANON_KEY){const client=sup.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);const {data:{user}}=await client.auth.getUser();if(user?.id)return {type:'account',id:'user:'+user.id,user}}}catch(e){}return {type:'local',id:'local',user:null}}
   function readPaid(identity){const all=new Set();for(const key of [rewardKey(identity.id),`illegalRunner.finishRewards.v3:${identity.id}`]){try{const list=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(list))list.forEach(v=>all.add(Number(v)))}catch(e){}}return all}
