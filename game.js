@@ -22,6 +22,7 @@
     const levelReward = firstCompletion ? 100 * Math.ceil(completedLevel / 10) : 0
     const runCoins = collectedCoins + levelReward
     const newHighest = completedLevel > 0 ? Math.max(currentHighest, Math.min(300, completedLevel + 1)) : currentHighest
+    window.dispatchEvent(new CustomEvent('ir:levelCompletion', { detail: { level: completedLevel, collected: collectedCoins, reward: levelReward, firstCompletion } }))
     if (isGuest || !sb || !user) {
       profile.coins = (profile.coins || 0) + runCoins
       profile.total_distance = (profile.total_distance || 0) + distance
