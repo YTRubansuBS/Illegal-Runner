@@ -4,16 +4,6 @@
   fetch(ORIGINAL, { cache: 'no-store' })
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
-      code = code.replace(/    const reward = 150 \+ G\.level \* 12 \+ \(profile\.bonus_level \|\| 1\) \* 30\n    G\.coins \+= reward\n    if \(G\.level >= \(profile\.highest_level \|\| 1\) && G\.level < 300\) profile\.highest_level = G\.level \+ 1\n    if \(G\.level >= 300\) profile\.highest_level = 300\n/, '')
-      code = code.replace(/  async function finish\(\) \{[\s\S]*?\n  \}\n  async function end\(\)/, `  async function finish() {
-    if (!G.running) return
-    G.running = false
-    cancelAnimationFrame(G.raf)
-    await commonSave()
-    SFX.win()
-    showEnd(G.level >= 300 ? "👑 CHAMPION !" : "🏁 NIVEAU " + G.level + " TERMINÉ")
-  }
-  async function end()`)
       code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
           if (e.detail?.selected_background && typeof G !== 'undefined' && G.world) G.world = WORLDS[e.detail.selected_background] || G.world
@@ -24,82 +14,27 @@
           if (typeof renderAll === 'function') renderAll()
         })
         const STEP = 1 / 120 // fixed physics step`)
-      code = code.replace(/  async function commonSave\\(\\) \\{[\\s\\S]*?\\n  \\}\\n(?=\\s*function freePack)/, \`  async function commonSave() {
-    const distance = Math.floor(G.dist || 0)
-    const collectedCoins = Math.max(0, Math.floor(G.coins || 0))
-    const completedLevel = Number(G.level || 0)
-    const currentHighest = Math.max(1, Number(profile.highest_level || 1))
-    const firstCompletion = completedLevel > 0 && completedLevel >= currentHighest
-    const levelReward = firstCompletion ? 100 * Math.ceil(completedLevel / 10) : 0
-    const runCoins = collectedCoins + levelReward
-    const newHighest = completedLevel > 0 ? Math.max(currentHighest, Math.min(300, completedLevel + 1)) : currentHighest
-
+      code = code.replace(/  async function commonSave\(\) \{[\s\S]*?\n  \}\n(?=\s*(?:async )?function freePack)/, `  async function commonSave() {
+    const distance = Math.floor(G.dist || 0), runCoins = Math.max(0, Math.floor(G.coins || 0)), completedLevel = Number(G.level || 0)
+    if (completedLevel > 0) profile.highest_level = Math.max(profile.highest_level || 1, Math.min(300, completedLevel + 1))
     if (isGuest || !sb || !user) {
-      profile.coins = Number(profile.coins || 0) + runCoins
-      profile.total_distance = Number(profile.total_distance || 0) + distance
-      profile.best_distance = Math.max(Number(profile.best_distance || 0), distance)
-      profile.quest_distance = Number(profile.quest_distance || 0) + distance
-      profile.quest_coins = Number(profile.quest_coins || 0) + runCoins
-      profile.quest_games = Number(profile.quest_games || 0) + 1
-      profile.highest_level = newHighest
-      saveLocal()
-      refreshTop()
-      renderAll()
-      if (completedLevel > 0) window.dispatchEvent(new CustomEvent('ir:levelCompletion', { detail: { level: completedLevel, collected: collectedCoins, reward: levelReward, firstCompletion, highestLevel: newHighest } }))
-      return
+      profile.coins = (profile.coins || 0) + runCoins
+      profile.total_distance = (profile.total_distance || 0) + distance
+      profile.best_distance = Math.max(profile.best_distance || 0, distance)
+      profile.quest_distance = (profile.quest_distance || 0) + distance
+      profile.quest_coins = (profile.quest_coins || 0) + runCoins
+      profile.quest_games = (profile.quest_games || 0) + 1
+      saveLocal(); refreshTop(); renderAll(); return
     }
-
-    let saved = false
     try {
-      const r = await sb.rpc('finish_run', {
-        p_mode: completedLevel ? 'level' : 'infinite',
-        p_level: completedLevel,
-        p_distance: distance,
-        p_coins: runCoins,
-        p_seconds: Math.floor((performance.now() - G.startTime) / 1000),
-        p_highest_level: newHighest
-      })
+      const r = await sb.rpc('finish_run', { p_mode: completedLevel ? 'level' : 'infinite', p_level: completedLevel, p_distance: distance, p_coins: runCoins, p_seconds: Math.floor((performance.now() - G.startTime) / 1000), p_highest_level: profile.highest_level || 1 })
       if (r.error) throw r.error
       if (r.data) Object.assign(profile, r.data)
-      saved = true
-    } catch (e) {
-      console.error('[IR] finish_run error:', e)
-      // Fallback: keep the local game state correct even if the RPC is unavailable.
-      profile.coins = Number(profile.coins || 0) + runCoins
-      profile.total_distance = Number(profile.total_distance || 0) + distance
-      profile.best_distance = Math.max(Number(profile.best_distance || 0), distance)
-      profile.quest_distance = Number(profile.quest_distance || 0) + distance
-      profile.quest_coins = Number(profile.quest_coins || 0) + runCoins
-      profile.quest_games = Number(profile.quest_games || 0) + 1
-      profile.highest_level = newHighest
-      try {
-        const u = await sb.from('profiles').update({
-          coins: profile.coins,
-          total_distance: profile.total_distance,
-          best_distance: profile.best_distance,
-          quest_distance: profile.quest_distance,
-          quest_coins: profile.quest_coins,
-          quest_games: profile.quest_games,
-          highest_level: newHighest,
-          updated_at: new Date().toISOString()
-        }).eq('id', user.id)
-        if (u.error) throw u.error
-        saved = true
-      } catch (fallbackError) {
-        console.error('[IR] profile fallback error:', fallbackError)
-      }
-    }
-
-    if (saved) {
-      refreshTop()
-      renderAll()
-      window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: { ...profile } }))
-      if (completedLevel > 0) window.dispatchEvent(new CustomEvent('ir:levelCompletion', { detail: { level: completedLevel, collected: collectedCoins, reward: levelReward, firstCompletion, highestLevel: Number(profile.highest_level || newHighest) } }))
-    } else {
-      toast('☁️ Sauvegarde impossible : progression conservée localement pour cette session.')
-    }
+      refreshTop(); renderAll(); window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: r.data || {} }))
+    } catch (e) { console.error('[IR] finish_run error:', e); toast('☁️ Sauvegarde du run impossible.') }
   }
-`)      code = code.replace(/  function freePack\(\) \{[\s\S]*?\n  \}\n(?=\s*function )/, `  async function freePack() {
+`)
+      code = code.replace(/  function freePack\(\) \{[\s\S]*?\n  \}\n(?=\s*function )/, `  async function freePack() {
     const today = new Date().toISOString().slice(0, 10)
     if (isGuest) { if (profile._freeToday === today) return toast("Déjà récupéré aujourd'hui."); profile._freeToday = today; profile.coins = (profile.coins || 0) + 75; SFX.coin(); saveLocal(); refreshTop(); renderAll(); return toast('🎁 +75 pièces gratuites !') }
     if (!sb || !user) return toast('Connecte-toi pour utiliser le cloud.')
