@@ -15,8 +15,12 @@
         })
         const STEP = 1 / 120 // fixed physics step`)
       code = code.replace(/  async function commonSave\(\) \{[\s\S]*?\n  \}\n(?=\s*(?:async )?function freePack)/, `  async function commonSave() {
-    const distance = Math.floor(G.dist || 0), runCoins = Math.max(0, Math.floor(G.coins || 0)), completedLevel = Number(G.level || 0)
-    if (completedLevel > 0) profile.highest_level = Math.max(profile.highest_level || 1, Math.min(300, completedLevel + 1))
+    const distance = Math.floor(G.dist || 0), collectedCoins = Math.max(0, Math.floor(G.coins || 0)), completedLevel = Number(G.level || 0)
+    const currentHighest = Math.max(1, Number(profile.highest_level || 1))
+    const firstCompletion = completedLevel > 0 && completedLevel >= currentHighest
+    const levelReward = firstCompletion ? 100 * Math.ceil(completedLevel / 10) : 0
+    const runCoins = collectedCoins + levelReward
+    const newHighest = completedLevel > 0 ? Math.max(currentHighest, Math.min(300, completedLevel + 1)) : currentHighest
     if (isGuest || !sb || !user) {
       profile.coins = (profile.coins || 0) + runCoins
       profile.total_distance = (profile.total_distance || 0) + distance
@@ -24,10 +28,11 @@
       profile.quest_distance = (profile.quest_distance || 0) + distance
       profile.quest_coins = (profile.quest_coins || 0) + runCoins
       profile.quest_games = (profile.quest_games || 0) + 1
+      profile.highest_level = newHighest
       saveLocal(); refreshTop(); renderAll(); return
     }
     try {
-      const r = await sb.rpc('finish_run', { p_mode: completedLevel ? 'level' : 'infinite', p_level: completedLevel, p_distance: distance, p_coins: runCoins, p_seconds: Math.floor((performance.now() - G.startTime) / 1000), p_highest_level: profile.highest_level || 1 })
+      const r = await sb.rpc('finish_run', { p_mode: completedLevel ? 'level' : 'infinite', p_level: completedLevel, p_distance: distance, p_coins: runCoins, p_seconds: Math.floor((performance.now() - G.startTime) / 1000), p_highest_level: newHighest })
       if (r.error) throw r.error
       if (r.data) Object.assign(profile, r.data)
       refreshTop(); renderAll(); window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: r.data || {} }))
