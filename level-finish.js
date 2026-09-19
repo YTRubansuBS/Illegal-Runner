@@ -95,13 +95,12 @@
     if (!flag) return
     const lv = getLevel()
     const p = getProgress()
-    if (!lv || isInfinite() || p < 0.45) {
+    if (!lv || isInfinite() || p < 0.95) {
       flag.style.display = 'none'
       return
     }
-    // The flag advances toward the player as the runner approaches the finish.
-    // It is driven by level progress, not by the player's position, so it never follows the player.
-    const t = Math.max(0, Math.min(1, (p - 0.45) / 0.55))
+    // The flag appears during the final 5% and moves toward the runner until the finish.
+    const t = Math.max(0, Math.min(1, (p - 0.95) / 0.05))
     const startX = innerWidth * 0.90
     const endX = innerWidth * 0.27
     flag.style.left = (startX + (endX - startX) * t) + 'px'
@@ -126,7 +125,7 @@
     if (!completed && getProgress() < 0.995) return
 
     finishShown = true
-    const collected = Math.max(0, Math.floor(Number(String($('runCoins')?.textContent || '0').replace(/[^0-9.]/g,'')) || 0))
+    const collected = completed && Number.isFinite(Number(lastCompletion.collected)) ? Math.max(0, Math.floor(Number(lastCompletion.collected))) : 0
     const reward = completed && lastCompletion.firstCompletion ? Math.max(0, Number(lastCompletion.reward || 0)) : 0
 
     if ($('overTitle')) $('overTitle').textContent = lv >= 300 ? '👑 CHAMPION !' : `🏁 NIVEAU ${lv} TERMINÉ`
@@ -145,7 +144,7 @@
     }
     if (reward > 0) {
       box.style.display = ''
-      box.innerHTML = `🎉 PREMIÈRE RÉUSSITE : <b>+${reward} 🪙</b><br>🪙 Pièces ramassées : <b>${collected}</b>`
+      box.innerHTML = `🎉 PREMIÈRE RÉUSSITE : <b>+${reward} 🪙</b><br>🪙 Pièces ramassées : <b>${collected}</b><br>💰 Total gagné ce niveau : <b>${collected + reward} 🪙</b>`
     } else {
       box.style.display = ''
       box.innerHTML = `🪙 Pièces ramassées : <b>${collected}</b>`
