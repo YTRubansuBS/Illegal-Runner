@@ -14,7 +14,7 @@
           if (typeof renderAll === 'function') renderAll()
         })
         const STEP = 1 / 120 // fixed physics step`)
-      code = code.replace(/  async function commonSave\(\) \{[\s\S]*?\n  \}\n(?=\s*(?:async )?function freePack)/, `  async function commonSave() {
+      code = code.replace(/  async function commonSave\\(\\) \\{[\\s\\S]*?\\n  \\}\\n(?=\\s*(?:async )?function freePack)/, \`  async function commonSave() {
     const distance = Math.floor(G.dist || 0)
     const runCoins = Math.max(0, Math.floor(G.coins || 0))
     const completedLevel = Number(G.level || 0)
@@ -43,7 +43,7 @@
       window.dispatchEvent(new CustomEvent('ir:levelReward', { detail: { level: completedLevel, reward: levelReward, collected: runCoins } }))
     } catch (e) { console.error('[IR] finish_run error:', e); toast('☁️ Sauvegarde du run impossible.') }
   }
-`)
+\`)
       code = code.replace(/  function freePack\(\) \{[\s\S]*?\n  \}\n(?=\s*function )/, `  async function freePack() {
     const today = new Date().toISOString().slice(0, 10)
     if (isGuest) { if (profile._freeToday === today) return toast("Déjà récupéré aujourd'hui."); profile._freeToday = today; profile.coins = (profile.coins || 0) + 75; SFX.coin(); saveLocal(); refreshTop(); renderAll(); return toast('🎁 +75 pièces gratuites !') }
