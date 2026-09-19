@@ -65,12 +65,13 @@
   }
 
   function getProgress() {
+    const r = window.__IR_RUNTIME
+    if (r && r.level && r.goal > 0) return Math.max(0, Math.min(1, Number(r.dist || 0) / Number(r.goal || 1)))
     const b = $('progressBar')
     if (!b) return 0
     const w = parseFloat(b.style.width)
     return Number.isFinite(w) ? Math.max(0, Math.min(1, w / 100)) : 0
   }
-
   function getFlag() {
     ensureStyles()
     const game = $('game')
@@ -93,21 +94,20 @@
   function updateFlag() {
     const flag = getFlag()
     if (!flag) return
+    const r = window.__IR_RUNTIME
     const lv = getLevel()
-    const p = getProgress()
-    if (!lv || isInfinite() || p < 0.95) {
-      flag.style.display = 'none'
-      return
-    }
-    // The flag appears during the final 5% and moves toward the runner until the finish.
-    const t = Math.max(0, Math.min(1, (p - 0.95) / 0.05))
-    const startX = innerWidth * 0.90
-    const endX = innerWidth * 0.27
-    flag.style.left = (startX + (endX - startX) * t) + 'px'
+    if (!r || !r.running || !lv || isInfinite() || !(r.goal > 0) || !(r.speed > 0)) { flag.style.display = 'none'; return }
+    const remaining = Math.max(0, Number(r.goal) - Number(r.dist || 0))
+    const metersPerSecond = Math.max(0.1, Number(r.speed) * 0.06)
+    const secondsLeft = remaining / metersPerSecond
+    if (secondsLeft > 15 || remaining <= 0) { flag.style.display = 'none'; return }
+    const t = Math.max(0, Math.min(1, 1 - secondsLeft / 15))
+    const startX = innerWidth * 0.88
+    const playerX = innerWidth * 0.20
+    flag.style.left = (startX + (playerX + 90 - startX) * t) + 'px'
     flag.style.bottom = Math.max(88, Math.min(132, innerHeight * 0.16)) + 'px'
     flag.style.display = 'block'
   }
-
   function rewardForLevel(lv) {
     return 100 * Math.ceil(lv / 10)
   }
