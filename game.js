@@ -18,10 +18,12 @@
     const distance = Math.floor(G.dist || 0), runCoins = Math.max(0, Math.floor(G.coins || 0)), completedLevel = Number(G.level || 0)
     if (completedLevel > 0) profile.highest_level = Math.max(profile.highest_level || 1, Math.min(300, completedLevel + 1))
     if (isGuest || !sb || !user) {
-      profile.coins = (profile.coins || 0) + runCoins; profile.total_distance = (profile.total_distance || 0) + distance
-      profile.best_distance = Math.max(profile.best_distance || 0, distance); profile.total_distance = (profile.total_distance || 0) + distance
+      profile.coins = (profile.coins || 0) + runCoins
+      profile.total_distance = (profile.total_distance || 0) + distance
+      profile.best_distance = Math.max(profile.best_distance || 0, distance)
       profile.quest_distance = (profile.quest_distance || 0) + distance
-      profile.quest_coins = (profile.quest_coins || 0) + runCoins; profile.quest_games = (profile.quest_games || 0) + 1
+      profile.quest_coins = (profile.quest_coins || 0) + runCoins
+      profile.quest_games = (profile.quest_games || 0) + 1
       saveLocal(); refreshTop(); renderAll(); return
     }
     try {
