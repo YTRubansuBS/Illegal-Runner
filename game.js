@@ -5,6 +5,15 @@
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
       code = code.replace(/    const reward = 150 \+ G\.level \* 12 \+ \(profile\.bonus_level \|\| 1\) \* 30\n    G\.coins \+= reward\n    if \(G\.level >= \(profile\.highest_level \|\| 1\) && G\.level < 300\) profile\.highest_level = G\.level \+ 1\n    if \(G\.level >= 300\) profile\.highest_level = 300\n/, '')
+      code = code.replace(/  async function finish\(\) \{[\s\S]*?\n  \}\n  async function end\(\)/, `  async function finish() {
+    if (!G.running) return
+    G.running = false
+    cancelAnimationFrame(G.raf)
+    await commonSave()
+    SFX.win()
+    showEnd(G.level >= 300 ? "👑 CHAMPION !" : "🏁 NIVEAU " + G.level + " TERMINÉ")
+  }
+  async function end()`)
       code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
           if (e.detail?.selected_background && typeof G !== 'undefined' && G.world) G.world = WORLDS[e.detail.selected_background] || G.world
