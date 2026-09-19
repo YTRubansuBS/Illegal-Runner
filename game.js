@@ -46,6 +46,17 @@
         '    } catch (e) { console.error(\'[IR] finish_run error:\', e); toast(\'☁️ Sauvegarde du run impossible.\') }',
         '  }',
       ].join('\\n'))
+      code = code.replace('    $("dist").textContent = Math.floor(G.dist)', '    window.__IR_RUNTIME = { dist:G.dist, goal:G.goal, level:G.level, running:G.running, speed:G.speed, coins:G.coins }; $("dist").textContent = Math.floor(G.dist)')
+      code = code.replace(/  async function finish\\(\\) \\{[\\s\\S]*?\\n  \\}\\n(?=  async function end)/, [
+        '  async function finish() {',
+        '    if (!G.running) return',
+        '    G.running = false',
+        '    cancelAnimationFrame(G.raf)',
+        '    await commonSave()',
+        '    SFX.win()',
+        '    showEnd(G.level >= 300 ? "👑 CHAMPION !" : "🏁 NIVEAU " + G.level + " TERMINÉ")',
+        '  }'
+      ].join('\\n'))
       code = code.replace(/  function freePack\(\) \{[\s\S]*?\n  \}\n(?=\s*function )/, `  async function freePack() {
     const today = new Date().toISOString().slice(0, 10)
     if (isGuest) { if (profile._freeToday === today) return toast("Déjà récupéré aujourd'hui."); profile._freeToday = today; profile.coins = (profile.coins || 0) + 75; SFX.coin(); saveLocal(); refreshTop(); renderAll(); return toast('🎁 +75 pièces gratuites !') }
