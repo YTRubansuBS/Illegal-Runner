@@ -148,6 +148,9 @@
     const visible = getComputedStyle(over).display !== 'none'
     const completed = lastCompletion && Number(lastCompletion.level) === lv
     if (!completed && !visible) return
+    if (completed) {
+      hideFlag()
+    }
     if (!completed && getProgress() < 0.995) return
 
     finishShown = true
@@ -250,7 +253,7 @@
       resetAfterDeathOrMenu()
       updateFlag()
       showFinish()
-    }, 10)
+    }, 1)
   }
 
   if (document.readyState === 'loading') {
