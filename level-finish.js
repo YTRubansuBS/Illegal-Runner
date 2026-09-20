@@ -135,6 +135,11 @@
   function showFinish() {
     const over = $('over')
     const title = String($('overTitle')?.textContent || '')
+    const nextButton = $('btnNextLevel')
+    if (/TU ES MORT/i.test(title)) {
+      if (nextButton) nextButton.style.display = 'none'
+      return
+    }
     const lv = getLevel()
     if (!over || !lv || isInfinite()) return
     if (finishShown) return
@@ -234,6 +239,8 @@
         if (/TU ES MORT/i.test(title)) {
           finishShown = false
           hideFlag()
+          const nextButton = $('btnNextLevel')
+          if (nextButton) nextButton.style.display = 'none'
         }
       }).observe(over, { attributes:true, attributeFilter:['style','class'] })
     }
