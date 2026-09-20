@@ -111,7 +111,7 @@
     const title = String($('overTitle')?.textContent || '')
     const completed = lastCompletion && Number(lastCompletion.level) === lv
     const finishedScreen = !hidden && /NIVEAU\\s+\\d+\\s+TERMINÉ|CHAMPION/i.test(title)
-    if (/TU ES MORT/i.test(title) || completed || finishedScreen) {
+    if (/TU ES MORT/i.test(title) || finishedScreen) {
       flag.style.display = 'none'
       return
     }
@@ -242,7 +242,7 @@
     window.addEventListener('ir:levelCompletion', e => {
       lastCompletion = e.detail || null
       hideFlag()
-      updateFlag()
+      setTimeout(updateFlag, 0)
       setTimeout(showFinish, 0)
       setTimeout(showFinish, 100)
       setTimeout(showFinish, 300)
@@ -265,7 +265,7 @@
       resetAfterDeathOrMenu()
       updateFlag()
       showFinish()
-    }, 1)
+    }, 10)
   }
 
   if (document.readyState === 'loading') {
