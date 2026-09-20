@@ -62,6 +62,77 @@
           ensureFinishFlag()
           setInterval(updateFinishFlag, 50)
         })()
+      // Progressive difficulty + distance boost: difficulty increases with progress, but the runner speed stays unchanged.
+      code = code.replace('    G.baseSpeed = 360 + (profile.distance_level || 1) * 22', '    G.baseSpeed = 360')
+      code = code.replace('    G.speed = Math.min(940, G.baseSpeed + G.dist * 0.03 + dashSpeed)\n    G.dist += G.speed * dt * 0.06', '    G.speed = Math.min(940, G.baseSpeed + dashSpeed)\n    const distanceBoost = 1 + Math.max(0, Math.min(5, Number(profile.distance_level || 1) - 1)) * 0.12\n    G.dist += G.speed * dt * 0.06 * distanceBoost')
+      code = code.replace(`  function spawnObstacle() {
+    const gy = G.groundY
+    const set = profile.selected_obstacle_set || "classic"
+    const r = Math.random()
+    // difficulty grows with distance
+    const d = G.dist
+    if (r < 0.24) {
+      G.obs.push({ type: "spike", x: G.W + 40, y: gy - 40, w: 42, h: 40, destructible: true })
+    } else if (r < 0.42) {
+      const h = rand(46, Math.min(120, 60 + d * 0.02))
+      G.obs.push({ type: "wall", x: G.W + 40, y: gy - h, w: 30, h })
+    } else if (r < 0.56) {
+      G.obs.push({ type: "car", x: G.W + 40, y: gy - 56, w: 96, h: 56, vx: rand(20, 70) })
+    } else if (r < 0.7) {
+      G.obs.push({ type: "drone", x: G.W + 40, y: gy - rand(150, 200), w: 48, h: 34, destructible: true, bob: rand(0, 6.28), baseY: 0 })
+      G.obs[G.obs.length - 1].baseY = G.obs[G.obs.length - 1].y
+    } else if (r < 0.82) {
+      G.obs.push({ type: "projectile", x: G.W + 40, y: gy - rand(50, 95), w: 28, h: 18, destructible: true, vx: rand(180, 260) })
+    } else if (r < 0.92) {
+      const w = rand(90, Math.min(160, 100 + d * 0.02))
+      G.obs.push({ type: "pit", x: G.W + 40, y: gy, w, h: G.groundH })
+    } else {
+      // floating platform + optional spike combo (fair)
+      const py = gy - rand(90, 150)
+      G.obs.push({ type: "platform", x: G.W + 40, y: py, w: 130, h: 16 })
+      if (Math.random() < 0.4) G.obs.push({ type: "spike", x: G.W + 40 + 300, y: gy - 40, w: 42, h: 40, destructible: true })
+    }
+    void set
+  }` , `  function spawnObstacle() {
+    const gy = G.groundY
+    const set = profile.selected_obstacle_set || "classic"
+    const d = Math.max(0, Number(G.dist) || 0)
+    const diff = Math.max(0, Math.min(1, d / 3000))
+    const r = Math.random()
+
+    // 0-500m: learning phase — mostly simple obstacles.
+    const early = d < 500
+    const medium = d >= 500 && d < 1500
+    const late = d >= 1500
+
+    if (r < (early ? 0.34 : medium ? 0.26 : 0.20)) {
+      G.obs.push({ type: "spike", x: G.W + 40, y: gy - 40, w: 42, h: 40, destructible: true })
+    } else if (r < (early ? 0.58 : medium ? 0.46 : 0.38)) {
+      const h = rand(46, 60 + diff * 60)
+      G.obs.push({ type: "wall", x: G.W + 40, y: gy - h, w: 30, h })
+    } else if (r < (early ? 0.73 : medium ? 0.60 : 0.50)) {
+      G.obs.push({ type: "car", x: G.W + 40, y: gy - 56, w: 96, h: 56, vx: rand(20, 70 + diff * 35) })
+    } else if (r < (early ? 0.84 : medium ? 0.73 : 0.64)) {
+      G.obs.push({ type: "drone", x: G.W + 40, y: gy - rand(150, 200), w: 48, h: 34, destructible: true, bob: rand(0, 6.28), baseY: 0 })
+      G.obs[G.obs.length - 1].baseY = G.obs[G.obs.length - 1].y
+    } else if (r < (early ? 0.91 : medium ? 0.82 : 0.73)) {
+      G.obs.push({ type: "projectile", x: G.W + 40, y: gy - rand(50, 95), w: 28, h: 18, destructible: true, vx: rand(180, 260 + diff * 60) })
+    } else if (r < (early ? 0.96 : medium ? 0.91 : 0.88)) {
+      const w = rand(90 + diff * 8, 125 + diff * 40)
+      G.obs.push({ type: "pit", x: G.W + 40, y: gy, w, h: G.groundH })
+      if (!early && Math.random() < 0.20 + diff * 0.25) {
+        const gap = 190 + diff * 80
+        G.obs.push({ type: "spike", x: G.W + 40 + w + gap, y: gy - 40, w: 42, h: 40, destructible: true })
+      }
+    } else {
+      const py = gy - (90 + diff * 45)
+      G.obs.push({ type: "platform", x: G.W + 40, y: py, w: 130 - diff * 12, h: 16 })
+      if (!early && Math.random() < 0.35 + diff * 0.35) {
+        G.obs.push({ type: "spike", x: G.W + 40 + 220 + diff * 50, y: gy - 40, w: 42, h: 40, destructible: true })
+      }
+    }
+    void set
+  }`)
         const STEP = 1 / 120 // fixed physics step`)
       code = replaceBetween(code, "  async function commonSave() {", "  function freePack() {", `  async function commonSave() {
     const distance = Math.max(0, Math.floor(G.dist || 0))
