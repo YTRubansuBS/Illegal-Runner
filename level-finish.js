@@ -94,27 +94,36 @@
   function updateFlag() {
     const flag = getFlag()
     if (!flag) return
-    const r = window.__IR_RUNTIME
+
     const lv = getLevel()
-    if (!r || !r.running || !lv || isInfinite() || !(r.goal > 0)) {
+    const over = $('over')
+    const hidden = !over || getComputedStyle(over).display === 'none'
+
+    // Le mode INFINI n'a pas de drapeau de fin.
+    if (!lv || isInfinite()) {
       flag.style.display = 'none'
       return
     }
 
-    const progress = Math.max(0, Math.min(1, Number(r.dist || 0) / Number(r.goal || 1)))
+    // IMPORTANT : on utilise aussi la barre de progression du jeu.
+    // Cela fonctionne même en MODE LOCAL, sans Supabase et sans __IR_RUNTIME.
+    const progress = getProgress()
 
-    // Le drapeau apparaît dans les 5 % derniers mètres du niveau.
-    if (progress < 0.95 || progress >= 1) {
+    // Pendant une partie : le drapeau apparaît à 95 %.
+    // Une fois le niveau terminé, on le laisse visible très brièvement
+    // pour éviter qu'il disparaisse avant l'écran de victoire.
+    if (progress < 0.95 || progress > 1.001 || (!hidden && progress < 0.995)) {
       flag.style.display = 'none'
       return
     }
 
-    // De 95 % à 100 %, le drapeau avance vers le joueur.
-    // À 95 % : il est loin devant. À 90 % : le joueur est dessus.
+    // Le drapeau avance réellement vers la position du joueur
+    // entre 95 % et 100 % de progression.
     const t = Math.max(0, Math.min(1, (progress - 0.95) / 0.05))
-    const startX = innerWidth * 0.88
-    const playerX = innerWidth * 0.20
-    const targetX = playerX + 90
+    const startX = Math.max(180, innerWidth * 0.88)
+    const playerX = Math.max(80, innerWidth * 0.20)
+    const targetX = playerX + 55
+
     flag.style.left = (startX + (targetX - startX) * t) + 'px'
     flag.style.bottom = Math.max(88, Math.min(132, innerHeight * 0.16)) + 'px'
     flag.style.display = 'block'
