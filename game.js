@@ -62,7 +62,66 @@
           ensureFinishFlag()
           setInterval(updateFinishFlag, 50)
         })()
+        ;(() => {
+          let pauseStart = 0
+          let pauseCountdown = null
+          function showPause(show) {
+            const p = document.getElementById("pauseOverlay")
+            if (p) p.style.display = show ? "grid" : "none"
+          }
+          function pauseGame() {
+            if (!G.running) return
+            G.running = false
+            cancelAnimationFrame(G.raf)
+            pauseStart = performance.now()
+            showPause(true)
+          }
+          function resumeGame() {
+            if (G.running || !pauseStart) return
+            showPause(false)
+            const el = document.getElementById("countdown")
+            el.style.display = "flex"
+            el.classList.remove("go")
+            let n = 3
+            el.textContent = n
+            SFX.tick()
+            if (pauseCountdown) clearInterval(pauseCountdown)
+            pauseCountdown = setInterval(() => {
+              n--
+              if (n > 0) { el.textContent = n; SFX.tick() }
+              else if (n === 0) { el.textContent = "GO!"; el.classList.add("go"); SFX.go() }
+              else {
+                clearInterval(pauseCountdown)
+                pauseCountdown = null
+                el.style.display = "none"
+                G.running = true
+                G.startTime += performance.now() - pauseStart
+                pauseStart = 0
+                G.last = performance.now()
+                G.acc = 0
+                G.raf = requestAnimationFrame(loop)
+              }
+            }, 600)
+          }
+          function restartFromPause() {
+            showPause(false)
+            if (pauseCountdown) { clearInterval(pauseCountdown); pauseCountdown = null }
+            pauseStart = 0
+            start(G.level)
+          }
+          function quitFromPause() {
+            showPause(false)
+            if (pauseCountdown) { clearInterval(pauseCountdown); pauseCountdown = null }
+            pauseStart = 0
+            quit()
+          }
+          window.addEventListener("ir:pause", pauseGame)
+          window.addEventListener("ir:resume", resumeGame)
+          window.addEventListener("ir:pauseRestart", restartFromPause)
+          window.addEventListener("ir:pauseQuit", quitFromPause)
+        })()
         const STEP = 1 / 120 // fixed physics step`)
+      code = code.replace('    $("btnQuit").onclick = quit', '    $("btnQuit").onclick = quit\n    $("btnPause").onclick = () => window.dispatchEvent(new CustomEvent("ir:pause"))')
       code = replaceBetween(code, "  async function commonSave() {", "  function freePack() {", `  async function commonSave() {
     const distance = Math.max(0, Math.floor(G.dist || 0))
     const runCoins = Math.max(0, Math.floor(G.coins || 0))
