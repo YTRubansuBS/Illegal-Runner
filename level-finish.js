@@ -105,6 +105,17 @@
       return
     }
 
+    // IMPORTANT : dès que le niveau est terminé ou que l'écran de mort est actif,
+    // le drapeau est forcé à disparaître ici, avant tout calcul de position.
+    // Cela évite que updateFlag() le réaffiche juste après hideFlag().
+    const title = String($('overTitle')?.textContent || '')
+    const completed = lastCompletion && Number(lastCompletion.level) === lv
+    const finishedScreen = !hidden && /NIVEAU\\s+\\d+\\s+TERMINÉ|CHAMPION/i.test(title)
+    if (/TU ES MORT/i.test(title) || completed || finishedScreen) {
+      flag.style.display = 'none'
+      return
+    }
+
     // IMPORTANT : on utilise aussi la barre de progression du jeu.
     // Cela fonctionne même en MODE LOCAL, sans Supabase et sans __IR_RUNTIME.
     const progress = getProgress()
@@ -230,6 +241,7 @@
 
     window.addEventListener('ir:levelCompletion', e => {
       lastCompletion = e.detail || null
+      hideFlag()
       updateFlag()
       setTimeout(showFinish, 0)
       setTimeout(showFinish, 100)
