@@ -138,6 +138,7 @@
     const nextButton = $('btnNextLevel')
     if (/TU ES MORT/i.test(title)) {
       if (nextButton) nextButton.style.display = 'none'
+      hideFlag()
       return
     }
     const lv = getLevel()
@@ -249,7 +250,7 @@
       resetAfterDeathOrMenu()
       updateFlag()
       showFinish()
-    }, 100)
+    }, 10)
   }
 
   if (document.readyState === 'loading') {
