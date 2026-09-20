@@ -63,6 +63,30 @@
           setInterval(updateFinishFlag, 50)
         })()
         const STEP = 1 / 120 // fixed physics step`)
+      // Progressive difficulty: new stages at 5000m and 10000m. Character speed is unchanged.
+      code = code.replace('    const dashSpeed = G.dashT > 0 ? 520 : 0\\n    G.speed = Math.min(940, G.baseSpeed + G.dist * 0.03 + dashSpeed)\\n    G.dist += G.speed * dt * 0.06', '    const dashSpeed = G.dashT > 0 ? 520 : 0\\n    G.speed = Math.min(940, G.baseSpeed + G.dist * 0.03 + dashSpeed)\\n    const distanceBoost = 1 + Math.max(0, Math.min(5, Number(profile.distance_level || 1) - 1)) * 0.12\\n    G.dist += G.speed * dt * 0.06 * distanceBoost')
+      const progressiveSpawn = [
+        '  function spawnObstacle() {',
+        '    const gy = G.groundY',
+        '    const set = profile.selected_obstacle_set || "classic"',
+        '    const d = Math.max(0, Number(G.dist) || 0)',
+        '    const diff = Math.max(0, Math.min(1, d / 10000))',
+        '    const r = Math.random()',
+        '    const early = d < 500',
+        '    const medium = d >= 500 && d < 5000',
+        '    const hard = d >= 5000 && d < 10000',
+        '    const extreme = d >= 10000',
+        '    if (r < (early ? 0.34 : medium ? 0.28 : hard ? 0.22 : 0.18)) G.obs.push({ type: "spike", x: G.W + 40, y: gy - 40, w: 42, h: 40, destructible: true })',
+        '    else if (r < (early ? 0.60 : medium ? 0.48 : hard ? 0.38 : 0.30)) { const h = rand(46, 60 + diff * 70); G.obs.push({ type: "wall", x: G.W + 40, y: gy - h, w: 30, h }) }',
+        '    else if (r < (early ? 0.75 : medium ? 0.62 : hard ? 0.50 : 0.42)) G.obs.push({ type: "car", x: G.W + 40, y: gy - 56, w: 96, h: 56, vx: rand(20, 70 + diff * 40) })',
+        '    else if (r < (early ? 0.85 : medium ? 0.74 : hard ? 0.64 : 0.56)) { G.obs.push({ type: "drone", x: G.W + 40, y: gy - rand(150, 200), w: 48, h: 34, destructible: true, bob: rand(0, 6.28), baseY: 0 }); G.obs[G.obs.length - 1].baseY = G.obs[G.obs.length - 1].y }',
+        '    else if (r < (early ? 0.92 : medium ? 0.83 : hard ? 0.73 : 0.64)) G.obs.push({ type: "projectile", x: G.W + 40, y: gy - rand(50, 95), w: 28, h: 18, destructible: true, vx: rand(180, 260 + diff * 80) })',
+        '    else if (r < (early ? 0.97 : medium ? 0.91 : hard ? 0.84 : 0.78)) { const w = rand(90 + diff * 8, 125 + diff * 45); G.obs.push({ type: "pit", x: G.W + 40, y: gy, w, h: G.groundH }); if ((hard || extreme) && Math.random() < (hard ? 0.28 : 0.42)) G.obs.push({ type: "spike", x: G.W + 40 + w + (hard ? 180 : 155), y: gy - 40, w: 42, h: 40, destructible: true }) }',
+        '    else { const py = gy - (90 + diff * 55); G.obs.push({ type: "platform", x: G.W + 40, y: py, w: Math.max(95, 130 - diff * 20), h: 16 }); if ((medium || hard || extreme) && Math.random() < (medium ? 0.25 : hard ? 0.42 : 0.55)) G.obs.push({ type: "spike", x: G.W + 40 + (extreme ? 185 : hard ? 205 : 230), y: gy - 40, w: 42, h: 40, destructible: true }) }',
+        '    void set',
+        '  }'
+      ].join('\\n')
+      code = code.replace(/  function spawnObstacle\\(\\) \\{[\\s\\S]*?\\n  \\}\\n(?=\\s*function )/, progressiveSpawn + '\\n\\n  function ')
       code = replaceBetween(code, "  async function commonSave() {", "  function freePack() {", `  async function commonSave() {
     const distance = Math.max(0, Math.floor(G.dist || 0))
     const runCoins = Math.max(0, Math.floor(G.coins || 0))
