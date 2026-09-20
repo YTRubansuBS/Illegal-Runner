@@ -7,6 +7,7 @@
   let lastCompletion = null
   let observerStarted = false
   let levelEnded = false
+  let deathHideUntil = 0
 
   function ensureStyles() {
     if ($('irFinishStyle')) return
@@ -103,7 +104,7 @@
     // Une fois mort ou arrivé à la fin, le drapeau est définitivement caché
     // jusqu'au lancement d'un nouveau niveau. Cela évite que la boucle de jeu
     // le fasse réapparaître juste après sa disparition.
-    if (levelEnded) {
+    if (levelEnded || Date.now() < deathHideUntil) {
       flag.style.setProperty('display', 'none', 'important')
       return
     }
@@ -254,6 +255,7 @@
         if (/TU ES MORT/i.test(title)) {
           finishShown = false
           levelEnded = true
+          deathHideUntil = Date.now() + 3000
           hideFlag()
         }
       }).observe(over, { attributes:true, attributeFilter:['style','class'] })
@@ -261,7 +263,7 @@
 
     setInterval(() => {
       // Si la progression revient au début, c'est un nouveau niveau/une nouvelle partie.
-      if (getProgress() < 0.90 && !/TU ES MORT/i.test(String($('overTitle')?.textContent || ''))) levelEnded = false
+      if (getProgress() < 0.90 && !/TU ES MORT/i.test(String($('overTitle')?.textContent || ''))) { levelEnded = false; deathHideUntil = 0 }
       resetAfterDeathOrMenu()
       updateFlag()
       showFinish()
