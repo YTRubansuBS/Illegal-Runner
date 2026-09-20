@@ -14,7 +14,7 @@
   fetch(ORIGINAL, { cache: 'no-store' })
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
-      code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
+      // Expose the REAL runtime state so the finish flag can follow the game every frame.\n      code = code.replace('    world: WORLDS.city, goal: 0,\n  }', '    world: WORLDS.city, goal: 0,\n  }\n  window.__IR_RUNTIME = G')\n      code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
           if (e.detail?.selected_background && typeof G !== 'undefined' && G.world) G.world = WORLDS[e.detail.selected_background] || G.world
         })
