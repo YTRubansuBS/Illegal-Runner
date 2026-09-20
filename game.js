@@ -72,10 +72,13 @@
     if (!G.running) return
     G.running = false
     cancelAnimationFrame(G.raf)
+    const firstCompletion = G.level >= (profile.highest_level || 1)
+    const reward = firstCompletion ? (100 * Math.ceil(G.level / 10)) : 0
+    if (firstCompletion) G.coins = Math.max(0, Math.floor(G.coins || 0)) + reward
     const collected = Math.max(0, Math.floor(G.coins || 0))
     if (G.level >= (profile.highest_level || 1) && G.level < 300) profile.highest_level = G.level + 1
     if (G.level >= 300) profile.highest_level = 300
-    window.dispatchEvent(new CustomEvent("ir:levelCompletion", { detail: { level: G.level, collected, reward: 0, total: collected, firstCompletion: false } }))
+    window.dispatchEvent(new CustomEvent("ir:levelCompletion", { detail: { level: G.level, collected, reward, total: collected, firstCompletion } }))
     await commonSave()
     SFX.win()
     showEnd(G.level >= 300 ? "👑 CHAMPION !" : "🏁 NIVEAU " + G.level + " TERMINÉ")
