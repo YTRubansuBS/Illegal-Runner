@@ -48,7 +48,16 @@
               f.style.display = 'none'
               return
             }
-            f.style.display = (G.dist / G.goal >= 0.95) ? 'block' : 'none'
+            const progress = Math.max(0, Math.min(1, G.dist / G.goal))
+            if (progress < 0.95) {
+              f.style.display = 'none'
+              return
+            }
+            const approach = Math.max(0, Math.min(1, (progress - 0.95) / 0.05))
+            f.style.left = (72 - approach * 52) + '%'
+            f.style.top = (50 + Math.sin(approach * Math.PI) * 2) + '%'
+            f.style.transform = 'translate(-50%, -50%) scale(' + (1 + approach * 0.12) + ')'
+            f.style.display = 'block'
           }
           ensureFinishFlag()
           setInterval(updateFinishFlag, 50)
