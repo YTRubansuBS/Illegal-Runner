@@ -1,178 +1,256 @@
-/* Illegal Runner — FINISH FLAG
-   Standalone: does NOT depend on Supabase, runtime globals or custom events.
-*/
+/* Illegal Runner - reliable finish flag, first-completion reward display and next-level flow */
 (() => {
-  "use strict";
+  'use strict'
 
-  let lastWidth = 0;
-  let deadUntil = 0;
+  const $ = id => document.getElementById(id)
+  let finishShown = false
+  let lastCompletion = null
+  let observerStarted = false
 
-  function setup() {
-    const game = document.getElementById("game");
-    const bar = document.getElementById("progressBar");
-    if (!game || !bar) return;
+  function ensureStyles() {
+    if ($('irFinishStyle')) return
+    const s = document.createElement('style')
+    s.id = 'irFinishStyle'
+    s.textContent = `
+      #levelFinishCourseFlag {
+        position:absolute !important;
+        left:82vw !important;
+        bottom:16vh !important;
+        width:62px;
+        height:130px;
+        z-index:99999 !important;
+        pointer-events:none;
+        display:none;
+        transform:translateX(-50%);
+        filter:drop-shadow(0 0 12px rgba(0,229,255,.75));
+      }
+      #levelFinishCourseFlag .pole {
+        position:absolute; left:28px; bottom:0; width:6px; height:116px;
+        border-radius:5px; background:linear-gradient(#fff,#00e5ff 45%,#1677a0);
+        box-shadow:0 0 10px rgba(0,229,255,.9);
+      }
+      #levelFinishCourseFlag .flag {
+        position:absolute; left:33px; top:4px; width:50px; height:34px;
+        border-radius:2px 8px 8px 2px;
+        background:linear-gradient(135deg,#00e5ff,#7df8ff 48%,#008bb8);
+        clip-path:polygon(0 0,100% 0,78% 50%,100% 100%,0 100%);
+        box-shadow:0 0 14px rgba(0,229,255,.9);
+        animation:irFlagWave .55s ease-in-out infinite alternate;
+      }
+      #levelFinishCourseFlag .flag:after {
+        content:'🏁'; position:absolute; inset:0; display:grid; place-items:center; font-size:18px;
+      }
+      #levelFinishCourseFlag .base {
+        position:absolute; left:15px; bottom:0; width:32px; height:9px;
+        border-radius:50%; background:#00e5ff; box-shadow:0 0 14px rgba(0,229,255,.9);
+      }
+      @keyframes irFlagWave { from{transform:skewY(-2deg)} to{transform:skewY(4deg)} }
+      #levelFinishReward {
+        margin:10px 0 0; padding:10px 12px; border-radius:12px;
+        background:rgba(0,229,255,.10); border:1px solid rgba(0,229,255,.28);
+      }
+      #btnNextLevel { margin-top:10px; width:100%; }
+    `
+    document.head.appendChild(s)
+  }
 
-    let flag = document.getElementById("irRealFinishFlag");
+  function getLevel() {
+    const text = String($('objective')?.textContent || '')
+    const m = text.match(/NIVEAU\s+(\d+)/i)
+    return m ? Number(m[1]) : 0
+  }
+
+  function isInfinite() {
+    return /\bINFINI\b/i.test(String($('objective')?.textContent || ''))
+  }
+
+  function getProgress() {
+    const r = window.__IR_RUNTIME
+    if (r && r.level && r.goal > 0) return Math.max(0, Math.min(1, Number(r.dist || 0) / Number(r.goal || 1)))
+    const b = $('progressBar')
+    if (!b) return 0
+    const w = parseFloat(b.style.width)
+    return Number.isFinite(w) ? Math.max(0, Math.min(1, w / 100)) : 0
+  }
+  function getFlag() {
+    ensureStyles()
+    const game = $('game')
+    if (!game) return null
+    let flag = $('levelFinishCourseFlag')
     if (!flag) {
-      flag = document.createElement("div");
-      flag.id = "irRealFinishFlag";
-      flag.innerHTML =
-        '<div class="ir-pole"></div>' +
-        '<div class="ir-banner">🏁</div>' +
-        '<div class="ir-base"></div>';
-      game.appendChild(flag);
+      flag = document.createElement('div')
+      flag.id = 'levelFinishCourseFlag'
+      flag.innerHTML = '<div class="flag"></div><div class="pole"></div><div class="base"></div>'
+      game.appendChild(flag)
     }
-
-    if (!document.getElementById("irRealFinishFlagStyle")) {
-      const style = document.createElement("style");
-      style.id = "irRealFinishFlagStyle";
-      style.textContent = `
-        #irRealFinishFlag {
-          position:absolute !important;
-          width:64px !important;
-          height:140px !important;
-          left:88% !important;
-          bottom:18% !important;
-          z-index:2147483647 !important;
-          pointer-events:none !important;
-          display:none !important;
-          visibility:visible !important;
-          opacity:1 !important;
-          transform:translateX(-50%) !important;
-        }
-        #irRealFinishFlag .ir-pole {
-          position:absolute;
-          left:29px;
-          bottom:0;
-          width:6px;
-          height:122px;
-          background:#fff;
-          border-radius:5px;
-          box-shadow:0 0 12px #00e5ff;
-        }
-        #irRealFinishFlag .ir-banner {
-          position:absolute;
-          left:34px;
-          top:5px;
-          width:55px;
-          height:38px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-size:27px;
-          background:#00e5ff;
-          border-radius:2px 9px 9px 2px;
-          box-shadow:0 0 18px #00e5ff;
-          animation:irFlagWave .45s ease-in-out infinite alternate;
-        }
-        #irRealFinishFlag .ir-base {
-          position:absolute;
-          left:14px;
-          bottom:0;
-          width:36px;
-          height:10px;
-          border-radius:50%;
-          background:#00e5ff;
-          box-shadow:0 0 18px #00e5ff;
-        }
-        @keyframes irFlagWave {
-          from { transform:skewY(-3deg); }
-          to { transform:skewY(4deg); }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
-    function hide() {
-      flag.style.setProperty("display", "none", "important");
-    }
-
-    function show() {
-      flag.style.setProperty("display", "block", "important");
-    }
-
-    function progress() {
-      // game.js writes the real level progress directly as an inline width.
-      // IMPORTANT: the progress container is display:none, so computed width
-      // can be 0 even while the inline progress is correct.
-      const inline = parseFloat(String(bar.style.width || "").replace("%", ""));
-      if (Number.isFinite(inline)) return Math.max(0, Math.min(1, inline / 100));
-
-      // Fallbacks for future engine versions.
-      const attr = parseFloat(String(bar.getAttribute("data-progress") || ""));
-      if (Number.isFinite(attr)) return Math.max(0, Math.min(1, attr / 100));
-
-      const total = parseFloat(getComputedStyle(bar.parentElement).width);
-      const w = parseFloat(getComputedStyle(bar).width);
-      if (Number.isFinite(w) && Number.isFinite(total) && total > 0) {
-        return Math.max(0, Math.min(1, w / total));
-      }
-      return 0;
-    }
-
-    function update() {
-      const overlay = document.getElementById("over");
-      const title = String(document.getElementById("overTitle")?.textContent || "");
-      const gameVisible = getComputedStyle(game).display !== "none";
-      const overlayVisible = overlay && getComputedStyle(overlay).display !== "none";
-      const p = progress();
-
-      // Death or result screen: remove flag immediately.
-      if (!gameVisible || overlayVisible || /TU ES MORT|TERMINÉ|CHAMPION/i.test(title)) {
-        hide();
-        if (/TU ES MORT/i.test(title)) deadUntil = Date.now() + 1000;
-        return;
-      }
-
-      // A fresh run resets the death lock.
-      if (p < 0.05) {
-        deadUntil = 0;
-        lastWidth = p;
-        hide();
-        return;
-      }
-
-      if (Date.now() < deadUntil) {
-        hide();
-        return;
-      }
-
-      // The flag is tied ONLY to the real level progress written by game.js.
-      // It therefore works identically in LOCAL and ACCOUNT mode.
-      if (p >= 0.90 && p < 1.01) {
-        const t = Math.max(0, Math.min(1, (p - 0.90) / 0.10));
-        const start = Math.max(170, game.clientWidth * 0.88);
-        const player = Math.max(90, game.clientWidth * 0.20);
-        const target = player + 65;
-        flag.style.setProperty("left", (start + (target - start) * t) + "px", "important");
-        flag.style.setProperty("bottom", Math.max(95, game.clientHeight * 0.17) + "px", "important");
-        show();
-      } else {
-        hide();
-      }
-
-      lastWidth = p;
-    }
-
-    // Run continuously so it cannot be blocked by the game engine.
-    update();
-    setInterval(update, 50);
-
-    // Also react instantly to progress-bar changes.
-    new MutationObserver(update).observe(bar, {
-      attributes: true,
-      attributeFilter: ["style", "class", "data-progress"]
-    });
-
-    // The engine updates the inline width every animation frame.
-    // Polling is kept as a safety net for account/local/restart transitions.
-    window.addEventListener("resize", update);
-    document.addEventListener("visibilitychange", update);
+    return flag
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", setup, { once:true });
+  function hideFlag() {
+    const flag = $('levelFinishCourseFlag')
+    if (flag) flag.style.display = 'none'
+  }
+
+  function updateFlag() {
+    const flag = getFlag()
+    if (!flag) return
+
+    const lv = getLevel()
+    const over = $('over')
+    const hidden = !over || getComputedStyle(over).display === 'none'
+
+    // Le mode INFINI n'a pas de drapeau de fin.
+    if (!lv || isInfinite()) {
+      flag.style.display = 'none'
+      return
+    }
+
+    // IMPORTANT : on utilise aussi la barre de progression du jeu.
+    // Cela fonctionne même en MODE LOCAL, sans Supabase et sans __IR_RUNTIME.
+    const progress = getProgress()
+
+    // Pendant une partie : le drapeau apparaît à 95 %.
+    // Une fois le niveau terminé, on le laisse visible très brièvement
+    // pour éviter qu'il disparaisse avant l'écran de victoire.
+    if (progress < 0.95 || progress > 1.001 || (!hidden && progress < 0.995)) {
+      flag.style.display = 'none'
+      return
+    }
+
+    // Le drapeau avance réellement vers la position du joueur
+    // entre 95 % et 100 % de progression.
+    const t = Math.max(0, Math.min(1, (progress - 0.95) / 0.05))
+    const startX = Math.max(180, innerWidth * 0.88)
+    const playerX = Math.max(80, innerWidth * 0.20)
+    const targetX = playerX + 55
+
+    flag.style.left = (startX + (targetX - startX) * t) + 'px'
+    flag.style.bottom = Math.max(88, Math.min(132, innerHeight * 0.16)) + 'px'
+    flag.style.display = 'block'
+  }
+  function rewardForLevel(lv) {
+    return 100 * Math.ceil(lv / 10)
+  }
+
+  function showFinish() {
+    const over = $('over')
+    const title = String($('overTitle')?.textContent || '')
+    const lv = getLevel()
+    if (!over || !lv || isInfinite()) return
+    if (finishShown) return
+
+    const visible = getComputedStyle(over).display !== 'none'
+    const completed = lastCompletion && Number(lastCompletion.level) === lv
+    if (!completed && !visible) return
+    if (!completed && getProgress() < 0.995) return
+
+    finishShown = true
+    const collected = completed && Number.isFinite(Number(lastCompletion.collected)) ? Math.max(0, Math.floor(Number(lastCompletion.collected))) : 0
+    const reward = completed && lastCompletion.firstCompletion ? Math.max(0, Number(lastCompletion.reward || 0)) : 0
+
+    if ($('overTitle')) $('overTitle').textContent = lv >= 300 ? '👑 CHAMPION !' : `🏁 NIVEAU ${lv} TERMINÉ`
+    if ($('finalCoins')) $('finalCoins').textContent = collected + reward
+    if ($('finalTime')) $('finalTime').textContent = '—'
+    over.style.display = 'grid'
+
+    const card = document.querySelector('#over .over-card')
+    if (!card) return
+
+    let box = $('levelFinishReward')
+    if (!box) {
+      box = document.createElement('div')
+      box.id = 'levelFinishReward'
+      card.appendChild(box)
+    }
+    if (reward > 0) {
+      box.style.display = ''
+      box.innerHTML = `🎉 PREMIÈRE RÉUSSITE : <b>+${reward} 🪙</b><br>🪙 Pièces ramassées : <b>${collected}</b><br>💰 Total gagné ce niveau : <b>${collected + reward} 🪙</b>`
+    } else {
+      box.style.display = ''
+      box.innerHTML = `🪙 Pièces ramassées : <b>${collected}</b>`
+    }
+
+    if (lv >= 300) return
+
+    let next = $('btnNextLevel')
+    if (!next) {
+      next = document.createElement('button')
+      next.id = 'btnNextLevel'
+      next.className = 'primary'
+      next.type = 'button'
+      const row = card.querySelector('.row')
+      if (row) row.parentNode.insertBefore(next, row)
+      else card.appendChild(next)
+    }
+    next.textContent = `➡️ NIVEAU ${lv + 1}`
+    next.disabled = false
+    next.style.display = 'block'
+
+    next.onclick = e => {
+      e.preventDefault()
+      e.stopPropagation()
+      const target = lv + 1
+      finishShown = false
+      lastCompletion = null
+      hideFlag()
+      over.style.display = 'none'
+      const progress = $('progressBar')
+      if (progress) progress.style.width = '0%'
+      const button = document.querySelector(`#levelButtons button[data-level="${target}"]`)
+      if (!button || button.disabled) {
+        if (typeof window.toast === 'function') window.toast('🔒 Le niveau suivant n’est pas encore débloqué.')
+        return
+      }
+      setTimeout(() => button.click(), 80)
+    }
+  }
+
+  function resetAfterDeathOrMenu() {
+    const over = $('over')
+    if (!over) return
+    const title = String($('overTitle')?.textContent || '')
+    const hidden = getComputedStyle(over).display === 'none'
+    if (hidden || /TU ES MORT/i.test(title)) {
+      finishShown = false
+      if (hidden || /TU ES MORT/i.test(title)) hideFlag()
+    }
+  }
+
+  function start() {
+    if (observerStarted) return
+    observerStarted = true
+    ensureStyles()
+    getFlag()
+
+    window.addEventListener('ir:levelCompletion', e => {
+      lastCompletion = e.detail || null
+      updateFlag()
+      setTimeout(showFinish, 0)
+      setTimeout(showFinish, 100)
+      setTimeout(showFinish, 300)
+    })
+
+    const over = $('over')
+    if (over) {
+      new MutationObserver(() => {
+        const title = String($('overTitle')?.textContent || '')
+        if (/TU ES MORT/i.test(title)) {
+          finishShown = false
+          hideFlag()
+        }
+      }).observe(over, { attributes:true, attributeFilter:['style','class'] })
+    }
+
+    setInterval(() => {
+      resetAfterDeathOrMenu()
+      updateFlag()
+      showFinish()
+    }, 100)
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once:true })
   } else {
-    setup();
+    start()
   }
-})();
+})()
