@@ -14,7 +14,32 @@
   fetch(ORIGINAL, { cache: 'no-store' })
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
-      code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
+      code = code.replace('(() => {
+          let finishFlag = null
+          function ensureFinishFlag() {
+            if (finishFlag && document.body.contains(finishFlag)) return finishFlag
+            finishFlag = document.createElement("div")
+            finishFlag.id = "irFinishFlag"
+            finishFlag.innerHTML = '<div class="pole"></div><div class="flag">🏁</div>'
+            const st = document.createElement("style")
+            st.textContent = `
+              #irFinishFlag{position:fixed;left:72%;top:42%;width:120px;height:180px;z-index:2147483647;pointer-events:none;display:none}
+              #irFinishFlag .pole{position:absolute;left:48px;bottom:0;width:8px;height:170px;background:#fff;border-radius:5px;box-shadow:0 0 14px #00e5ff}
+              #irFinishFlag .flag{position:absolute;left:56px;top:0;width:64px;height:48px;background:#00e5ff;display:flex;align-items:center;justify-content:center;font-size:28px;clip-path:polygon(0 0,100% 0,78% 50%,100% 100%,0 100%);box-shadow:0 0 20px #00e5ff}
+            `
+            document.head.appendChild(st)
+            document.body.appendChild(finishFlag)
+            return finishFlag
+          }
+          function updateFinishFlag() {
+            const f = ensureFinishFlag()
+            if (!G.running || !G.goal || G.level <= 0) { f.style.display = "none"; return }
+            const progress = G.dist / G.goal
+            f.style.display = progress >= 0.95 ? "block" : "none"
+          }
+          setInterval(updateFinishFlag, 30)
+        })()
+        const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
           if (e.detail?.selected_background && typeof G !== 'undefined' && G.world) G.world = WORLDS[e.detail.selected_background] || G.world
         })
