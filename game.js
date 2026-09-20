@@ -121,7 +121,7 @@
           window.addEventListener("ir:pauseQuit", quitFromPause)
         })()
         const STEP = 1 / 120 // fixed physics step`)
-      code = code.replace(/  function renderUpgrades\\(\\) \\{[\\s\\S]*?\\n  \\}\\n(?=  function renderShop)/, `  function upgradeCard(item, bonus) {
+      code = code.replace(/  function renderUpgrades\(\) \{[\s\S]*?\n  \}\n(?=  function renderShop)/, `  function upgradeCard(item, bonus) {
     const [id, em, n, max, desc] = item
     const key = bonus ? "bonus_" + id + "_level" : id + "_level"
     const v = Number(profile[key] || 1)
@@ -141,7 +141,7 @@
       BONUS_UPGRADES.map(x => upgradeCard(x, true)).join("")
   }
 `)
-      code = code.replace(/  function jump\\(\\) \\{[\\s\\S]*?\\n  \\}\\n  function releaseJump/, `  function jump() {
+      code = code.replace(/  function jump\(\) \{[\s\S]*?\n  \}\n  function releaseJump/, `  function jump() {
     if (!G.running) return
     if (G.jetpackT > 0) {
       G.jetpackHold = true
