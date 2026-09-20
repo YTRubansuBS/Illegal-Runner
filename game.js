@@ -15,21 +15,38 @@
         })
         const STEP = 1 / 120 // fixed physics step`)
       code = code.replace(/  async function commonSave\(\) \{[\s\S]*?\n  \}\n(?=\s*(?:async )?function freePack)/, `  async function commonSave() {
-    const distance = Math.floor(G.dist || 0), runCoins = Math.max(0, Math.floor(G.coins || 0)), completedLevel = Number(G.level || 0)
+    const distance = Math.max(0, Math.floor(G.dist || 0))
+    const runCoins = Math.max(0, Math.floor(G.coins || 0))
+    const completedLevel = Number(G.level || 0)
     if (completedLevel > 0) profile.highest_level = Math.max(profile.highest_level || 1, Math.min(300, completedLevel + 1))
     if (isGuest || !sb || !user) {
-      profile.coins = (profile.coins || 0) + runCoins; profile.total_distance = (profile.total_distance || 0) + distance
-      profile.best_distance = Math.max(profile.best_distance || 0, distance); profile.total_distance = (profile.total_distance || 0) + distance
-      profile.quest_distance = (profile.quest_distance || 0) + distance
-      profile.quest_coins = (profile.quest_coins || 0) + runCoins; profile.quest_games = (profile.quest_games || 0) + 1
-      saveLocal(); refreshTop(); renderAll(); return
+      profile.coins = Math.max(0, Number(profile.coins || 0)) + runCoins
+      profile.total_distance = Math.max(0, Number(profile.total_distance || 0)) + distance
+      profile.best_distance = Math.max(Number(profile.best_distance || 0), distance)
+      profile.quest_distance = Math.max(0, Number(profile.quest_distance || 0)) + distance
+      profile.quest_coins = Math.max(0, Number(profile.quest_coins || 0)) + runCoins
+      profile.quest_games = Math.max(0, Number(profile.quest_games || 0)) + 1
+      saveLocal()
+      refreshTop(); renderAll()
+      return
     }
     try {
-      const r = await sb.rpc('finish_run', { p_mode: completedLevel ? 'level' : 'infinite', p_level: completedLevel, p_distance: distance, p_coins: runCoins, p_seconds: Math.floor((performance.now() - G.startTime) / 1000), p_highest_level: profile.highest_level || 1 })
+      const r = await sb.rpc('finish_run', {
+        p_mode: completedLevel ? 'level' : 'infinite',
+        p_level: completedLevel,
+        p_distance: distance,
+        p_coins: runCoins,
+        p_seconds: Math.floor((performance.now() - G.startTime) / 1000),
+        p_highest_level: profile.highest_level || 1
+      })
       if (r.error) throw r.error
       if (r.data) Object.assign(profile, r.data)
-      refreshTop(); renderAll(); window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: r.data || {} }))
-    } catch (e) { console.error('[IR] finish_run error:', e); toast('☁️ Sauvegarde du run impossible.') }
+      refreshTop(); renderAll()
+      window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: r.data || {} }))
+    } catch (e) {
+      console.error('[IR] finish_run error:', e)
+      toast('☁️ Sauvegarde du run impossible.')
+    }
   }
 `)
       code = code.replace(/  function freePack\(\) \{[\s\S]*?\n  \}\n(?=\s*function )/, `  async function freePack() {
@@ -41,7 +58,7 @@
     profile.coins = Number(data || profile.coins || 0); profile._freeToday = today; refreshTop(); renderAll(); SFX.coin(); window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: { coins: profile.coins, _freeToday: today } })); toast('🎁 +75 pièces gratuites !')
   }
 `)
-      // CLEAN COIN SYSTEM: the run amount is exactly the coins collected in the run. No level-completion bonus.\n      code = code.replace(/  async function finish\(\) \{[\\s\\S]*?\\n  \\}\\n  async function end/, '  async function finish() {\\n    if (!G.running) return\\n    G.running = false\\n    cancelAnimationFrame(G.raf)\\n    const collected = Math.max(0, Math.floor(G.coins || 0))\\n    const reward = 0\\n    const firstCompletion = false\\n    if (G.level >= (profile.highest_level || 1) && G.level < 300) profile.highest_level = G.level + 1\\n    if (G.level >= 300) profile.highest_level = 300\\n    window.dispatchEvent(new CustomEvent("ir:levelCompletion", { detail: { level: G.level, collected, reward, total: collected, firstCompletion } }))\\n    await commonSave()\\n    SFX.win()\\n    showEnd(G.level >= 300 ? "👑 CHAMPION !" : "🏁 NIVEAU " + G.level + " TERMINÉ")\\n  }\\n  async function end')\n      code = code.replace(/  async function loadLeaderboard\(\) \{[\s\S]*?\n  \}\n(?=  async function loadFriends)/, "  async function loadLeaderboard() {\n    const box = $(\"leaderList\")\n    if (isGuest || !sb) { $(\"leaderInfo\").textContent = \"Mode local : connecte-toi pour le classement en ligne.\"; box.innerHTML = '<div class=\"card\">☁️ Classement disponible en MODE COMPTE.</div>'; return }\n    const q = await sb.rpc(\"get_leaderboard\")\n    if (q.error) { box.innerHTML = '<div class=\"card\">❌ Erreur de chargement du classement.</div>'; return }\n    const rows = Array.isArray(q.data) ? q.data : []\n    $(\"leaderInfo\").textContent = \"Classement complet — \" + rows.length + \" joueur(s).\"\n    box.innerHTML = rows.map((r,i) => '<div class=\"rank\"><strong>#'+(i+1)+'</strong><span style=\"flex:1\">'+escapeHtml(r.username)+'</span><b>🏆 '+Number(r.best_distance||0)+'m</b><span class=\"muted\">LV '+Number(r.highest_level||1)+'</span></div>').join('') || '<div class=\"card\">Aucun joueur.</div>'\n  }")
+      // CLEAN COIN SYSTEM: only coins physically collected during the run are awarded. No hidden level bonus.\n      code = code.replace(/  async function finish\(\) \{[\\s\\S]*?\\n  \}\n  async function end/, `  async function finish() {\n    if (!G.running) return\n    G.running = false\n    cancelAnimationFrame(G.raf)\n    const collected = Math.max(0, Math.floor(G.coins || 0))\n    if (G.level >= (profile.highest_level || 1) && G.level < 300) profile.highest_level = G.level + 1\n    if (G.level >= 300) profile.highest_level = 300\n    window.dispatchEvent(new CustomEvent("ir:levelCompletion", { detail: { level: G.level, collected, reward: 0, total: collected, firstCompletion: false } }))\n    await commonSave()\n    SFX.win()\n    showEnd(G.level >= 300 ? "👑 CHAMPION !" : "🏁 NIVEAU " + G.level + " TERMINÉ")\n  }\n  async function end`)\n      code = code.replace(/  async function loadLeaderboard\(\) \{[\s\S]*?\n  \}\n(?=  async function loadFriends)/, "  async function loadLeaderboard() {\n    const box = $(\"leaderList\")\n    if (isGuest || !sb) { $(\"leaderInfo\").textContent = \"Mode local : connecte-toi pour le classement en ligne.\"; box.innerHTML = '<div class=\"card\">☁️ Classement disponible en MODE COMPTE.</div>'; return }\n    const q = await sb.rpc(\"get_leaderboard\")\n    if (q.error) { box.innerHTML = '<div class=\"card\">❌ Erreur de chargement du classement.</div>'; return }\n    const rows = Array.isArray(q.data) ? q.data : []\n    $(\"leaderInfo\").textContent = \"Classement complet — \" + rows.length + \" joueur(s).\"\n    box.innerHTML = rows.map((r,i) => '<div class=\"rank\"><strong>#'+(i+1)+'</strong><span style=\"flex:1\">'+escapeHtml(r.username)+'</span><b>🏆 '+Number(r.best_distance||0)+'m</b><span class=\"muted\">LV '+Number(r.highest_level||1)+'</span></div>').join('') || '<div class=\"card\">Aucun joueur.</div>'\n  }")
       code = code.replace('["dash", "⚡", "Dash", 6, "Niveau 6 = traverse/détruit les obstacles."]', '["dash", "⚡", "Dash", 5, "20s de base → 10s au niveau max. Niveau 5 = traverse les obstacles."]')
       code = code.replace('"Niveau 6 : traverse et détruit les obstacles."', '"Niveau 5 : traverse et détruit les obstacles."')
       code = code.replace('  function dash() {\n', `  const getDashCooldown = () => { const level = Math.max(1, Math.min(5, Number(profile.dash_level || 1))); return 20 - (level - 1) * 2.5 }
