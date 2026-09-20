@@ -14,8 +14,8 @@
     s.textContent = `
       #levelFinishCourseFlag {
         position:absolute !important;
-        left:82vw !important;
-        bottom:16vh !important;
+        left:82vw;
+        bottom:16vh;
         width:62px;
         height:130px;
         z-index:99999 !important;
