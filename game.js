@@ -121,60 +121,6 @@
           window.addEventListener("ir:pauseQuit", quitFromPause)
         })()
         const STEP = 1 / 120 // fixed physics step`)
-      code = code.replace(/  function renderUpgrades\(\) \{[\s\S]*?\n  \}\n(?=  function renderShop)/, `  function upgradeCard(item, bonus) {
-    const [id, em, n, max, desc] = item
-    const key = bonus ? "bonus_" + id + "_level" : id + "_level"
-    const v = Number(profile[key] || 1)
-    const costs = [100, 500, 1000, 2500, 5000, 10000]
-    const cost = costs[Math.min(v - 1, costs.length - 1)]
-    const maxed = v >= max
-    const buttonId = bonus ? "bonus:" + id : id
-    return \`<div class="card"><div class="emoji">\${em}</div><h3>\${n}</h3><p class="muted">\${desc}</p><p>Niveau \${v}/\${max}</p><div class="progress"><i style="width:\${(v / max) * 100}%"></i></div><button data-up="\${buttonId}" \${maxed ? "disabled" : ""}>\${maxed ? "MAX" : "🪙 " + cost}</button></div>\`
-  }
-  function renderUpgrades() {
-    const el = $("upgradeGrid")
-    if (!el) return
-    el.innerHTML =
-      '<div style="grid-column:1/-1"><h2>🧑 AMÉLIORATIONS DU PERSONNAGE</h2><p class="muted">Les améliorations de ton personnage.</p></div>' +
-      UPGRADES.map(x => upgradeCard(x, false)).join("") +
-      '<div style="grid-column:1/-1;margin-top:16px"><h2>✨ AMÉLIORATIONS DES BONUS</h2><p class="muted">Chaque bonus dure 5 secondes au niveau 1, puis +2 secondes par niveau. Maximum 6/6 = 15 secondes.</p></div>' +
-      BONUS_UPGRADES.map(x => upgradeCard(x, true)).join("")
-  }
-`)
-      code = code.replace(/  function jump\(\) \{[\s\S]*?\n  \}\n  function releaseJump/, `  function jump() {
-    if (!G.running) return
-    if (G.jetpackT > 0) {
-      G.jetpackHold = true
-      return
-    }
-    const boost = G.jumpBoostT > 0 ? 1.5 : 1
-    const power = (980 + (profile.jump_level || 1) * 45) * boost
-    if (G.player.ground) {
-      G.player.vy = -power
-      G.player.ground = false
-      G.canDouble = true
-      G.player.sy = 0.7
-      SFX.jump()
-      burst(G.player.x + 20, G.player.y + G.player.h, G.world.accent, 8)
-    } else if ((profile.jump_level || 1) >= 2 && G.canDouble) {
-      G.player.vy = -power * 0.9
-      G.canDouble = false
-      G.player.sy = 0.7
-      SFX.dbl()
-      burst(G.player.x + 20, G.player.y + G.player.h, "#fff", 10)
-    }
-    G.gliding = true
-  }
-  function releaseJump() {
-    G.gliding = false
-    G.jetpackHold = false
-  }`)
-      code = code.replace("    shield: false, coinMult: 1, coinBoostT: 0, jumpBoostT: 0,", "    shield: false, shieldT: 0, coinMult: 1, coinBoostT: 0, jumpBoostT: 0, jetpackT: 0, scoreDoubleT: 0, magnetT: 0, jetpackHold: false,")
-      code = code.replace("    G.shield = false; G.coinMult = 1; G.coinBoostT = 0; G.jumpBoostT = 0", "    G.shield = false; G.shieldT = 0; G.coinMult = 1; G.coinBoostT = 0; G.jumpBoostT = 0; G.jetpackT = 0; G.scoreDoubleT = 0; G.magnetT = 0; G.jetpackHold = false")
-      code = code.replace("    const grav = G.jetpackT > 0 ? 520 : 2600\\n    p.vy += grav * dt\\n    if (G.jetpackT > 0 && p.vy > 120) p.vy = 120", "    const grav = 2600\\n    if (G.jetpackT > 0 && G.jetpackHold) { p.vy = -900; if (p.y < 60) { p.y = 60; p.vy = 0 } } else { p.vy += grav * dt }")
-      code = code.replace('    const jb = $("btnJump")\\n    jb.addEventListener("pointerdown", (e) => { e.preventDefault(); jump() })\\n    jb.addEventListener("pointerup", releaseJump)\\n    jb.addEventListener("pointercancel", releaseJump)\\n', '')
-      code = code.replace('    c.addEventListener("pointerdown", (e) => { e.preventDefault(); jump() })\\n    c.addEventListener("pointerup", releaseJump)', '    c.addEventListener("pointerdown", (e) => { e.preventDefault(); jump() })\\n    c.addEventListener("pointerup", releaseJump)\\n    c.addEventListener("pointercancel", releaseJump)')
-      code = code.replace("    if (type === \\"shield\\") { G.shield = true; G.shieldT = seconds; toast(\\"🛡️ Bouclier ! \\" + seconds + \\"s\\") }", "    if (type === \\"shield\\") { G.shield = true; G.shieldT = seconds; toast(\\"🛡️ Bouclier ! \\" + seconds + \\"s\\") }")
       code = code.replace('    $("btnQuit").onclick = quit', '    $("btnPause").onclick = () => window.dispatchEvent(new CustomEvent("ir:pause"))')
       code = code.replace('    $("btnOverMenu").onclick = quit', '    $("btnOverMenu").onclick = quit\n    $("btnResume").onclick = () => window.dispatchEvent(new CustomEvent("ir:resume"))\n    $("btnPauseRestart").onclick = () => window.dispatchEvent(new CustomEvent("ir:pauseRestart"))\n    $("btnPauseQuit").onclick = () => window.dispatchEvent(new CustomEvent("ir:pauseQuit"))')
       code = replaceBetween(code, "  async function commonSave() {", "  function freePack() {", `  async function commonSave() {
@@ -277,9 +223,9 @@
           hurt(false)
         }`)
       code = code.replace('["jump", "⬆️", "Saut", 6, "Hauteur et double-saut renforcés."]', '["jump", "🪽", "Saut", 2, "Niveau 2 : débloque le double saut pour 5000 pièces."]')
-      code = code.replace('const v = profile[id + "_level"] || 1\n      const cost = [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]', 'const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[id + "_level"] || 1)\n      const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
+      code = code.replace('const v = profile[id + "_level"] || 1\n      const cost = 100 * v', 'const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[id + "_level"] || 1)\n      const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
       code = code.replace('} else if (G.canDouble) {', '} else if ((profile.jump_level || 1) >= 2 && G.canDouble) {')
-      code = code.replace('    const v = profile[key] || 1\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]', '    const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[key] || 1)\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
+      code = code.replace('    const v = profile[key] || 1\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = 100 * v', '    const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[key] || 1)\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
       code = code.replace(/const cost = id === "jump" \? 5000 : 100 \* Math\.max\(1, v\)/g, 'const OTHER_UPGRADE_COSTS = [100, 500, 1000, 2500, 5000]\n      const cost = id === "jump" ? 5000 : OTHER_UPGRADE_COSTS[Math.min(Math.max(0, v - 1), OTHER_UPGRADE_COSTS.length - 1)]')
       code = code.replace(/  function renderShop\(\) \{[\s\S]*?\n  \}\n(?=\s*function renderPacks)/, `  function renderShop() {
     const el = $("shopGrid")
@@ -362,21 +308,6 @@
     friendAction(b.dataset.friendAction, b.dataset.friendId)
   })
   async function adminSearch() {`)
-      code = code.replace("  const UPGRADES = [\n    [\"lives\", \"❤️\", \"Vies\", 5, \"Max de vies par run.\"],\n    [\"distance\", \"🏃\", \"Distance\", 6, \"Vitesse & score de départ.\"],\n    [\"dash\", \"⚡\", \"Dash\", 5, \"20s de base → 10s au niveau max.\"],\n    [\"jump\", \"⬆️\", \"Sauts\", 2, \"Niveau 2 : débloque le double saut.\"],\n    [\"coin\", \"🪙\", \"Pièces\", 6, \"Multiplie les pièces ramassées.\"],\n    [\"distance\", \"🏃\", \"Distance\", 6, \"Vitesse & score de départ.\"],\n  ]", "  const UPGRADES = [\n    [\"lives\", \"❤️\", \"Vies\", 5, \"Max de vies par run.\"],\n    [\"dash\", \"⚡\", \"Dash\", 5, \"20s de base → 10s au niveau max.\"],\n    [\"jump\", \"⬆️\", \"Sauts\", 2, \"Niveau 2 : débloque le double saut.\"],\n    [\"coin\", \"🪙\", \"Pièces\", 6, \"Multiplie les pièces ramassées.\"],\n    [\"distance\", \"🏃\", \"Distance\", 6, \"Vitesse & score de départ.\"],\n  ]\n  const BONUS_UPGRADES = [\n    [\"mega\", \"🚀\", \"Mega saut\", 6, \"Durée : 5s → 15s.\"],\n    [\"x2\", \"🪙\", \"Doubles pièces\", 6, \"Durée : 5s → 15s.\"],\n    [\"shield\", \"🛡️\", \"Bouclier\", 6, \"Durée : 5s → 15s.\"],\n    [\"jetpack\", \"🛩️\", \"Jetpack\", 6, \"Durée : 5s → 15s.\"],\n    [\"scoreDouble\", \"🏆\", \"Double score\", 6, \"Durée : 5s → 15s.\"],\n    [\"magnet\", \"🧲\", \"Aimant\", 6, \"Durée : 5s → 15s.\"],\n  ]\n  const BONUS_DURATION = (level) => 3 + Math.max(1, Math.min(6, Number(level || 1))) * 2")
-      code = code.replace("    lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1, bonus_level: 1,", "    lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1,\n    bonus_mega_level: 1, bonus_x2_level: 1, bonus_shield_level: 1, bonus_jetpack_level: 1,\n    bonus_scoreDouble_level: 1, bonus_magnet_level: 1,")
-      code = code.replace("  function renderUpgrades() {\n    $(\"upgradeGrid\").innerHTML = UPGRADES.map(([id, em, n, max, desc]) => {\n      const v = profile[id + \"_level\"] || 1\n      const cost = [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]\n      const maxed = v >= max\n      return `<div class=\"card\"><div class=\"emoji\">${em}</div><h3>${n}</h3><p class=\"muted\">${desc}</p>\n        <p>Niveau ${v}/${max}</p><div class=\"progress\"><i style=\"width:${(v / max) * 100}%\"></i></div>\n        <button data-up=\"${id}\" ${maxed ? \"disabled\" : \"\"}>${maxed ? \"MAX\" : \"🪙 \" + cost}</button></div>`\n    }).join(\"\")\n  }", "  function upgradeCard([id, em, n, max, desc], bonus = false) {\n    const key = bonus ? \"bonus_\" + id + \"_level\" : id + \"_level\"\n    const v = Number(profile[key] || 1)\n    const maxed = v >= max\n    const cost = [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]\n    const buttonId = bonus ? \"bonus:\" + id : id\n    return `<div class=\"card\"><div class=\"emoji\">${em}</div><h3>${n}</h3><p class=\"muted\">${desc}</p>\n      <p>Niveau ${v}/${max}</p><div class=\"progress\"><i style=\"width:${(v / max) * 100}%\"></i></div>\n      <button data-up=\"${buttonId}\" ${maxed ? \"disabled\" : \"\"}>${maxed ? \"MAX\" : \"🪙 \" + cost}</button></div>`\n  }\n  function renderUpgrades() {\n    $(\"upgradeGrid\").innerHTML =\n      `<div style=\"grid-column:1/-1\"><h2>🧑 AMÉLIORATIONS DU PERSONNAGE</h2><p class=\"muted\">Vies, dash, sauts, pièces et distance.</p></div>` +\n      UPGRADES.map(u => upgradeCard(u)).join(\"\") +\n      `<div style=\"grid-column:1/-1;margin-top:10px\"><h2>✨ AMÉLIORATIONS DES BONUS</h2><p class=\"muted\">Base 5 secondes. Chaque niveau ajoute 2 secondes. Maximum 6/6 = 15 secondes.</p></div>` +\n      BONUS_UPGRADES.map(u => upgradeCard(u, true)).join(\"\")\n  }")
-      code = code.replace("  function buyUpgrade(id) {\n    const max = UPGRADES.find((u) => u[0] === id)[3]\n    const key = id + \"_level\"\n    const v = profile[key] || 1\n    if (v >= max) return toast(\"Niveau maximum !\")\n    const cost = [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]\n    if ((profile.coins || 0) < cost) return toast(\"Pas assez de pièces.\")\n    profile.coins -= cost\n    profile[key] = v + 1\n    SFX.bonus()\n    persist(); renderAll(); toast(\"⚡ Amélioration achetée !\")\n  }", "  function buyUpgrade(id) {\n    const isBonus = String(id).startsWith(\"bonus:\")\n    const realId = isBonus ? String(id).slice(6) : id\n    const list = isBonus ? BONUS_UPGRADES : UPGRADES\n    const item = list.find((u) => u[0] === realId)\n    if (!item) return\n    const max = item[3]\n    const key = isBonus ? \"bonus_\" + realId + \"_level\" : realId + \"_level\"\n    const v = Number(profile[key] || 1)\n    if (v >= max) return toast(\"Niveau maximum !\")\n    const cost = [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]\n    if ((profile.coins || 0) < cost) return toast(\"Pas assez de pièces.\")\n    profile.coins -= cost\n    profile[key] = v + 1\n    SFX.bonus()\n    persist(); renderAll(); toast(\"⚡ Amélioration achetée !\")\n  }")
-      code = code.replace("    const types = [\"shield\", \"mega\", \"x2\"]", "    const types = [\"shield\", \"mega\", \"x2\", \"jetpack\", \"scoreDouble\", \"magnet\"]")
-      code = code.replace("    shield: false, coinMult: 1, coinBoostT: 0, jumpBoostT: 0,", "    shield: false, shieldT: 0, coinMult: 1, coinBoostT: 0, jumpBoostT: 0,\n    jetpackT: 0, scoreDoubleT: 0, magnetT: 0,")
-      code = code.replace("    G.shield = false; G.coinMult = 1; G.coinBoostT = 0; G.jumpBoostT = 0", "    G.shield = false; G.shieldT = 0; G.coinMult = 1; G.coinBoostT = 0; G.jumpBoostT = 0\n    G.jetpackT = 0; G.scoreDoubleT = 0; G.magnetT = 0")
-      code = code.replace("    if (G.jumpBoostT > 0) G.jumpBoostT -= dt", "    if (G.jumpBoostT > 0) G.jumpBoostT -= dt\n    if (G.shieldT > 0) { G.shieldT -= dt; if (G.shieldT <= 0) { G.shieldT = 0; G.shield = false } }\n    if (G.jetpackT > 0) G.jetpackT -= dt\n    if (G.scoreDoubleT > 0) G.scoreDoubleT -= dt\n    if (G.magnetT > 0) G.magnetT -= dt")
-      code = code.replace("    G.dist += G.speed * dt * 0.06", "    G.dist += G.speed * dt * 0.06 * (G.scoreDoubleT > 0 ? 2 : 1)")
-      code = code.replace("    const grav = 2600\n    p.vy += grav * dt", "    const grav = G.jetpackT > 0 ? 520 : 2600\n    p.vy += grav * dt\n    if (G.jetpackT > 0 && p.vy > 120) p.vy = 120")
-      code = code.replace("    for (const c of G.coinsArr) c.x -= G.speed * dt", "    for (const c of G.coinsArr) {\n      c.x -= G.speed * dt\n      if (G.magnetT > 0 && !c.got) {\n        const dx = (p.x + p.w / 2) - c.x\n        const dy = (p.y + p.h / 2) - c.y\n        const d = Math.hypot(dx, dy)\n        if (d < 260 && d > 1) { c.x += dx * Math.min(1, dt * 8); c.y += dy * Math.min(1, dt * 8) }\n      }\n    }")
-      code = code.replace("  function applyBonus(type) {\n    SFX.bonus()\n    if (type === \"shield\") { G.shield = true; toast(\"🛡️ Bouclier !\") }\n    else if (type === \"mega\") { G.jumpBoostT = 6 + (profile.bonus_level || 1); toast(\"🚀 Méga-saut !\") }\n    else { G.coinBoostT = 8 + (profile.bonus_level || 1); toast(\"✨ Pièces x2 !\") }\n    burst(G.player.x + 20, G.player.y + 20, \"#fff\", 16)\n  }", "  function bonusDuration(id) {\n    const key = \"bonus_\" + id + \"_level\"\n    return BONUS_DURATION(profile[key] || 1)\n  }\n  function applyBonus(type) {\n    SFX.bonus()\n    const seconds = bonusDuration(type)\n    if (type === \"shield\") { G.shield = true; G.shieldT = seconds; toast(\"🛡️ Bouclier ! \" + seconds + \"s\") }\n    else if (type === \"mega\") { G.jumpBoostT = seconds; toast(\"🚀 Méga-saut ! \" + seconds + \"s\") }\n    else if (type === \"x2\") { G.coinBoostT = seconds; toast(\"✨ Pièces x2 ! \" + seconds + \"s\") }\n    else if (type === \"jetpack\") { G.jetpackT = seconds; toast(\"🛩️ Jetpack ! \" + seconds + \"s\") }\n    else if (type === \"scoreDouble\") { G.scoreDoubleT = seconds; toast(\"🏆 Score x2 ! \" + seconds + \"s\") }\n    else if (type === \"magnet\") { G.magnetT = seconds; toast(\"🧲 Aimant ! \" + seconds + \"s\") }\n    burst(G.player.x + 20, G.player.y + 20, \"#fff\", 16)\n  }")
-      code = code.replace("      const col = b.type === \"shield\" ? \"#54ffc1\" : b.type === \"mega\" ? \"#a14dff\" : \"#ffd84a\"\n      const icon = b.type === \"shield\" ? \"🛡️\" : b.type === \"mega\" ? \"🚀\" : \"✨\"", "      const col = b.type === \"shield\" ? \"#54ffc1\" : b.type === \"mega\" ? \"#a14dff\" : b.type === \"x2\" ? \"#ffd84a\" : b.type === \"jetpack\" ? \"#00e5ff\" : b.type === \"scoreDouble\" ? \"#ffcf4a\" : \"#ff5aa0\"\n      const icon = b.type === \"shield\" ? \"🛡️\" : b.type === \"mega\" ? \"🚀\" : b.type === \"x2\" ? \"🪙\" : b.type === \"jetpack\" ? \"🛩️\" : b.type === \"scoreDouble\" ? \"🏆\" : \"🧲\"")
-      code = code.replace("    G.bonusT -= dt\n    if (G.bonusT <= 0) { spawnBonus(); G.bonusT = rand(9, 15) - (profile.bonus_level || 1) }", "    G.bonusT -= dt\n    if (G.bonusT <= 0) { spawnBonus(); G.bonusT = rand(7, 12) }")
-      code = code.replace("  const UPGRADES = [\n    [\"lives\", \"❤️\", \"Vies\", 5, \"Max de vies par run.\"],\n    [\"distance\", \"🏃\", \"Distance\", 6, \"Vitesse & score de départ.\"],\n    [\"dash\", \"⚡\", \"Dash\", 5, \"20s de base → 10s au niveau max.\"],\n    [\"jump\", \"⬆️\", \"Saut\", 2, \"Niveau 2 : débloque le double saut.\"],\n    [\"coin\", \"🪙\", \"Pièces\", 6, \"Multiplie les pièces ramassées.\"],\n    [\"bonus\", \"✨\", \"Bonus\", 6, \"Durée & fréquence des bonus.\"],\n  ]", "  const UPGRADES = [\n    [\"lives\", \"❤️\", \"Vies\", 5, \"Max de vies par run.\"],\n    [\"dash\", \"⚡\", \"Dash\", 5, \"20s de base → 10s au niveau max.\"],\n    [\"jump\", \"⬆️\", \"Sauts\", 2, \"Niveau 2 : débloque le double saut.\"],\n    [\"coin\", \"🪙\", \"Pièces\", 6, \"Multiplie les pièces ramassées.\"],\n    [\"distance\", \"🏃\", \"Distance\", 6, \"Vitesse & score de départ.\"],\n  ]\n  const BONUS_UPGRADES = [\n    [\"mega\", \"🚀\", \"Mega saut\", 6, \"Durée : 5s → 15s.\"],\n    [\"x2\", \"🪙\", \"Doubles pièces\", 6, \"Durée : 5s → 15s.\"],\n    [\"shield\", \"🛡️\", \"Bouclier\", 6, \"Durée : 5s → 15s.\"],\n    [\"jetpack\", \"🛩️\", \"Jetpack\", 6, \"Durée : 5s → 15s.\"],\n    [\"scoreDouble\", \"🏆\", \"Double score\", 6, \"Durée : 5s → 15s.\"],\n    [\"magnet\", \"🧲\", \"Aimant\", 6, \"Durée : 5s → 15s.\"],\n  ]\n  const BONUS_DURATION = (level) => 3 + Math.max(1, Math.min(6, Number(level || 1))) * 2")
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
