@@ -221,7 +221,6 @@
     getFlag()
 
     window.addEventListener('ir:levelCompletion', e => {
-      hideFlag()
       lastCompletion = e.detail || null
       updateFlag()
       setTimeout(showFinish, 0)
@@ -235,8 +234,6 @@
         const title = String($('overTitle')?.textContent || '')
         if (/TU ES MORT/i.test(title)) {
           finishShown = false
-          hideFlag()
-        } else if (/NIVEAU\s+\d+\s+TERMINÉ|CHAMPION/i.test(title)) {
           hideFlag()
         }
       }).observe(over, { attributes:true, attributeFilter:['style','class'] })
