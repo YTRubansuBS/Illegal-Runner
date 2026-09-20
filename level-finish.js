@@ -121,10 +121,11 @@
     // IMPORTANT : dès que le niveau est terminé ou que l'écran de mort est actif,
     // le drapeau est forcé à disparaître ici, avant tout calcul de position.
     // Cela évite que updateFlag() le réaffiche juste après hideFlag().
+    const runtime = window.__IR_RUNTIME
     const title = String($('overTitle')?.textContent || '')
     const completed = lastCompletion && Number(lastCompletion.level) === lv
-    const finishedScreen = !hidden && /NIVEAU\\s+\\d+\\s+TERMINÉ|CHAMPION/i.test(title)
-    if (/TU ES MORT/i.test(title) || finishedScreen) {
+    const finishedScreen = !hidden && /NIVEAU\s+\d+\s+TERMINÉ|CHAMPION/i.test(title)
+    if ((runtime && runtime.running === false) || /TU ES MORT/i.test(title) || finishedScreen) {
       flag.style.display = 'none'
       return
     }
@@ -135,7 +136,9 @@
 
     // Pendant la partie : le drapeau apparaît dans la dernière partie du niveau.
     // Il reste affiché jusqu'à l'arrivée, puis les écrans de fin le masquent.
-    if (progress < 0.80 || progress > 1.001 || !hidden) {
+    const gameVisible = getComputedStyle($('game')).display !== 'none'
+    const runActive = runtime ? runtime.running === true : gameVisible && hidden
+    if (progress < 0.80 || progress > 1.001 || !runActive || !gameVisible || !hidden) {
       flag.style.display = 'none'
       return
     }
