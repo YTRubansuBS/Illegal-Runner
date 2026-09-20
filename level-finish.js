@@ -99,36 +99,27 @@
 
     const lv = getLevel()
     const over = $('over')
-    const hidden = !over || getComputedStyle(over).display === 'none'
+    const title = String($('overTitle')?.textContent || '')
+    const game = $('game')
+    const overVisible = !!over && getComputedStyle(over).display !== 'none'
 
-    // Une fois mort ou arrivé à la fin, le drapeau est définitivement caché
-    // jusqu'au lancement d'un nouveau niveau. Cela évite que la boucle de jeu
-    // le fasse réapparaître juste après sa disparition.
-    if (levelEnded || Date.now() < deathHideUntil) {
+    // Le drapeau doit être visible UNIQUEMENT pendant une vraie partie.
+    // Mort ou niveau terminé = caché.
+    if (!lv || isInfinite() || !game || getComputedStyle(game).display === 'none' ||
+        overVisible || /TU ES MORT|TERMINÉ|CHAMPION/i.test(title)) {
       flag.style.setProperty('display', 'none', 'important')
       return
     }
 
-    // Le mode INFINI n'a pas de drapeau de fin.
-    if (!lv || isInfinite()) {
-      flag.style.display = 'none'
-      return
-    }
-
-    // IMPORTANT : on utilise aussi la barre de progression du jeu.
-    // Cela fonctionne même en MODE LOCAL, sans Supabase et sans __IR_RUNTIME.
     const progress = getProgress()
 
-    // Pendant une partie : le drapeau apparaît à 95 %.
-    // Une fois le niveau terminé, on le laisse visible très brièvement
-    // pour éviter qu'il disparaisse avant l'écran de victoire.
-    if (progress < 0.95 || progress > 1.001 || (!hidden && progress < 0.995)) {
-      flag.style.display = 'none'
+    // Il apparaît dans les derniers 5 % du niveau.
+    if (progress < 0.95 || progress >= 1) {
+      flag.style.setProperty('display', 'none', 'important')
       return
     }
 
-    // Le drapeau avance réellement vers la position du joueur
-    // entre 95 % et 100 % de progression.
+    // De 95 % à 100 %, il avance vers le joueur.
     const t = Math.max(0, Math.min(1, (progress - 0.95) / 0.05))
     const startX = Math.max(180, innerWidth * 0.88)
     const playerX = Math.max(80, innerWidth * 0.20)
@@ -138,6 +129,7 @@
     flag.style.bottom = Math.max(88, Math.min(132, innerHeight * 0.16)) + 'px'
     flag.style.setProperty('display', 'block', 'important')
   }
+
   function rewardForLevel(lv) {
     return 100 * Math.ceil(lv / 10)
   }
