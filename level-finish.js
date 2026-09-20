@@ -145,6 +145,8 @@
     if (!completed && getProgress() < 0.995) return
 
     finishShown = true
+    // Le drapeau disparaît immédiatement dès que le niveau est terminé.
+    hideFlag()
     const collected = completed && Number.isFinite(Number(lastCompletion.collected)) ? Math.max(0, Math.floor(Number(lastCompletion.collected))) : 0
     const reward = completed && lastCompletion.firstCompletion ? Math.max(0, Number(lastCompletion.reward || 0)) : 0
 
@@ -224,7 +226,10 @@
 
     window.addEventListener('ir:levelCompletion', e => {
       lastCompletion = e.detail || null
+      // Fin du niveau : le drapeau ne doit plus rester affiché.
+      hideFlag()
       updateFlag()
+      hideFlag()
       setTimeout(showFinish, 0)
       setTimeout(showFinish, 100)
       setTimeout(showFinish, 300)
