@@ -66,7 +66,20 @@
 
   function getProgress() {
     const r = window.__IR_RUNTIME
-    if (r && r.level && r.goal > 0) return Math.max(0, Math.min(1, Number(r.dist || 0) / Number(r.goal || 1)))
+    if (r && r.level && r.goal > 0) {
+      return Math.max(0, Math.min(1, Number(r.dist || 0) / Number(r.goal || 1)))
+    }
+
+    // Source fiable de secours : le HUD "dist" est mis à jour à chaque frame
+    // par le moteur original. On connaît aussi exactement l'objectif du niveau.
+    const lv = getLevel()
+    const distText = String($('dist')?.textContent || '').replace(/[^0-9.-]/g, '')
+    const dist = Number(distText)
+    if (lv > 0 && Number.isFinite(dist)) {
+      const goal = 400 + lv * 20
+      return Math.max(0, Math.min(1, dist / goal))
+    }
+
     const b = $('progressBar')
     if (!b) return 0
     const w = parseFloat(b.style.width)
@@ -120,17 +133,16 @@
     // Cela fonctionne même en MODE LOCAL, sans Supabase et sans __IR_RUNTIME.
     const progress = getProgress()
 
-    // Pendant une partie : le drapeau apparaît à 95 %.
-    // Une fois le niveau terminé, on le laisse visible très brièvement
-    // pour éviter qu'il disparaisse avant l'écran de victoire.
-    if (progress < 0.95 || progress > 1.001 || (!hidden && progress < 0.995)) {
+    // Pendant la partie : le drapeau apparaît dans la dernière partie du niveau.
+    // Il reste affiché jusqu'à l'arrivée, puis les écrans de fin le masquent.
+    if (progress < 0.80 || progress > 1.001 || !hidden) {
       flag.style.display = 'none'
       return
     }
 
     // Le drapeau avance réellement vers la position du joueur
-    // entre 95 % et 100 % de progression.
-    const t = Math.max(0, Math.min(1, (progress - 0.95) / 0.05))
+    // entre 80 % et 100 % de progression.
+    const t = Math.max(0, Math.min(1, (progress - 0.80) / 0.20))
     const startX = Math.max(180, innerWidth * 0.88)
     const playerX = Math.max(80, innerWidth * 0.20)
     const targetX = playerX + 55
