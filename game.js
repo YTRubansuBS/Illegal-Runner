@@ -121,6 +121,60 @@
           window.addEventListener("ir:pauseQuit", quitFromPause)
         })()
         const STEP = 1 / 120 // fixed physics step`)
+      code = code.replace(/  function renderUpgrades\\(\\) \\{[\\s\\S]*?\\n  \\}\\n(?=  function renderShop)/, `  function upgradeCard(item, bonus) {
+    const [id, em, n, max, desc] = item
+    const key = bonus ? "bonus_" + id + "_level" : id + "_level"
+    const v = Number(profile[key] || 1)
+    const costs = [100, 500, 1000, 2500, 5000, 10000]
+    const cost = costs[Math.min(v - 1, costs.length - 1)]
+    const maxed = v >= max
+    const buttonId = bonus ? "bonus:" + id : id
+    return \`<div class="card"><div class="emoji">\${em}</div><h3>\${n}</h3><p class="muted">\${desc}</p><p>Niveau \${v}/\${max}</p><div class="progress"><i style="width:\${(v / max) * 100}%"></i></div><button data-up="\${buttonId}" \${maxed ? "disabled" : ""}>\${maxed ? "MAX" : "🪙 " + cost}</button></div>\`
+  }
+  function renderUpgrades() {
+    const el = $("upgradeGrid")
+    if (!el) return
+    el.innerHTML =
+      '<div style="grid-column:1/-1"><h2>🧑 AMÉLIORATIONS DU PERSONNAGE</h2><p class="muted">Les améliorations de ton personnage.</p></div>' +
+      UPGRADES.map(x => upgradeCard(x, false)).join("") +
+      '<div style="grid-column:1/-1;margin-top:16px"><h2>✨ AMÉLIORATIONS DES BONUS</h2><p class="muted">Chaque bonus dure 5 secondes au niveau 1, puis +2 secondes par niveau. Maximum 6/6 = 15 secondes.</p></div>' +
+      BONUS_UPGRADES.map(x => upgradeCard(x, true)).join("")
+  }
+`)
+      code = code.replace(/  function jump\\(\\) \\{[\\s\\S]*?\\n  \\}\\n  function releaseJump/, `  function jump() {
+    if (!G.running) return
+    if (G.jetpackT > 0) {
+      G.jetpackHold = true
+      return
+    }
+    const boost = G.jumpBoostT > 0 ? 1.5 : 1
+    const power = (980 + (profile.jump_level || 1) * 45) * boost
+    if (G.player.ground) {
+      G.player.vy = -power
+      G.player.ground = false
+      G.canDouble = true
+      G.player.sy = 0.7
+      SFX.jump()
+      burst(G.player.x + 20, G.player.y + G.player.h, G.world.accent, 8)
+    } else if ((profile.jump_level || 1) >= 2 && G.canDouble) {
+      G.player.vy = -power * 0.9
+      G.canDouble = false
+      G.player.sy = 0.7
+      SFX.dbl()
+      burst(G.player.x + 20, G.player.y + G.player.h, "#fff", 10)
+    }
+    G.gliding = true
+  }
+  function releaseJump() {
+    G.gliding = false
+    G.jetpackHold = false
+  }`)
+      code = code.replace("    shield: false, coinMult: 1, coinBoostT: 0, jumpBoostT: 0,", "    shield: false, shieldT: 0, coinMult: 1, coinBoostT: 0, jumpBoostT: 0, jetpackT: 0, scoreDoubleT: 0, magnetT: 0, jetpackHold: false,")
+      code = code.replace("    G.shield = false; G.coinMult = 1; G.coinBoostT = 0; G.jumpBoostT = 0", "    G.shield = false; G.shieldT = 0; G.coinMult = 1; G.coinBoostT = 0; G.jumpBoostT = 0; G.jetpackT = 0; G.scoreDoubleT = 0; G.magnetT = 0; G.jetpackHold = false")
+      code = code.replace("    const grav = G.jetpackT > 0 ? 520 : 2600\\n    p.vy += grav * dt\\n    if (G.jetpackT > 0 && p.vy > 120) p.vy = 120", "    const grav = 2600\\n    if (G.jetpackT > 0 && G.jetpackHold) { p.vy = -900; if (p.y < 60) { p.y = 60; p.vy = 0 } } else { p.vy += grav * dt }")
+      code = code.replace('    const jb = $("btnJump")\\n    jb.addEventListener("pointerdown", (e) => { e.preventDefault(); jump() })\\n    jb.addEventListener("pointerup", releaseJump)\\n    jb.addEventListener("pointercancel", releaseJump)\\n', '')
+      code = code.replace('    c.addEventListener("pointerdown", (e) => { e.preventDefault(); jump() })\\n    c.addEventListener("pointerup", releaseJump)', '    c.addEventListener("pointerdown", (e) => { e.preventDefault(); jump() })\\n    c.addEventListener("pointerup", releaseJump)\\n    c.addEventListener("pointercancel", releaseJump)')
+      code = code.replace("    if (type === \\"shield\\") { G.shield = true; G.shieldT = seconds; toast(\\"🛡️ Bouclier ! \\" + seconds + \\"s\\") }", "    if (type === \\"shield\\") { G.shield = true; G.shieldT = seconds; toast(\\"🛡️ Bouclier ! \\" + seconds + \\"s\\") }")
       code = code.replace('    $("btnQuit").onclick = quit', '    $("btnPause").onclick = () => window.dispatchEvent(new CustomEvent("ir:pause"))')
       code = code.replace('    $("btnOverMenu").onclick = quit', '    $("btnOverMenu").onclick = quit\n    $("btnResume").onclick = () => window.dispatchEvent(new CustomEvent("ir:resume"))\n    $("btnPauseRestart").onclick = () => window.dispatchEvent(new CustomEvent("ir:pauseRestart"))\n    $("btnPauseQuit").onclick = () => window.dispatchEvent(new CustomEvent("ir:pauseQuit"))')
       code = replaceBetween(code, "  async function commonSave() {", "  function freePack() {", `  async function commonSave() {
