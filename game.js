@@ -315,8 +315,16 @@
       code = code.replace('const grav = 2600\n    p.vy += grav * dt', 'const grav = 2600\n    if (G.jetpackT > 0 && G.jetpackHold) { p.vy = -900; p.y = Math.max(60, p.y + p.vy * dt) } else p.vy += grav * dt')
       code = code.replace('  function applyBonus(type) {', '  function applyBonus(type) {\n    const level = Math.max(1, Math.min(6, Number(profile.bonus_level || 1)))\n    const duration = 5 + (level - 1) * 2')
       code = code.replace('else if (type === "mega") { G.jumpBoostT = 6 + (profile.bonus_level || 1); toast("🚀 Méga-saut !") }', 'else if (type === "mega") { G.jumpBoostT = duration; toast("🚀 Méga-saut !") }')
-      code = code.replace('else { G.coinBoostT = 8 + (profile.bonus_level || 1); toast("✨ Pièces x2 !") }', 'else if (type === "x2") { G.coinBoostT = duration; toast("🪙 Pièces x2 !") }\n    else if (type === "jetpack") { G.jetpackT = duration; G.jetpackHold = true; toast("🛩️ Jetpack !") }\n    else if (type === "scoreDouble") { G.scoreDoubleT = duration; toast("🏆 Score x2 !") }\n    else if (type === "magnet") { G.magnetT = duration; toast("🧲 Aimant !") }')
+      code = code.replace('else { G.coinBoostT = 8 + (profile.bonus_level || 1); toast("✨ Pièces x2 !") }', 'else if (type === "x2") { G.coinBoostT = duration; toast("🪙 Pièces x2 !") }\n    else if (type === "jetpack") { G.jetpackT = duration; G.jetpackHold = false; toast("🛩️ Jetpack ! Maintiens ton doigt sur l’écran pour voler.") }\n    else if (type === "scoreDouble") { G.scoreDoubleT = duration; toast("🏆 Score x2 !") }\n    else if (type === "magnet") { G.magnetT = duration; toast("🧲 Aimant !") }')
       code = code.replace('const icon = b.type === "shield" ? "🛡️" : b.type === "mega" ? "🚀" : "✨"', 'const icon = b.type === "shield" ? "🛡️" : b.type === "mega" ? "🚀" : b.type === "x2" ? "🪙" : b.type === "jetpack" ? "🛩️" : b.type === "scoreDouble" ? "🏆" : "🧲"')
+      code = code.replace('const STEP = 1 / 120 // fixed physics step', `const STEP = 1 / 120 // fixed physics step
+        const jetpackCanvas = document.getElementById("game")
+        if (jetpackCanvas) {
+          jetpackCanvas.addEventListener("pointerdown", e => { if (G.running && G.jetpackT > 0) { G.jetpackHold = true; e.preventDefault() } }, { passive: false })
+          jetpackCanvas.addEventListener("pointerup", e => { if (G.jetpackT > 0) { G.jetpackHold = false; e.preventDefault() } }, { passive: false })
+          jetpackCanvas.addEventListener("pointercancel", () => { G.jetpackHold = false })
+          jetpackCanvas.addEventListener("pointerleave", () => { G.jetpackHold = false })
+        }`)
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
