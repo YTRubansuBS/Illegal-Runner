@@ -153,7 +153,6 @@
 
     if ($('overTitle')) $('overTitle').textContent = lv >= 300 ? '👑 CHAMPION !' : `🏁 NIVEAU ${lv} TERMINÉ`
     if ($('finalCoins')) $('finalCoins').textContent = collected
-    if ($('finalTime')) $('finalTime').textContent = '—'
     over.style.display = 'grid'
 
     const card = document.querySelector('#over .over-card')
