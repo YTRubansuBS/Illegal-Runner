@@ -92,13 +92,22 @@
     }
 
     function progress() {
-      const w = parseFloat(getComputedStyle(bar).width);
+      // game.js writes the real level progress directly as an inline width.
+      // IMPORTANT: the progress container is display:none, so computed width
+      // can be 0 even while the inline progress is correct.
+      const inline = parseFloat(String(bar.style.width || "").replace("%", ""));
+      if (Number.isFinite(inline)) return Math.max(0, Math.min(1, inline / 100));
+
+      // Fallbacks for future engine versions.
+      const attr = parseFloat(String(bar.getAttribute("data-progress") || ""));
+      if (Number.isFinite(attr)) return Math.max(0, Math.min(1, attr / 100));
+
       const total = parseFloat(getComputedStyle(bar.parentElement).width);
+      const w = parseFloat(getComputedStyle(bar).width);
       if (Number.isFinite(w) && Number.isFinite(total) && total > 0) {
         return Math.max(0, Math.min(1, w / total));
       }
-      const inline = parseFloat(bar.style.width);
-      return Number.isFinite(inline) ? inline / 100 : 0;
+      return 0;
     }
 
     function update() {
@@ -128,8 +137,8 @@
         return;
       }
 
-      // IMPORTANT: show the flag from 90% onward.
-      // This is intentionally independent of level number/account/local mode.
+      // The flag is tied ONLY to the real level progress written by game.js.
+      // It therefore works identically in LOCAL and ACCOUNT mode.
       if (p >= 0.90 && p < 1.01) {
         const t = Math.max(0, Math.min(1, (p - 0.90) / 0.10));
         const start = Math.max(170, game.clientWidth * 0.88);
@@ -152,8 +161,13 @@
     // Also react instantly to progress-bar changes.
     new MutationObserver(update).observe(bar, {
       attributes: true,
-      attributeFilter: ["style", "class"]
+      attributeFilter: ["style", "class", "data-progress"]
     });
+
+    // The engine updates the inline width every animation frame.
+    // Polling is kept as a safety net for account/local/restart transitions.
+    window.addEventListener("resize", update);
+    document.addEventListener("visibilitychange", update);
   }
 
   if (document.readyState === "loading") {
