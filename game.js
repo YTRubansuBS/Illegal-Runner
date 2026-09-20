@@ -62,67 +62,7 @@
           ensureFinishFlag()
           setInterval(updateFinishFlag, 50)
         })()
-        ;(() => {
-          let pauseStart = 0
-          let pauseCountdown = null
-          function showPause(show) {
-            const p = document.getElementById("pauseOverlay")
-            if (p) p.style.display = show ? "grid" : "none"
-          }
-          function pauseGame() {
-            if (!G.running) return
-            G.running = false
-            cancelAnimationFrame(G.raf)
-            pauseStart = performance.now()
-            showPause(true)
-          }
-          function resumeGame() {
-            if (G.running || !pauseStart) return
-            showPause(false)
-            const el = document.getElementById("countdown")
-            el.style.display = "flex"
-            el.classList.remove("go")
-            let n = 3
-            el.textContent = n
-            SFX.tick()
-            if (pauseCountdown) clearInterval(pauseCountdown)
-            pauseCountdown = setInterval(() => {
-              n--
-              if (n > 0) { el.textContent = n; SFX.tick() }
-              else if (n === 0) { el.textContent = "GO!"; el.classList.add("go"); SFX.go() }
-              else {
-                clearInterval(pauseCountdown)
-                pauseCountdown = null
-                el.style.display = "none"
-                G.running = true
-                G.startTime += performance.now() - pauseStart
-                pauseStart = 0
-                G.last = performance.now()
-                G.acc = 0
-                G.raf = requestAnimationFrame(loop)
-              }
-            }, 600)
-          }
-          function restartFromPause() {
-            showPause(false)
-            if (pauseCountdown) { clearInterval(pauseCountdown); pauseCountdown = null }
-            pauseStart = 0
-            start(G.level)
-          }
-          function quitFromPause() {
-            showPause(false)
-            if (pauseCountdown) { clearInterval(pauseCountdown); pauseCountdown = null }
-            pauseStart = 0
-            quit()
-          }
-          window.addEventListener("ir:pause", pauseGame)
-          window.addEventListener("ir:resume", resumeGame)
-          window.addEventListener("ir:pauseRestart", restartFromPause)
-          window.addEventListener("ir:pauseQuit", quitFromPause)
-        })()
         const STEP = 1 / 120 // fixed physics step`)
-      code = code.replace('    $("btnQuit").onclick = quit', '    $("btnPause").onclick = () => window.dispatchEvent(new CustomEvent("ir:pause"))')
-      code = code.replace('    $("btnOverMenu").onclick = quit', '    $("btnOverMenu").onclick = quit\n    $("btnResume").onclick = () => window.dispatchEvent(new CustomEvent("ir:resume"))\n    $("btnPauseRestart").onclick = () => window.dispatchEvent(new CustomEvent("ir:pauseRestart"))\n    $("btnPauseQuit").onclick = () => window.dispatchEvent(new CustomEvent("ir:pauseQuit"))')
       code = replaceBetween(code, "  async function commonSave() {", "  function freePack() {", `  async function commonSave() {
     const distance = Math.max(0, Math.floor(G.dist || 0))
     const runCoins = Math.max(0, Math.floor(G.coins || 0))
@@ -179,18 +119,14 @@
     if (G.level >= 300) profile.highest_level = 300
     window.dispatchEvent(new CustomEvent("ir:levelCompletion", { detail: { level: G.level, collected, reward, total: collected, firstCompletion } }))
     await commonSave()
-    const progressBar = $("progressBar")
-    if (progressBar) progressBar.style.width = "0%"
     SFX.win()
     showEnd(G.level >= 300 ? "👑 CHAMPION !" : "🏁 NIVEAU " + G.level + " TERMINÉ")
   }
 `)
-      code = code.replace('    showEnd("TU ES MORT")', '    const progressBar = $("progressBar")\n    if (progressBar) progressBar.style.width = "0%"\n    showEnd("TU ES MORT")')
       code = code.replace(/  async function loadLeaderboard\(\) \{[\s\S]*?\n  \}\n(?=  async function loadFriends)/, "  async function loadLeaderboard() {\n    const box = $(\"leaderList\")\n    if (isGuest || !sb) { $(\"leaderInfo\").textContent = \"Mode local : connecte-toi pour le classement en ligne.\"; box.innerHTML = '<div class=\"card\">☁️ Classement disponible en MODE COMPTE.</div>'; return }\n    const q = await sb.rpc(\"get_leaderboard\")\n    if (q.error) { box.innerHTML = '<div class=\"card\">❌ Erreur de chargement du classement.</div>'; return }\n    const rows = Array.isArray(q.data) ? q.data : []\n    $(\"leaderInfo\").textContent = \"Classement complet — \" + rows.length + \" joueur(s).\"\n    box.innerHTML = rows.map((r,i) => '<div class=\"rank\"><strong>#'+(i+1)+'</strong><span style=\"flex:1\">'+escapeHtml(r.username)+'</span><b>🏆 '+Number(r.best_distance||0)+'m</b><span class=\"muted\">LV '+Number(r.highest_level||1)+'</span></div>').join('') || '<div class=\"card\">Aucun joueur.</div>'\n  }")
       code = code.replace('["dash", "⚡", "Dash", 6, "Niveau 6 = traverse/détruit les obstacles."]', '["dash", "⚡", "Dash", 5, "20s de base → 10s au niveau max. Niveau 5 = traverse les obstacles."]')
       code = code.replace('if (p.y > G.H + 40) { hurt(true); p.y = G.groundY - p.h; p.vy = 0 }', 'if (p.y > G.H + 40) { G.lives = 0; drawHearts(); end() }')
       code = code.replace('if (p.y > G.H + 40) { G.lives = 0; drawHearts(); end() }', 'let pitLava = null; for (const o of G.obs) { if (o.type === "pit" && p.x + 8 < o.x + o.w && p.x + p.w - 8 > o.x && p.y + p.h >= G.groundY + G.groundH - 24) { pitLava = o; break } } if (pitLava) { hurt(false); p.x = Math.max(80, G.W * 0.2); p.y = G.groundY - p.h; p.vy = 0; p.ground = true; return } if (p.y > G.H + 40) { hurt(true); p.y = G.groundY - p.h; p.vy = 0 }')
-      code = code.replace('const w = rand(90, Math.min(160, 100 + d * 0.02))', 'const w = 160')
       code = code.replace('for (const o of G.obs) if (o.type === "pit") { ctx.fillStyle = "#000"; ctx.fillRect(o.x, gy - 1, o.w, G.groundH + 2) }', 'for (const o of G.obs) if (o.type === "pit") { ctx.fillStyle = "#000"; ctx.fillRect(o.x, gy - 1, o.w, G.groundH + 2); ctx.fillStyle = "#ff3b00"; ctx.fillRect(o.x, gy + G.groundH - 22, o.w, 22); ctx.fillStyle = "#ffb000"; ctx.fillRect(o.x, gy + G.groundH - 22, o.w, 5) }')
       code = code.replace('"Niveau 6 : traverse et détruit les obstacles."', '"Niveau 5 : traverse et détruit les obstacles."')
       code = code.replace('  function dash() {\n', `  const getDashCooldown = () => { const level = Math.max(1, Math.min(5, Number(profile.dash_level || 1))); return 20 - (level - 1) * 2.5 }
