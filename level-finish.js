@@ -6,6 +6,7 @@
   let finishShown = false
   let lastCompletion = null
   let observerStarted = false
+  let levelEnded = false
 
   function ensureStyles() {
     if ($('irFinishStyle')) return
@@ -88,7 +89,7 @@
 
   function hideFlag() {
     const flag = $('levelFinishCourseFlag')
-    if (flag) flag.style.display = 'none'
+    if (flag) flag.style.setProperty('display', 'none', 'important')
   }
 
   function updateFlag() {
@@ -98,6 +99,14 @@
     const lv = getLevel()
     const over = $('over')
     const hidden = !over || getComputedStyle(over).display === 'none'
+
+    // Une fois mort ou arrivé à la fin, le drapeau est définitivement caché
+    // jusqu'au lancement d'un nouveau niveau. Cela évite que la boucle de jeu
+    // le fasse réapparaître juste après sa disparition.
+    if (levelEnded) {
+      flag.style.setProperty('display', 'none', 'important')
+      return
+    }
 
     // Le mode INFINI n'a pas de drapeau de fin.
     if (!lv || isInfinite()) {
@@ -126,7 +135,7 @@
 
     flag.style.left = (startX + (targetX - startX) * t) + 'px'
     flag.style.bottom = Math.max(88, Math.min(132, innerHeight * 0.16)) + 'px'
-    flag.style.display = 'block'
+    flag.style.setProperty('display', 'block', 'important')
   }
   function rewardForLevel(lv) {
     return 100 * Math.ceil(lv / 10)
@@ -145,6 +154,7 @@
     if (!completed && getProgress() < 0.995) return
 
     finishShown = true
+    levelEnded = true
     // Le drapeau disparaît immédiatement dès que le niveau est terminé.
     hideFlag()
     const collected = completed && Number.isFinite(Number(lastCompletion.collected)) ? Math.max(0, Math.floor(Number(lastCompletion.collected))) : 0
@@ -194,6 +204,7 @@
       const target = lv + 1
       finishShown = false
       lastCompletion = null
+      levelEnded = false
       hideFlag()
       over.style.display = 'none'
       const progress = $('progressBar')
@@ -226,6 +237,7 @@
 
     window.addEventListener('ir:levelCompletion', e => {
       lastCompletion = e.detail || null
+      levelEnded = true
       // Fin du niveau : le drapeau ne doit plus rester affiché.
       hideFlag()
       updateFlag()
@@ -241,12 +253,15 @@
         const title = String($('overTitle')?.textContent || '')
         if (/TU ES MORT/i.test(title)) {
           finishShown = false
+          levelEnded = true
           hideFlag()
         }
       }).observe(over, { attributes:true, attributeFilter:['style','class'] })
     }
 
     setInterval(() => {
+      // Si la progression revient au début, c'est un nouveau niveau/une nouvelle partie.
+      if (getProgress() < 0.90 && !/TU ES MORT/i.test(String($('overTitle')?.textContent || ''))) levelEnded = false
       resetAfterDeathOrMenu()
       updateFlag()
       showFinish()
