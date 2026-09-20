@@ -13,7 +13,7 @@
     s.id = 'irFinishStyle'
     s.textContent = `
       #levelFinishCourseFlag {
-        position:absolute !important;
+        position:fixed !important;
         left:82vw;
         bottom:16vh;
         width:62px;
@@ -65,25 +65,27 @@
   }
 
   function getProgress() {
-    const r = window.__IR_RUNTIME
-    if (r && r.level && r.goal > 0) {
-      return Math.max(0, Math.min(1, Number(r.dist || 0) / Number(r.goal || 1)))
-    }
-
-    // Source fiable de secours : le HUD "dist" est mis à jour à chaque frame
-    // par le moteur original. On connaît aussi exactement l'objectif du niveau.
-    const lv = getLevel()
-    const distText = String($('dist')?.textContent || '').replace(/[^0-9.-]/g, '')
-    const dist = Number(distText)
-    if (lv > 0 && Number.isFinite(dist)) {
-      const goal = 400 + lv * 20
-      return Math.max(0, Math.min(1, dist / goal))
-    }
-
+    // La barre de progression est la source la plus fiable : le moteur la met
+    // à jour à chaque frame pendant une partie de niveau.
     const b = $('progressBar')
-    if (!b) return 0
-    const w = parseFloat(b.style.width)
-    return Number.isFinite(w) ? Math.max(0, Math.min(1, w / 100)) : 0
+    if (b) {
+      const wrap = b.parentElement
+      const br = b.getBoundingClientRect()
+      const wr = wrap ? wrap.getBoundingClientRect() : null
+      if (wr && wr.width > 0) {
+        return Math.max(0, Math.min(1, br.width / wr.width))
+      }
+      const w = parseFloat(b.style.width)
+      if (Number.isFinite(w)) return Math.max(0, Math.min(1, w / 100))
+    }
+
+    // Secours : HUD de distance.
+    const lv = getLevel()
+    const dist = Number(String($('dist')?.textContent || '').replace(/[^0-9.-]/g, ''))
+    if (lv > 0 && Number.isFinite(dist)) {
+      return Math.max(0, Math.min(1, dist / (400 + lv * 20)))
+    }
+    return 0
   }
   function getFlag() {
     ensureStyles()
@@ -94,7 +96,7 @@
       flag = document.createElement('div')
       flag.id = 'levelFinishCourseFlag'
       flag.innerHTML = '<div class="flag"></div><div class="pole"></div><div class="base"></div>'
-      game.appendChild(flag)
+      document.body.appendChild(flag)
     }
     return flag
   }
@@ -123,7 +125,6 @@
     // Cela évite que updateFlag() le réaffiche juste après hideFlag().
     const runtime = window.__IR_RUNTIME
     const title = String($('overTitle')?.textContent || '')
-    const completed = lastCompletion && Number(lastCompletion.level) === lv
     const finishedScreen = !hidden && /NIVEAU\s+\d+\s+TERMINÉ|CHAMPION/i.test(title)
     if ((runtime && runtime.running === false) || /TU ES MORT/i.test(title) || finishedScreen) {
       flag.style.display = 'none'
@@ -137,15 +138,17 @@
     // Pendant la partie : le drapeau apparaît dans la dernière partie du niveau.
     // Il reste affiché jusqu'à l'arrivée, puis les écrans de fin le masquent.
     const gameVisible = getComputedStyle($('game')).display !== 'none'
-    const runActive = runtime ? runtime.running === true : gameVisible && hidden
-    if (progress < 0.80 || progress > 1.001 || !runActive || !gameVisible || !hidden) {
+    const progressVisible = getComputedStyle($('progressWrap')).display !== 'none'
+    const runActive = runtime ? runtime.running === true : gameVisible && hidden && progressVisible
+
+    // Le drapeau apparaît assez tôt pour être visible pendant la course,
+    // puis se rapproche continuellement du joueur jusqu'à l'arrivée.
+    if (progress < 0.60 || progress > 1.001 || !runActive || !gameVisible || !hidden || !progressVisible) {
       flag.style.display = 'none'
       return
     }
 
-    // Le drapeau avance réellement vers la position du joueur
-    // entre 80 % et 100 % de progression.
-    const t = Math.max(0, Math.min(1, (progress - 0.80) / 0.20))
+    const t = Math.max(0, Math.min(1, (progress - 0.60) / 0.40))
     const startX = Math.max(180, innerWidth * 0.88)
     const playerX = Math.max(80, innerWidth * 0.20)
     const targetX = playerX + 55
