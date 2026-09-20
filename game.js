@@ -1,18 +1,18 @@
 /* ILLEGAL RUNNER loader: original engine + live customization + persistent Supabase progression. */
 (() => {
   const ORIGINAL = 'https://raw.githubusercontent.com/YTRubansuBS/Illegal-Runner/de2f0579d3e51b2b898a9cc3c8c87a1c8e190a26/game.js'
+  function replaceBetween(source, startMarker, endMarker, replacement) {
+    const a = source.indexOf(startMarker)
+    const b = source.indexOf(endMarker, a)
+    if (a < 0 || b < 0) {
+      console.error("[IR] replacement marker not found:", startMarker)
+      return source
+    }
+    return source.slice(0, a) + replacement + "\n" + source.slice(b)
+  }
+
   fetch(ORIGINAL, { cache: 'no-store' })
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
-    function replaceBetween(source, startMarker, endMarker, replacement) {
-      const a = source.indexOf(startMarker)
-      const b = source.indexOf(endMarker, a)
-      if (a < 0 || b < 0) {
-        console.error("[IR] replacement marker not found:", startMarker)
-        return source
-      }
-      return source.slice(0, a) + replacement + "\n" + source.slice(b)
-    }
-
     .then(code => {
       code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
