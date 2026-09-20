@@ -68,7 +68,47 @@
     profile.coins = Number(data || profile.coins || 0); profile._freeToday = today; refreshTop(); renderAll(); SFX.coin(); window.dispatchEvent(new CustomEvent('ir:profileChanged', { detail: { coins: profile.coins, _freeToday: today } })); toast('🎁 +75 pièces gratuites !')
   }
 `)
-            code = replaceBetween(code, "  async function finish() {", "  async function end() {", `  async function finish() {
+            code = replaceBetween(code, "  async function finish() {
+    if (!G.running) return
+    G.running = false
+    cancelAnimationFrame(G.raf)
+
+    // Une complétion est "première fois" uniquement si le niveau
+    // n'était pas encore débloqué avant ce run.
+    const previousHighest = Math.max(1, Number(profile.highest_level || 1))
+    const completedLevel = Math.max(1, Number(G.level || 1))
+    const firstCompletion = completedLevel >= previousHighest
+    const reward = firstCompletion ? (100 * Math.ceil(completedLevel / 10)) : 0
+
+    // G.coins contient les pièces ramassées pendant le run.
+    // Le bonus de première complétion est ajouté une seule fois ici.
+    const collected = Math.max(0, Math.floor(G.coins || 0))
+    const totalRunCoins = collected + reward
+    G.coins = totalRunCoins
+
+    // Débloque le niveau suivant après avoir déterminé firstCompletion.
+    if (completedLevel >= previousHighest && completedLevel < 300) {
+      profile.highest_level = completedLevel + 1
+    } else if (completedLevel >= 300) {
+      profile.highest_level = 300
+    }
+
+    window.dispatchEvent(new CustomEvent("ir:levelCompletion", {
+      detail: {
+        level: completedLevel,
+        collected,
+        reward,
+        total: totalRunCoins,
+        firstCompletion
+      }
+    }))
+
+    await commonSave()
+    SFX.win()
+    showEnd(completedLevel >= 300 ? "👑 CHAMPION !" : "🏁 NIVEAU " + completedLevel + " TERMINÉ")
+  }
+
+  async function end() {", `  async function finish() {
     if (!G.running) return
     G.running = false
     cancelAnimationFrame(G.raf)
