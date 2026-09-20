@@ -32,7 +32,7 @@
     } catch (e) { console.error('[IR] finish_run error:', e); toast('☁️ Sauvegarde du run impossible.') }
   }
 `)
-      code = code.replace(`    await commonSave()\n    SFX.win()\n    showEnd(G.level >= 300 ? "👑 CHAMPION !" : "🏁 NIVEAU " + G.level + " TERMINÉ")`, `    window.dispatchEvent(new CustomEvent("ir:levelCompletion", { detail: { level: Number(G.level || 0), collected: Math.max(0, Math.floor(G.coins - reward)), reward: Math.max(0, Math.floor(reward)), firstCompletion: true } }))\n    await commonSave()\n    SFX.win()\n    showEnd(G.level >= 300 ? "👑 CHAMPION !" : "🏁 NIVEAU " + G.level + " TERMINÉ")`)\n      code = code.replace(/  function freePack\(\) \{[\s\S]*?\n  \}\n(?=\s*function )/, `  async function freePack() {
+      code = code.replace(/  function freePack\(\) \{[\s\S]*?\n  \}\n(?=\s*function )/, `  async function freePack() {
     const today = new Date().toISOString().slice(0, 10)
     if (isGuest) { if (profile._freeToday === today) return toast("Déjà récupéré aujourd'hui."); profile._freeToday = today; profile.coins = (profile.coins || 0) + 75; SFX.coin(); saveLocal(); refreshTop(); renderAll(); return toast('🎁 +75 pièces gratuites !') }
     if (!sb || !user) return toast('Connecte-toi pour utiliser le cloud.')
