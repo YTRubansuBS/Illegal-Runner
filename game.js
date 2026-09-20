@@ -121,7 +121,7 @@
           window.addEventListener("ir:pauseQuit", quitFromPause)
         })()
         const STEP = 1 / 120 // fixed physics step`)
-      code = code.replace('    $("btnQuit").onclick = quit', '    $("btnQuit").onclick = quit\n    $("btnPause").onclick = () => window.dispatchEvent(new CustomEvent("ir:pause"))')
+      code = code.replace('    $("btnQuit").onclick = quit', '    $("btnPause").onclick = () => window.dispatchEvent(new CustomEvent("ir:pause"))')
       code = code.replace('    $("btnOverMenu").onclick = quit', '    $("btnOverMenu").onclick = quit\n    $("btnResume").onclick = () => window.dispatchEvent(new CustomEvent("ir:resume"))\n    $("btnPauseRestart").onclick = () => window.dispatchEvent(new CustomEvent("ir:pauseRestart"))\n    $("btnPauseQuit").onclick = () => window.dispatchEvent(new CustomEvent("ir:pauseQuit"))')
       code = replaceBetween(code, "  async function commonSave() {", "  function freePack() {", `  async function commonSave() {
     const distance = Math.max(0, Math.floor(G.dist || 0))
