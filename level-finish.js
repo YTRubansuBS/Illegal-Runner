@@ -154,7 +154,7 @@
       : 0
 
     if ($('overTitle')) $('overTitle').textContent = lv >= 300 ? '👑 CHAMPION !' : `🏁 NIVEAU ${lv} TERMINÉ`
-    if ($('finalCoins')) $('finalCoins').textContent = collected + reward
+    if ($('finalCoins')) $('finalCoins').textContent = completed && Number.isFinite(Number(lastCompletion.total)) ? Math.max(0, Math.floor(Number(lastCompletion.total))) : collected + reward
     if ($('finalTime')) $('finalTime').textContent = '—'
     over.style.display = 'grid'
 
@@ -169,7 +169,7 @@
     }
     if (reward > 0) {
       box.style.display = ''
-      box.innerHTML = `🎉 PREMIÈRE RÉUSSITE : <b>+${reward} 🪙</b><br>🪙 Pièces ramassées : <b>${collected}</b><br>💰 Total gagné ce niveau : <b>${collected + reward} 🪙</b>`
+      box.innerHTML = `🎉 PREMIÈRE RÉUSSITE : <b>+${reward} 🪙</b><br>🪙 Pièces ramassées : <b>${collected}</b><br>💰 Total gagné ce niveau : <b>${completed && Number.isFinite(Number(lastCompletion.total)) ? Math.floor(Number(lastCompletion.total)) : collected + reward} 🪙</b>`
     } else {
       box.style.display = ''
       box.innerHTML = `🪙 <b>Pièces gagnées dans ce niveau : ${collected}</b>`
