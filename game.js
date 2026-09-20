@@ -308,6 +308,73 @@
     friendAction(b.dataset.friendAction, b.dataset.friendId)
   })
   async function adminSearch() {`)
+
+      code = code.replace(/  const UPGRADES = \[[\s\S]*?\n  \]\n  const DEFAULTS =/, \`  const UPGRADES = [
+    ["lives", "❤️", "Vies", 5, "Max de vies par run."],
+    ["distance", "🏃", "Distance", 6, "Vitesse de départ."],
+    ["dash", "⚡", "Dash", 5, "20s → 10s au niveau max."],
+    ["jump", "⬆️", "Saut", 2, "Niveau 2 : double saut."],
+    ["coin", "🪙", "Pièces", 6, "Plus de pièces ramassées."],
+  ]
+  const BONUS_UPGRADES = [
+    ["mega", "🚀", "Mega saut", 6, "Durée du bonus."],
+    ["x2", "🪙", "Doubles pièces", 6, "Durée du bonus."],
+    ["shield", "🛡️", "Bouclier", 6, "Durée du bonus."],
+    ["jetpack", "🚀", "Jetpack", 6, "Durée du bonus."],
+    ["scoreDouble", "🏆", "Double score", 6, "Durée du bonus."],
+    ["magnet", "🧲", "Aimant", 6, "Durée du bonus."],
+  ]
+  const DEFAULTS =\`)
+      code = code.replace(/  function renderUpgrades\(\) \{[\s\S]*?\n  \}\n(?=  function renderShop)/, \`  function renderUpgradeCards(list, title) {
+    const costs = [100, 500, 1000, 2500, 5000]
+    const html = list.map(([id, em, n, max, desc]) => {
+      const key = id === "scoreDouble" ? "score_double" : id === "x2" ? "bonus_x2" : id
+      const v = Number(profile[key + "_level"] || 1)
+      const maxed = v >= max
+      const cost = costs[Math.min(v - 1, costs.length - 1)]
+      return '<div class="card"><div class="emoji">' + em + '</div><h3>' + n + '</h3><p class="muted">' + desc + '</p>' +
+        '<p>Niveau ' + v + '/' + max + (list === BONUS_UPGRADES ? ' · ' + (5 + (v - 1) * 2) + 's' : '') + '</p>' +
+        '<div class="progress"><i style="width:' + ((v / max) * 100) + '%"></i></div>' +
+        '<button data-up="' + id + '" ' + (maxed ? 'disabled' : '') + '>' + (maxed ? 'MAX' : '🪙 ' + cost) + '</button></div>'
+    }).join("")
+    return '<div style="grid-column:1/-1"><h2>' + title + '</h2></div>' + html
+  }
+  function renderUpgrades() {
+    const box = $("upgradeGrid")
+    box.innerHTML = renderUpgradeCards(UPGRADES, "👤 AMÉLIORATIONS DU PERSONNAGE") +
+      renderUpgradeCards(BONUS_UPGRADES, "✨ AMÉLIORATIONS DES BONUS")
+  }
+\`)
+      code = code.replace(/  function buyUpgrade\(id\) \{[\s\S]*?\n  \}\n(?=  function freePack)/, \`  function buyUpgrade(id) {
+    const isBonus = BONUS_UPGRADES.some(u => u[0] === id)
+    const data = isBonus ? BONUS_UPGRADES.find(u => u[0] === id) : UPGRADES.find(u => u[0] === id)
+    if (!data) return
+    const max = data[3]
+    const key = id === "scoreDouble" ? "score_double" : id === "x2" ? "bonus_x2" : id
+    const levelKey = key + "_level"
+    const v = Number(profile[levelKey] || 1)
+    if (v >= max) return toast("Niveau maximum !")
+    const costs = [100, 500, 1000, 2500, 5000]
+    const cost = costs[Math.min(v - 1, costs.length - 1)]
+    if ((profile.coins || 0) < cost) return toast("Pas assez de pièces.")
+    profile.coins -= cost
+    profile[levelKey] = v + 1
+    SFX.bonus()
+    persist(); renderAll(); toast("⚡ Amélioration achetée !")
+  }
+\`)
+      code = code.replace('const types = ["shield", "mega", "x2"]', 'const types = ["shield", "mega", "x2", "jetpack", "scoreDouble", "magnet"]')
+      code = code.replace('G.shield = false; G.coinMult = 1; G.coinBoostT = 0; G.jumpBoostT = 0', 'G.shield = false; G.shieldT = 0; G.coinMult = 1; G.coinBoostT = 0; G.jumpBoostT = 0; G.jetpackT = 0; G.scoreDoubleT = 0; G.magnetT = 0; G.score = 0')
+      code = code.replace('if (G.jumpBoostT > 0) G.jumpBoostT -= dt', 'if (G.jumpBoostT > 0) G.jumpBoostT -= dt\n    if (G.shieldT > 0) G.shieldT -= dt\n    if (G.jetpackT > 0) G.jetpackT -= dt\n    if (G.scoreDoubleT > 0) G.scoreDoubleT -= dt\n    if (G.magnetT > 0) G.magnetT -= dt')
+      code = code.replace('G.dist += G.speed * dt * 0.06\n    G.worldScroll += G.speed * dt', 'G.dist += G.speed * dt * 0.06\n    G.score = (G.score || 0) + G.speed * dt * 0.06 * (G.scoreDoubleT > 0 ? 2 : 1)\n    G.worldScroll += G.speed * dt')
+      code = code.replace('const grav = 2600\n    p.vy += grav * dt', 'const grav = 2600\n    if (G.jetpackT > 0) { p.vy = 0; p.ground = false; p.y = Math.max(40, p.y - 240 * dt) } else p.vy += grav * dt')
+      code = code.replace('for (const c of G.coinsArr) {\n      if (c.got) continue\n      const dx = c.x - cx, dy = c.y - cy', 'for (const c of G.coinsArr) {\n      if (c.got) continue\n      if (G.magnetT > 0) { const mdx = cx - c.x, mdy = cy - c.y; const md = Math.hypot(mdx, mdy); if (md < 280 && md > 1) { const pull = Math.min(1, dt * 8); c.x += mdx * pull; c.y += mdy * pull } }\n      const dx = c.x - cx, dy = c.y - cy')
+      code = code.replace('const col = b.type === "shield" ? "#54ffc1" : b.type === "mega" ? "#a14dff" : "#ffd84a"\n      const icon = b.type === "shield" ? "🛡️" : b.type === "mega" ? "🚀" : "✨"', 'const col = b.type === "shield" ? "#54ffc1" : b.type === "mega" ? "#a14dff" : b.type === "jetpack" ? "#00e5ff" : b.type === "scoreDouble" ? "#ffd84a" : b.type === "magnet" ? "#ff4d9d" : "#ffd84a"\n      const icon = b.type === "shield" ? "🛡️" : b.type === "mega" ? "🚀" : b.type === "jetpack" ? "🛩️" : b.type === "scoreDouble" ? "🏆" : b.type === "magnet" ? "🧲" : "🪙"')
+      code = code.replace('if (G.shield && !fall) {', 'if (G.shield && G.shieldT > 0 && !fall) {')
+      code = code.replace('  function applyBonus(type) {[\s\S]*?\n  }\n(?=  function hurt)', '  function applyBonus(type) { const duration = getBonusDuration(type); SFX.bonus(); if (type === "shield") { G.shield = true; G.shieldT = duration; toast("🛡️ Bouclier ! " + duration + "s") } else if (type === "mega") { G.jumpBoostT = duration; toast("🚀 Méga-saut ! " + duration + "s") } else if (type === "x2") { G.coinBoostT = duration; toast("🪙 Pièces x2 ! " + duration + "s") } else if (type === "jetpack") { G.jetpackT = duration; toast("🚀 JETPACK ! " + duration + "s") } else if (type === "scoreDouble") { G.scoreDoubleT = duration; toast("🏆 SCORE x2 ! " + duration + "s") } else if (type === "magnet") { G.magnetT = duration; toast("🧲 AIMANT ! " + duration + "s") } burst(G.player.x + 20, G.player.y + 20, "#fff", 16) }\n      ')
+      code = code.replace('  function dash() {\n', '  const getBonusDuration = id => { const key = id === "scoreDouble" ? "score_double_level" : id === "x2" ? "bonus_x2_level" : id + "_level"; const level = Math.max(1, Math.min(6, Number(profile[key] || 1))); return 5 + (level - 1) * 2 }\n\n  function dash() {\n')
+      code = code.replace('$(\"finalDist\").textContent = Math.floor(G.dist)', '$(\"finalDist\").textContent = Math.floor(G.score || G.dist)')
+
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
