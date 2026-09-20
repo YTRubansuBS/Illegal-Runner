@@ -376,29 +376,7 @@
       code = code.replace('$(\"finalDist\").textContent = Math.floor(G.dist)', '$(\"finalDist\").textContent = Math.floor(G.score || G.dist)')
 
 
-      code = code.replace(/  function applyBonus\(type\) \{[\s\S]*?\n  \}\n(?=  function hurt)/, \`  function applyBonus(type) {
-    const duration = getBonusDuration(type)
-    SFX.bonus()
-    if (type === "shield") { G.shield = true; G.shieldT = duration; toast("🛡️ Bouclier ! " + duration + "s") }
-    else if (type === "mega") { G.jumpBoostT = duration; toast("🚀 Méga-saut ! " + duration + "s") }
-    else if (type === "x2") { G.coinBoostT = duration; toast("🪙 Pièces x2 ! " + duration + "s") }
-    else if (type === "jetpack") { G.jetpackT = duration; toast("🚀 JETPACK ! " + duration + "s") }
-    else if (type === "scoreDouble") { G.scoreDoubleT = duration; toast("🏆 SCORE x2 ! " + duration + "s") }
-    else if (type === "magnet") { G.magnetT = duration; toast("🧲 AIMANT ! " + duration + "s") }
-    burst(G.player.x + 20, G.player.y + 20, "#fff", 16)
-  }
-\`)
-      code = code.replace('  function boot() {', \`  function boot() {
-    try {
-      const savedBonus = JSON.parse(localStorage.getItem("irBonusUpgrades:" + (profile.username || "Runner")) || "{}")
-      profile._bonusUpgrades = savedBonus
-      for (const id of ["mega","x2","shield","jetpack","scoreDouble","magnet"]) {
-        const key = id === "scoreDouble" ? "score_double" : id === "x2" ? "bonus_x2" : id
-        profile[key + "_level"] = Math.max(1, Math.min(6, Number(savedBonus[key + "_level"] || profile[key + "_level"] || 1)))
-      }
-    } catch (e) {}
-\`)
-      code = code.replace('    profile.coins -= cost\\n    profile[levelKey] = v + 1', '    profile.coins -= cost\\n    profile[levelKey] = v + 1\\n    if (isBonus) { try { const b = JSON.parse(localStorage.getItem("irBonusUpgrades:" + (profile.username || "Runner")) || "{}"); b[levelKey] = profile[levelKey]; localStorage.setItem("irBonusUpgrades:" + (profile.username || "Runner"), JSON.stringify(b)) } catch (e) {} }')
+
 
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
