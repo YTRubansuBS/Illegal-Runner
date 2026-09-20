@@ -54,9 +54,9 @@
               return
             }
             const approach = Math.max(0, Math.min(1, (progress - 0.95) / 0.05))
-            f.style.left = (72 - approach * 52) + '%'
+            f.style.left = (78 - approach * 58) + '%'
             f.style.top = (50 + Math.sin(approach * Math.PI) * 2) + '%'
-            f.style.transform = 'translate(-50%, -50%) scale(' + (1 + approach * 0.12) + ')'
+            f.style.transform = 'translate(-50%, -50%) scale(' + (1 + approach * 0.18) + ')'
             f.style.display = 'block'
           }
           ensureFinishFlag()
