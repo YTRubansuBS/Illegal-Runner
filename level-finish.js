@@ -19,12 +19,43 @@
     return flag
   }
 
+  function getLevelProgress() {
+    const objective = String(document.getElementById('objective')?.textContent || '')
+    const match = objective.match(/NIVEAU\\s+(\\d+)/i)
+    if (!match) return null
+    const level = Number(match[1])
+    if (!Number.isFinite(level) || level <= 0) return null
+
+    const distText = String(document.getElementById('dist')?.textContent || '')
+    const dist = Number(distText.replace(/[^0-9.-]/g, ''))
+    if (!Number.isFinite(dist)) return null
+
+    const goal = 400 + level * 20
+    return goal > 0 ? Math.max(0, Math.min(1, dist / goal)) : null
+  }
+
   function update() {
     const f = createFlag()
     const game = document.getElementById('game')
     const over = document.getElementById('over')
-    const active = game && getComputedStyle(game).display !== 'none' && (!over || getComputedStyle(over).display === 'none')
-    f.style.setProperty('display', active ? 'block' : 'none', 'important')
+    const active = game && getComputedStyle(game).display !== 'none' &&
+      (!over || getComputedStyle(over).display === 'none')
+
+    if (!active) {
+      f.style.setProperty('display','none','important')
+      return
+    }
+
+    const progress = getLevelProgress()
+
+    // Le drapeau reste caché jusqu'à 95% du niveau.
+    if (progress === null || progress < 0.95) {
+      f.style.setProperty('display','none','important')
+      return
+    }
+
+    // À 95%, il apparaît et reste FIXE : il ne bouge jamais.
+    f.style.setProperty('display','block','important')
   }
 
   function init() {
@@ -33,6 +64,9 @@
     setInterval(update, 10)
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true})
-  else init()
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, {once:true})
+  } else {
+    init()
+  }
 })()
