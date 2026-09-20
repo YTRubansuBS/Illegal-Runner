@@ -65,25 +65,23 @@
   }
 
   function getProgress() {
-    // La barre de progression est la source la plus fiable : le moteur la met
-    // à jour à chaque frame pendant une partie de niveau.
-    const b = $('progressBar')
-    if (b) {
-      const wrap = b.parentElement
-      const br = b.getBoundingClientRect()
-      const wr = wrap ? wrap.getBoundingClientRect() : null
-      if (wr && wr.width > 0) {
-        return Math.max(0, Math.min(1, br.width / wr.width))
-      }
-      const w = parseFloat(b.style.width)
-      if (Number.isFinite(w)) return Math.max(0, Math.min(1, w / 100))
-    }
-
-    // Secours : HUD de distance.
+    // Source commune aux deux modes : la distance HUD est mise à jour par le
+    // moteur à chaque frame, aussi bien en MODE COMPTE qu'en MODE LOCAL.
     const lv = getLevel()
     const dist = Number(String($('dist')?.textContent || '').replace(/[^0-9.-]/g, ''))
     if (lv > 0 && Number.isFinite(dist)) {
       return Math.max(0, Math.min(1, dist / (400 + lv * 20)))
+    }
+
+    // Secours si le HUD n'est pas encore rafraîchi.
+    const b = $('progressBar')
+    if (b) {
+      const w = parseFloat(b.style.width)
+      if (Number.isFinite(w)) return Math.max(0, Math.min(1, w / 100))
+      const wrap = b.parentElement
+      const br = b.getBoundingClientRect()
+      const wr = wrap ? wrap.getBoundingClientRect() : null
+      if (wr && wr.width > 0) return Math.max(0, Math.min(1, br.width / wr.width))
     }
     return 0
   }
@@ -131,19 +129,14 @@
       return
     }
 
-    // IMPORTANT : on utilise aussi la barre de progression du jeu.
-    // Cela fonctionne même en MODE LOCAL, sans Supabase et sans __IR_RUNTIME.
+    // Fonctionne de la même manière en compte et en local : aucune dépendance
+    // à Supabase, au profil cloud ou à la visibilité de la barre de progression.
     const progress = getProgress()
 
-    // Pendant la partie : le drapeau apparaît dans la dernière partie du niveau.
-    // Il reste affiché jusqu'à l'arrivée, puis les écrans de fin le masquent.
     const gameVisible = getComputedStyle($('game')).display !== 'none'
-    const progressVisible = getComputedStyle($('progressWrap')).display !== 'none'
-    const runActive = runtime ? runtime.running === true : gameVisible && hidden && progressVisible
+    const runActive = runtime ? runtime.running === true : gameVisible && hidden
 
-    // Le drapeau apparaît assez tôt pour être visible pendant la course,
-    // puis se rapproche continuellement du joueur jusqu'à l'arrivée.
-    if (progress < 0.60 || progress > 1.001 || !runActive || !gameVisible || !hidden || !progressVisible) {
+    if (progress < 0.60 || progress > 1.001 || !runActive || !gameVisible || !hidden) {
       flag.style.display = 'none'
       return
     }
@@ -265,6 +258,23 @@
       setTimeout(showFinish, 100)
       setTimeout(showFinish, 300)
     })
+
+    const restartButton = $('btnRestart')
+    if (restartButton) {
+      restartButton.addEventListener('click', () => {
+        // Rejouer démarre un nouveau run du même niveau : réinitialiser
+        // immédiatement l'état du drapeau pour qu'il puisse réapparaître.
+        finishShown = false
+        lastCompletion = null
+        hideFlag()
+        const progress = $('progressBar')
+        if (progress) progress.style.width = '0%'
+        setTimeout(() => {
+          finishShown = false
+          updateFlag()
+        }, 120)
+      }, true)
+    }
 
     const over = $('over')
     if (over) {
