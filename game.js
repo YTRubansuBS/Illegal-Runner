@@ -14,7 +14,65 @@
   fetch(ORIGINAL, { cache: 'no-store' })
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
-      code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
+      code = code.replace('window.addEventListener('ir:customizationChanged', e => {
+          if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
+          if (e.detail?.selected_background && typeof G !== 'undefined' && G.world) G.world = WORLDS[e.detail.selected_background] || G.world
+        })
+        window.addEventListener('ir:profileChanged', e => {
+          if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
+          if (typeof refreshTop === 'function') refreshTop()
+          if (typeof renderAll === 'function') renderAll()
+        })
+
+        // FINISH FLAG: this code runs inside the original engine, so it can read the real G state.
+        ;(() => {
+          let finishFlag = null
+          let finishFlagStyle = null
+
+          function ensureFinishFlag() {
+            if (finishFlag && document.body.contains(finishFlag)) return finishFlag
+
+            finishFlag = document.createElement('div')
+            finishFlag.id = 'irFinishFlag'
+            finishFlag.innerHTML = '<div class="irff-pole"></div><div class="irff-check">🏁</div><div class="irff-base"></div>'
+
+            if (!finishFlagStyle) {
+              finishFlagStyle = document.createElement('style')
+              finishFlagStyle.id = 'irFinishFlagStyle'
+              finishFlagStyle.textContent =
+                '#irFinishFlag{position:fixed;left:72vw;top:50%;transform:translate(-50%,-50%);width:110px;height:170px;z-index:999999;pointer-events:none;display:none}' +
+                '#irFinishFlag .irff-pole{position:absolute;left:38px;bottom:8px;width:8px;height:150px;background:#fff;border-radius:5px;box-shadow:0 0 12px #00e5ff}' +
+                '#irFinishFlag .irff-check{position:absolute;left:46px;top:5px;width:62px;height:46px;display:flex;align-items:center;justify-content:center;font-size:30px;filter:drop-shadow(0 0 10px #00e5ff)}' +
+                '#irFinishFlag .irff-base{position:absolute;left:18px;bottom:0;width:50px;height:11px;border-radius:50%;background:#00e5ff;box-shadow:0 0 18px #00e5ff}'
+              document.head.appendChild(finishFlagStyle)
+            }
+
+            document.body.appendChild(finishFlag)
+            return finishFlag
+          }
+
+          function updateFinishFlag() {
+            const f = ensureFinishFlag()
+            const game = document.getElementById('game')
+            const over = document.getElementById('over')
+            const playing = !!G && G.running === true
+            const visibleGame = !!game && getComputedStyle(game).display !== 'none'
+            const visibleOver = !!over && getComputedStyle(over).display !== 'none'
+
+            if (!playing || !visibleGame || visibleOver || !G.level || !Number.isFinite(G.dist) || !Number.isFinite(G.goal) || G.goal <= 0) {
+              f.style.display = 'none'
+              return
+            }
+
+            const progress = G.dist / G.goal
+            f.style.display = progress >= 0.95 ? 'block' : 'none'
+          }
+
+          ensureFinishFlag()
+          setInterval(updateFinishFlag, 50)
+        })()
+
+        const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
           if (e.detail?.selected_background && typeof G !== 'undefined' && G.world) G.world = WORLDS[e.detail.selected_background] || G.world
         })
