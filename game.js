@@ -14,62 +14,7 @@
   fetch(ORIGINAL, { cache: 'no-store' })
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
-      code = code.replace('const STEP = 1 / 120 // fixed physics step', `const STEP = 1 / 120 // fixed physics step`)
-      code = code.replace(/  const UPGRADES = \[[\\s\\S]*?\n  \]/, `  const UPGRADES = [
-    ["lives", "❤️", "Vies", 5, "Max de vies par run."],
-    ["distance", "🏃", "Distance", 6, "Vitesse & score de départ."],
-    ["dash", "⚡", "Dash", 6, "Réduit le cooldown du dash."],
-    ["jump", "⬆️", "Sauts", 6, "Améliore les sauts."],
-    ["coin", "🪙", "Pièces", 6, "Multiplie les pièces ramassées."],
-    ["bonus", "✨", "Bonus", 6, "Bonus plus longs et plus fréquents."],
-  ]
-  const BONUS_UPGRADES = [
-    ["mega", "🚀", "Mega saut", 6, "Durée du bonus : 5s → 15s."],
-    ["x2", "🪙", "Doubles pièces", 6, "Durée du bonus : 5s → 15s."],
-    ["shield", "🛡️", "Bouclier", 6, "Durée du bonus : 5s → 15s."],
-    ["jetpack", "🛩️", "Jetpack", 6, "Durée du bonus : 5s → 15s."],
-    ["scoreDouble", "🏆", "Double score", 6, "Durée du bonus : 5s → 15s."],
-    ["magnet", "🧲", "Aimant", 6, "Durée du bonus : 5s → 15s."],
-  ]
-  const BONUS_DURATION = (level) => 3 + Math.max(1, Math.min(6, Number(level || 1))) * 2`)
-      code = code.replace(/  function renderUpgrades\(\) \{[\\s\\S]*?\n  \}\n  function renderShop/, `  function renderUpgrades() {
-    const grid = $("upgradeGrid")
-    if (!grid) return
-    const card = (id, em, n, max, desc, bonus) => {
-      const key = bonus ? "bonus_" + id + "_level" : id + "_level"
-      const v = Number(profile[key] || 1)
-      const cost = [100, 500, 1000, 2500, 5000, 10000][Math.min(v - 1, 5)]
-      const maxed = v >= max
-      const extra = bonus ? " · " + BONUS_DURATION(v) + "s" : ""
-      return \`<div class="card"><div class="emoji">\${em}</div><h3>\${n}</h3><p class="muted">\${desc}\${extra}</p><p>Niveau \${v}/\${max}</p><div class="progress"><i style="width:\${(v / max) * 100}%"></i></div><button data-up="\${id}" data-bonus="\${bonus ? "1" : "0"}" \${maxed ? "disabled" : ""}>\${maxed ? "MAX" : "🪙 " + cost}</button></div>\`
-    }
-    grid.innerHTML =
-      "<h2 style='grid-column:1/-1'>⚡ AMÉLIORATIONS DU PERSONNAGE</h2>" +
-      UPGRADES.map(u => card(u[0], u[1], u[2], u[3], u[4], false)).join("") +
-      "<h2 style='grid-column:1/-1;margin-top:18px'>🎁 AMÉLIORATIONS DES BONUS</h2>" +
-      BONUS_UPGRADES.map(u => card(u[0], u[1], u[2], u[3], u[4], true)).join("")
-  }
-  function renderShop`)
-      code = code.replace(/  function buyUpgrade\(id\) \{[\\s\\S]*?\n  \}\n  function freePack/, `  function buyUpgrade(id, isBonus = false) {
-    const list = isBonus ? BONUS_UPGRADES : UPGRADES
-    const item = list.find((u) => u[0] === id)
-    if (!item) return
-    const max = item[3]
-    const key = isBonus ? "bonus_" + id + "_level" : id + "_level"
-    const v = Number(profile[key] || 1)
-    if (v >= max) return toast("Niveau maximum !")
-    const cost = [100, 500, 1000, 2500, 5000, 10000][Math.min(v - 1, 5)]
-    if (Number(profile.coins || 0) < cost) return toast("Pas assez de pièces.")
-    profile.coins -= cost
-    profile[key] = v + 1
-    SFX.bonus()
-    persist()
-    renderAll()
-    toast("⚡ Amélioration achetée !")
-  }
-  function freePack`)
-      code = code.replace('else if (t.dataset.up) buyUpgrade(t.dataset.up)', 'else if (t.dataset.up) buyUpgrade(t.dataset.up, t.dataset.bonus === "1")')
-('ir:customizationChanged', e => {
+      code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
           if (e.detail?.selected_background && typeof G !== 'undefined' && G.world) G.world = WORLDS[e.detail.selected_background] || G.world
         })
