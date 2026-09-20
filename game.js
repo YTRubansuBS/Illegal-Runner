@@ -62,67 +62,7 @@
           ensureFinishFlag()
           setInterval(updateFinishFlag, 50)
         })()
-        ;(() => {
-          let pauseStart = 0
-          let pauseCountdown = null
-          function showPause(show) {
-            const p = document.getElementById("pauseOverlay")
-            if (p) p.style.display = show ? "grid" : "none"
-          }
-          function pauseGame() {
-            if (!G.running) return
-            G.running = false
-            cancelAnimationFrame(G.raf)
-            pauseStart = performance.now()
-            showPause(true)
-          }
-          function resumeGame() {
-            if (G.running || !pauseStart) return
-            showPause(false)
-            const el = document.getElementById("countdown")
-            el.style.display = "flex"
-            el.classList.remove("go")
-            let n = 3
-            el.textContent = n
-            SFX.tick()
-            if (pauseCountdown) clearInterval(pauseCountdown)
-            pauseCountdown = setInterval(() => {
-              n--
-              if (n > 0) { el.textContent = n; SFX.tick() }
-              else if (n === 0) { el.textContent = "GO!"; el.classList.add("go"); SFX.go() }
-              else {
-                clearInterval(pauseCountdown)
-                pauseCountdown = null
-                el.style.display = "none"
-                G.running = true
-                G.startTime += performance.now() - pauseStart
-                pauseStart = 0
-                G.last = performance.now()
-                G.acc = 0
-                G.raf = requestAnimationFrame(loop)
-              }
-            }, 600)
-          }
-          function restartFromPause() {
-            showPause(false)
-            if (pauseCountdown) { clearInterval(pauseCountdown); pauseCountdown = null }
-            pauseStart = 0
-            start(G.level)
-          }
-          function quitFromPause() {
-            showPause(false)
-            if (pauseCountdown) { clearInterval(pauseCountdown); pauseCountdown = null }
-            pauseStart = 0
-            quit()
-          }
-          window.addEventListener("ir:pause", pauseGame)
-          window.addEventListener("ir:resume", resumeGame)
-          window.addEventListener("ir:pauseRestart", restartFromPause)
-          window.addEventListener("ir:pauseQuit", quitFromPause)
-        })()
         const STEP = 1 / 120 // fixed physics step`)
-      code = code.replace('    $("btnQuit").onclick = quit', '    $("btnPause").onclick = () => window.dispatchEvent(new CustomEvent("ir:pause"))')
-      code = code.replace('    $("btnOverMenu").onclick = quit', '    $("btnOverMenu").onclick = quit\n    $("btnResume").onclick = () => window.dispatchEvent(new CustomEvent("ir:resume"))\n    $("btnPauseRestart").onclick = () => window.dispatchEvent(new CustomEvent("ir:pauseRestart"))\n    $("btnPauseQuit").onclick = () => window.dispatchEvent(new CustomEvent("ir:pauseQuit"))')
       code = replaceBetween(code, "  async function commonSave() {", "  function freePack() {", `  async function commonSave() {
     const distance = Math.max(0, Math.floor(G.dist || 0))
     const runCoins = Math.max(0, Math.floor(G.coins || 0))
@@ -179,18 +119,14 @@
     if (G.level >= 300) profile.highest_level = 300
     window.dispatchEvent(new CustomEvent("ir:levelCompletion", { detail: { level: G.level, collected, reward, total: collected, firstCompletion } }))
     await commonSave()
-    const progressBar = $("progressBar")
-    if (progressBar) progressBar.style.width = "0%"
     SFX.win()
     showEnd(G.level >= 300 ? "👑 CHAMPION !" : "🏁 NIVEAU " + G.level + " TERMINÉ")
   }
 `)
-      code = code.replace('    showEnd("TU ES MORT")', '    const progressBar = $("progressBar")\n    if (progressBar) progressBar.style.width = "0%"\n    showEnd("TU ES MORT")')
       code = code.replace(/  async function loadLeaderboard\(\) \{[\s\S]*?\n  \}\n(?=  async function loadFriends)/, "  async function loadLeaderboard() {\n    const box = $(\"leaderList\")\n    if (isGuest || !sb) { $(\"leaderInfo\").textContent = \"Mode local : connecte-toi pour le classement en ligne.\"; box.innerHTML = '<div class=\"card\">☁️ Classement disponible en MODE COMPTE.</div>'; return }\n    const q = await sb.rpc(\"get_leaderboard\")\n    if (q.error) { box.innerHTML = '<div class=\"card\">❌ Erreur de chargement du classement.</div>'; return }\n    const rows = Array.isArray(q.data) ? q.data : []\n    $(\"leaderInfo\").textContent = \"Classement complet — \" + rows.length + \" joueur(s).\"\n    box.innerHTML = rows.map((r,i) => '<div class=\"rank\"><strong>#'+(i+1)+'</strong><span style=\"flex:1\">'+escapeHtml(r.username)+'</span><b>🏆 '+Number(r.best_distance||0)+'m</b><span class=\"muted\">LV '+Number(r.highest_level||1)+'</span></div>').join('') || '<div class=\"card\">Aucun joueur.</div>'\n  }")
       code = code.replace('["dash", "⚡", "Dash", 6, "Niveau 6 = traverse/détruit les obstacles."]', '["dash", "⚡", "Dash", 5, "20s de base → 10s au niveau max. Niveau 5 = traverse les obstacles."]')
       code = code.replace('if (p.y > G.H + 40) { hurt(true); p.y = G.groundY - p.h; p.vy = 0 }', 'if (p.y > G.H + 40) { G.lives = 0; drawHearts(); end() }')
       code = code.replace('if (p.y > G.H + 40) { G.lives = 0; drawHearts(); end() }', 'let pitLava = null; for (const o of G.obs) { if (o.type === "pit" && p.x + 8 < o.x + o.w && p.x + p.w - 8 > o.x && p.y + p.h >= G.groundY + G.groundH - 24) { pitLava = o; break } } if (pitLava) { hurt(false); p.x = Math.max(80, G.W * 0.2); p.y = G.groundY - p.h; p.vy = 0; p.ground = true; return } if (p.y > G.H + 40) { hurt(true); p.y = G.groundY - p.h; p.vy = 0 }')
-      code = code.replace('const w = rand(90, Math.min(160, 100 + d * 0.02))', 'const w = 160')
       code = code.replace('for (const o of G.obs) if (o.type === "pit") { ctx.fillStyle = "#000"; ctx.fillRect(o.x, gy - 1, o.w, G.groundH + 2) }', 'for (const o of G.obs) if (o.type === "pit") { ctx.fillStyle = "#000"; ctx.fillRect(o.x, gy - 1, o.w, G.groundH + 2); ctx.fillStyle = "#ff3b00"; ctx.fillRect(o.x, gy + G.groundH - 22, o.w, 22); ctx.fillStyle = "#ffb000"; ctx.fillRect(o.x, gy + G.groundH - 22, o.w, 5) }')
       code = code.replace('"Niveau 6 : traverse et détruit les obstacles."', '"Niveau 5 : traverse et détruit les obstacles."')
       code = code.replace('  function dash() {\n', `  const getDashCooldown = () => { const level = Math.max(1, Math.min(5, Number(profile.dash_level || 1))); return 20 - (level - 1) * 2.5 }
@@ -308,76 +244,6 @@
     friendAction(b.dataset.friendAction, b.dataset.friendId)
   })
   async function adminSearch() {`)
-
-      code = code.replace(/  const UPGRADES = \[[\s\S]*?\n  \]\n  const DEFAULTS =/, \`  const UPGRADES = [
-    ["lives", "❤️", "Vies", 5, "Max de vies par run."],
-    ["distance", "🏃", "Distance", 6, "Vitesse de départ."],
-    ["dash", "⚡", "Dash", 5, "20s → 10s au niveau max."],
-    ["jump", "⬆️", "Saut", 2, "Niveau 2 : double saut."],
-    ["coin", "🪙", "Pièces", 6, "Plus de pièces ramassées."],
-  ]
-  const BONUS_UPGRADES = [
-    ["mega", "🚀", "Mega saut", 6, "Durée du bonus."],
-    ["x2", "🪙", "Doubles pièces", 6, "Durée du bonus."],
-    ["shield", "🛡️", "Bouclier", 6, "Durée du bonus."],
-    ["jetpack", "🚀", "Jetpack", 6, "Durée du bonus."],
-    ["scoreDouble", "🏆", "Double score", 6, "Durée du bonus."],
-    ["magnet", "🧲", "Aimant", 6, "Durée du bonus."],
-  ]
-  const DEFAULTS =\`)
-      code = code.replace(/  function renderUpgrades\(\) \{[\s\S]*?\n  \}\n(?=  function renderShop)/, \`  function renderUpgradeCards(list, title) {
-    const costs = [100, 500, 1000, 2500, 5000]
-    const html = list.map(([id, em, n, max, desc]) => {
-      const key = id === "scoreDouble" ? "score_double" : id === "x2" ? "bonus_x2" : id
-      const v = Number(profile[key + "_level"] || 1)
-      const maxed = v >= max
-      const cost = costs[Math.min(v - 1, costs.length - 1)]
-      return '<div class="card"><div class="emoji">' + em + '</div><h3>' + n + '</h3><p class="muted">' + desc + '</p>' +
-        '<p>Niveau ' + v + '/' + max + (list === BONUS_UPGRADES ? ' · ' + (5 + (v - 1) * 2) + 's' : '') + '</p>' +
-        '<div class="progress"><i style="width:' + ((v / max) * 100) + '%"></i></div>' +
-        '<button data-up="' + id + '" ' + (maxed ? 'disabled' : '') + '>' + (maxed ? 'MAX' : '🪙 ' + cost) + '</button></div>'
-    }).join("")
-    return '<div style="grid-column:1/-1"><h2>' + title + '</h2></div>' + html
-  }
-  function renderUpgrades() {
-    const box = $("upgradeGrid")
-    box.innerHTML = renderUpgradeCards(UPGRADES, "👤 AMÉLIORATIONS DU PERSONNAGE") +
-      renderUpgradeCards(BONUS_UPGRADES, "✨ AMÉLIORATIONS DES BONUS")
-  }
-\`)
-      code = code.replace(/  function buyUpgrade\(id\) \{[\s\S]*?\n  \}\n(?=  function freePack)/, \`  function buyUpgrade(id) {
-    const isBonus = BONUS_UPGRADES.some(u => u[0] === id)
-    const data = isBonus ? BONUS_UPGRADES.find(u => u[0] === id) : UPGRADES.find(u => u[0] === id)
-    if (!data) return
-    const max = data[3]
-    const key = id === "scoreDouble" ? "score_double" : id === "x2" ? "bonus_x2" : id
-    const levelKey = key + "_level"
-    const v = Number(profile[levelKey] || 1)
-    if (v >= max) return toast("Niveau maximum !")
-    const costs = [100, 500, 1000, 2500, 5000]
-    const cost = costs[Math.min(v - 1, costs.length - 1)]
-    if ((profile.coins || 0) < cost) return toast("Pas assez de pièces.")
-    profile.coins -= cost
-    profile[levelKey] = v + 1
-    SFX.bonus()
-    persist(); renderAll(); toast("⚡ Amélioration achetée !")
-  }
-\`)
-      code = code.replace('const types = ["shield", "mega", "x2"]', 'const types = ["shield", "mega", "x2", "jetpack", "scoreDouble", "magnet"]')
-      code = code.replace('G.shield = false; G.coinMult = 1; G.coinBoostT = 0; G.jumpBoostT = 0', 'G.shield = false; G.shieldT = 0; G.coinMult = 1; G.coinBoostT = 0; G.jumpBoostT = 0; G.jetpackT = 0; G.scoreDoubleT = 0; G.magnetT = 0; G.score = 0')
-      code = code.replace('if (G.jumpBoostT > 0) G.jumpBoostT -= dt', 'if (G.jumpBoostT > 0) G.jumpBoostT -= dt\n    if (G.shieldT > 0) G.shieldT -= dt\n    if (G.jetpackT > 0) G.jetpackT -= dt\n    if (G.scoreDoubleT > 0) G.scoreDoubleT -= dt\n    if (G.magnetT > 0) G.magnetT -= dt')
-      code = code.replace('G.dist += G.speed * dt * 0.06\n    G.worldScroll += G.speed * dt', 'G.dist += G.speed * dt * 0.06\n    G.score = (G.score || 0) + G.speed * dt * 0.06 * (G.scoreDoubleT > 0 ? 2 : 1)\n    G.worldScroll += G.speed * dt')
-      code = code.replace('const grav = 2600\n    p.vy += grav * dt', 'const grav = 2600\n    if (G.jetpackT > 0) { p.vy = 0; p.ground = false; p.y = Math.max(40, p.y - 240 * dt) } else p.vy += grav * dt')
-      code = code.replace('for (const c of G.coinsArr) {\n      if (c.got) continue\n      const dx = c.x - cx, dy = c.y - cy', 'for (const c of G.coinsArr) {\n      if (c.got) continue\n      if (G.magnetT > 0) { const mdx = cx - c.x, mdy = cy - c.y; const md = Math.hypot(mdx, mdy); if (md < 280 && md > 1) { const pull = Math.min(1, dt * 8); c.x += mdx * pull; c.y += mdy * pull } }\n      const dx = c.x - cx, dy = c.y - cy')
-      code = code.replace('const col = b.type === "shield" ? "#54ffc1" : b.type === "mega" ? "#a14dff" : "#ffd84a"\n      const icon = b.type === "shield" ? "🛡️" : b.type === "mega" ? "🚀" : "✨"', 'const col = b.type === "shield" ? "#54ffc1" : b.type === "mega" ? "#a14dff" : b.type === "jetpack" ? "#00e5ff" : b.type === "scoreDouble" ? "#ffd84a" : b.type === "magnet" ? "#ff4d9d" : "#ffd84a"\n      const icon = b.type === "shield" ? "🛡️" : b.type === "mega" ? "🚀" : b.type === "jetpack" ? "🛩️" : b.type === "scoreDouble" ? "🏆" : b.type === "magnet" ? "🧲" : "🪙"')
-      code = code.replace('if (G.shield && !fall) {', 'if (G.shield && G.shieldT > 0 && !fall) {')
-      code = code.replace('  function applyBonus(type) {[\s\S]*?\n  }\n(?=  function hurt)', '  function applyBonus(type) { const duration = getBonusDuration(type); SFX.bonus(); if (type === "shield") { G.shield = true; G.shieldT = duration; toast("🛡️ Bouclier ! " + duration + "s") } else if (type === "mega") { G.jumpBoostT = duration; toast("🚀 Méga-saut ! " + duration + "s") } else if (type === "x2") { G.coinBoostT = duration; toast("🪙 Pièces x2 ! " + duration + "s") } else if (type === "jetpack") { G.jetpackT = duration; toast("🚀 JETPACK ! " + duration + "s") } else if (type === "scoreDouble") { G.scoreDoubleT = duration; toast("🏆 SCORE x2 ! " + duration + "s") } else if (type === "magnet") { G.magnetT = duration; toast("🧲 AIMANT ! " + duration + "s") } burst(G.player.x + 20, G.player.y + 20, "#fff", 16) }\n      ')
-      code = code.replace('  function dash() {\n', '  const getBonusDuration = id => { const key = id === "scoreDouble" ? "score_double_level" : id === "x2" ? "bonus_x2_level" : id + "_level"; const level = Math.max(1, Math.min(6, Number(profile[key] || 1))); return 5 + (level - 1) * 2 }\n\n  function dash() {\n')
-      code = code.replace('$(\"finalDist\").textContent = Math.floor(G.dist)', '$(\"finalDist\").textContent = Math.floor(G.score || G.dist)')
-
-
-
-
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
