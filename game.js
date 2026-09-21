@@ -359,7 +359,7 @@
       code = code.replace('if (G.coinBoostT > 0) { G.coinBoostT -= dt; G.coinMult = 2 } else G.coinMult = 1', 'if (G.coinBoostT > 0) { G.coinBoostT -= dt; G.coinMult = 2 } else G.coinMult = 1\n    if (G.scoreDoubleT > 0) { G.scoreDoubleT -= dt; G.scoreMult = 2 } else G.scoreMult = 1\n    if (G.jetpackT > 0) G.jetpackT -= dt; else G.jetpackHold = false\n    if (G.magnetT > 0) G.magnetT -= dt')
       code = code.replace('for (const c of G.coinsArr) c.x -= G.speed * dt', 'for (const c of G.coinsArr) { c.x -= G.speed * dt; if (G.magnetT > 0 && !c.got) { const dx = (G.player.x + 20) - c.x, dy = (G.player.y + 20) - c.y, d = Math.hypot(dx, dy); if (d < 260 && d > 1) { c.x += dx / d * 900 * dt; c.y += dy / d * 900 * dt } } }')
       code = code.replace('const grav = 2600\n    p.vy += grav * dt', 'const grav = 2600\n    if (G.jetpackT > 0 && G.jetpackHold) { p.vy = -420; p.y = p.y + p.vy * dt } else p.vy += grav * dt')
-      code = code.replace('  function applyBonus(type) {', '  function applyBonus(type) {\n    const level = Math.max(1, Math.min(6, Number(profile.bonus_level || 1)))\n    const duration = 5 + (level - 1) * 2')
+      code = code.replace('  function applyBonus(type) {', '  function applyBonus(type) {\n    const level = Math.max(1, Math.min(6, Number(profile.bonus_level || 1)))\n    const duration = 5')
       code = code.replace('else if (type === "mega") { G.jumpBoostT = 6 + (profile.bonus_level || 1); toast("🚀 Méga-saut !") }', 'else if (type === "mega") { G.jumpBoostT = duration; toast("🚀 Méga-saut !") }')
       code = code.replace('else { G.coinBoostT = 8 + (profile.bonus_level || 1); toast("✨ Pièces x2 !") }', 'else if (type === "x2") { G.coinBoostT = duration; toast("🪙 Pièces x2 !") }\n    else if (type === "jetpack") { G.jetpackT = duration; G.jetpackHold = false; toast("🛩️ Jetpack ! Maintiens ton doigt sur l’écran pour voler.") }\n    else if (type === "scoreDouble") { G.scoreDoubleT = duration; toast("🏆 Score x2 !") }\n    else if (type === "magnet") { G.magnetT = duration; toast("🧲 Aimant !") }')
       code = code.replace('const icon = b.type === "shield" ? "🛡️" : b.type === "mega" ? "🚀" : "✨"', 'const icon = b.type === "shield" ? "🛡️" : b.type === "mega" ? "🚀" : b.type === "x2" ? "🪙" : b.type === "jetpack" ? "🛩️" : b.type === "scoreDouble" ? "🏆" : "🧲"')
@@ -371,6 +371,27 @@
           jetpackCanvas.addEventListener("pointercancel", () => { G.jetpackHold = false })
           jetpackCanvas.addEventListener("pointerleave", () => { G.jetpackHold = false })
         }`)
+      code += `
+;(() => {
+  let bonusTimer = document.getElementById("irBonusTimer")
+  if (!bonusTimer) {
+    bonusTimer = document.createElement("div")
+    bonusTimer.id = "irBonusTimer"
+    bonusTimer.style.cssText = "position:fixed;left:50%;top:78px;transform:translateX(-50%);z-index:30;display:none;padding:7px 14px;border:2px solid rgba(0,229,255,.8);border-radius:12px;background:rgba(2,4,10,.9);color:#fff;font:900 18px Orbitron,Inter,sans-serif;box-shadow:0 0 16px rgba(0,229,255,.35);pointer-events:none;text-align:center"
+    document.body.appendChild(bonusTimer)
+  }
+  setInterval(() => {
+    if (typeof G === "undefined" || !G.running) { bonusTimer.style.display = "none"; return }
+    const active = [
+      [G.shieldT, "🛡️"], [G.jumpBoostT, "🚀"], [G.coinBoostT, "🪙"],
+      [G.jetpackT, "🛩️"], [G.scoreDoubleT, "🏆"], [G.magnetT, "🧲"]
+    ].filter(x => Number(x[0] || 0) > 0).sort((a,b) => b[0] - a[0])
+    if (!active.length) { bonusTimer.style.display = "none"; return }
+    bonusTimer.textContent = active[0][1] + " " + Number(active[0][0]).toFixed(1) + "s"
+    bonusTimer.style.display = "block"
+  }, 50)
+})()
+`;
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
