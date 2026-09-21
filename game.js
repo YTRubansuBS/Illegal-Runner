@@ -257,7 +257,7 @@
     $("upgradeGrid").innerHTML = cards
   }
 `)
-      code = replaceBetween(code, "  function buyUpgrade(id) {", "  function freePack() {", `  function buyUpgrade(id) {
+      code = replaceBetween(code, "  async function buyUpgrade(id) {", "  function freePack() {", `  function buyUpgrade(id) {
     const entry = UPGRADES.find((u) => u[0] === id)
     if (!entry) return
     const max = entry[3]
@@ -269,7 +269,7 @@
     profile.coins -= cost
     profile[key] = v + 1
     SFX.bonus()
-    persist()
+    await persist()
     renderAll()
     toast("⚡ " + entry[2] + " amélioré ! Niveau " + (v + 1) + "/" + max)
   }
