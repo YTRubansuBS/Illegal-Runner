@@ -377,41 +377,30 @@
         }`)
       code += `
 ;(() => {
-  const labels = { shield:"🛡️", mega:"🚀", x2:"🪙", jetpack:"🛩️", scoreDouble:"🏆", magnet:"🧲" }\n  const __irBonusUpgradeUI = () => {\n    const grid = document.getElementById("upgradeGrid")\n    if (!grid) return\n    for (const id of ["bonus_shield","bonus_mega","bonus_x2","bonus_jetpack","bonus_scoreDouble","bonus_magnet"]) {\n      const b = grid.querySelector("button[data-up=\"" + id + "\"]")\n      if (b) b.closest(".card")?.remove()\n    }\n    const b = grid.querySelector("button[data-up=\"bonus\"]")\n    if (!b) return\n    const card = b.closest(".card")\n    if (!card) return\n    let section = document.getElementById("irBonusUpgradeSection")\n    if (!section) {\n      section = document.createElement("div")\n      section.id = "irBonusUpgradeSection"\n      section.style.cssText = "grid-column:1/-1;margin-top:10px"\n      const title = document.createElement("div")\n      title.innerHTML = '<h2 style="margin:8px 0 4px\">🎁 BONUS</h2><p class=\"muted\" style=\"margin:0 0 10px\">Améliore la durée de tous les bonus : +2 secondes par niveau.</p>'\n      section.appendChild(title)\n      const box = document.createElement("div")\n      box.className = "grid"\n      section.appendChild(box)\n      grid.appendChild(section)\n      section._box = box\n    }\n    const box = section._box || section.querySelector(".grid")\n    if (box && card.parentElement !== box) box.appendChild(card)\n    const m = card.textContent.match(/Niveau\\s+(\\d+)\\/6/)\n    if (m) {\n      const level = Math.max(1, Math.min(6, Number(m[1])))\n      let d = card.querySelector(".ir-bonus-duration")\n      if (!d) { d = document.createElement("p"); d.className = "muted ir-bonus-duration"; card.querySelector("h3")?.after(d) }\n      d.textContent = "⏱️ Durée : " + (5 + (level - 1) * 2) + " secondes"\n    }\n  }\n  const __irUpgradeObserver = new MutationObserver(() => __irBonusUpgradeUI())\n  __irUpgradeObserver.observe(document.body, { childList:true, subtree:true })\n  setTimeout(__irBonusUpgradeUI, 0)
+  const labels = { shield:"🛡️", mega:"🚀", x2:"🪙", jetpack:"🛩️", scoreDouble:"🏆", magnet:"🧲" }
   let bonusTimer = document.getElementById("irBonusTimer")
-
   if (!bonusTimer) {
     bonusTimer = document.createElement("div")
     bonusTimer.id = "irBonusTimer"
     bonusTimer.style.cssText = "position:fixed;left:16px;top:64px;z-index:2147483646;display:none;padding:7px 14px;border:2px solid rgba(0,229,255,.8);border-radius:12px;background:rgba(2,4,10,.94);color:#fff;font:900 18px Orbitron,Inter,sans-serif;box-shadow:0 0 16px rgba(0,229,255,.35);pointer-events:none;text-align:center;line-height:1.35;white-space:pre-line"
     document.body.appendChild(bonusTimer)
   }
-
   setInterval(() => {
     const G = window.__IR_G
     const source = window.__IR_BONUS_TIMERS || {}
-    if (!G || !G.running) {
-      bonusTimer.style.display = "none"
-      return
-    }
-
-    const now = Date.now()
-    const lines = []
-
+    if (!G || !G.running) { bonusTimer.style.display = "none"; return }
+    const now = Date.now(), lines = []
     for (const type of Object.keys(labels)) {
       const until = Number(source[type] || 0)
-      if (until <= now) {
-        if (until > 0) delete source[type]
-        continue
-      }
+      if (until <= now) { if (until > 0) delete source[type]; continue }
       lines.push(labels[type] + " " + ((until - now) / 1000).toFixed(1) + "s")
     }
-
     bonusTimer.textContent = lines.join("\\n")
     bonusTimer.style.display = lines.length ? "block" : "none"
   }, 50)
 })()
 `;
+
 
 
 
