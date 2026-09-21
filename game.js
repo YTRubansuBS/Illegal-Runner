@@ -205,8 +205,8 @@
       code = code.replace('  function dash() {\n', `  const getDashCooldown = () => { const level = Math.max(1, Math.min(5, Number(profile.dash_level || 1))); return 20 - (level - 1) * 2.5 }
 
   function dash() {
-    if (G.jetpackT > 0) { G.jetpackT = 0; G.jetpackHold = false; G.player.vy = 0; }
-`)      code = code.replace('    G.dashCd = 1.6', '    G.dashCd = getDashCooldown()')
+`)
+      code = code.replace('    G.dashCd = 1.6', '    G.dashCd = getDashCooldown()')
       code = code.replace(`        if (G.dashT > 0 && DESTRUCTIBLE[o.type]) {
           o.dead = true
           burst(o.x + o.w / 2, o.y + o.h / 2, G.world.accent, 14)
