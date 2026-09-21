@@ -361,10 +361,10 @@
       code = code.replace('for (const c of G.coinsArr) c.x -= G.speed * dt', 'for (const c of G.coinsArr) { c.x -= G.speed * dt; if (G.magnetT > 0 && !c.got) { const dx = (G.player.x + 20) - c.x, dy = (G.player.y + 20) - c.y, d = Math.hypot(dx, dy); if (d < 260 && d > 1) { c.x += dx / d * 900 * dt; c.y += dy / d * 900 * dt } } }')
       code = code.replace('const grav = 2600\n    p.vy += grav * dt', 'const grav = 2600\n    if (G.jetpackT > 0 && G.jetpackHold) { p.vy = -420; p.y = p.y + p.vy * dt } else p.vy += grav * dt')
       code = code.replace('  function applyBonus(type) {', '  function applyBonus(type) {\n    const level = Math.max(1, Math.min(6, Number(profile.bonus_level || 1)))\n    const duration = 5')
-      code = code.replace('if (type === "shield") { G.shield = true; toast("🛡️ Bouclier !") }', 'if (type === "shield") { G.shield = true; G.shieldT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.shield = 5; toast("🛡️ Bouclier !") }')
+      code = code.replace('if (type === "shield") { G.shield = true; toast("🛡️ Bouclier !") }', 'if (type === "shield") { G.shield = true; G.shieldT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.shield = Date.now() + 5000; toast("🛡️ Bouclier !") }')
       code = code.replace('G.shield = false\\n      p.inv = 1.1', 'G.shield = false\\n      G.shieldT = 0\\n      p.inv = 1.1')
-      code = code.replace('else if (type === "mega") { G.jumpBoostT = 6 + (profile.bonus_level || 1); toast("🚀 Méga-saut !") }', 'else if (type === "mega") { G.jumpBoostT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.mega = 5; toast("🚀 Méga-saut !") }')
-      code = code.replace('else { G.coinBoostT = 8 + (profile.bonus_level || 1); toast("✨ Pièces x2 !") }', 'else if (type === "x2") { G.coinBoostT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.x2 = 5; toast("🪙 Pièces x2 !") }\n    else if (type === "jetpack") { G.jetpackT = duration; G.jetpackHold = false; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.jetpack = 5; toast("🛩️ Jetpack ! Maintiens ton doigt sur l’écran pour voler.") }\n    else if (type === "scoreDouble") { G.scoreDoubleT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.scoreDouble = 5; toast("🏆 Score x2 !") }\n    else if (type === "magnet") { G.magnetT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.magnet = 5; toast("🧲 Aimant !") }')
+      code = code.replace('else if (type === "mega") { G.jumpBoostT = 6 + (profile.bonus_level || 1); toast("🚀 Méga-saut !") }', 'else if (type === "mega") { G.jumpBoostT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.mega = Date.now() + 5000; toast("🚀 Méga-saut !") }')
+      code = code.replace('else { G.coinBoostT = 8 + (profile.bonus_level || 1); toast("✨ Pièces x2 !") }', 'else if (type === "x2") { G.coinBoostT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.x2 = Date.now() + 5000; toast("🪙 Pièces x2 !") }\n    else if (type === "jetpack") { G.jetpackT = duration; G.jetpackHold = false; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.jetpack = Date.now() + 5000; toast("🛩️ Jetpack ! Maintiens ton doigt sur l’écran pour voler.") }\n    else if (type === "scoreDouble") { G.scoreDoubleT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.scoreDouble = Date.now() + 5000; toast("🏆 Score x2 !") }\n    else if (type === "magnet") { G.magnetT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.magnet = Date.now() + 5000; toast("🧲 Aimant !") }')
       code = code.replace('const icon = b.type === "shield" ? "🛡️" : b.type === "mega" ? "🚀" : "✨"', 'const icon = b.type === "shield" ? "🛡️" : b.type === "mega" ? "🚀" : b.type === "x2" ? "🪙" : b.type === "jetpack" ? "🛩️" : b.type === "scoreDouble" ? "🏆" : "🧲"')
       code = code.replace('const STEP = 1 / 120 // fixed physics step', `const STEP = 1 / 120 // fixed physics step
         const jetpackCanvas = document.getElementById("game")
@@ -376,10 +376,8 @@
         }`)
       code += `
 ;(() => {
-  let bonusTimer = document.getElementById("irBonusTimer")
   const labels = { shield:"🛡️", mega:"🚀", x2:"🪙", jetpack:"🛩️", scoreDouble:"🏆", magnet:"🧲" }
-  const activeUntil = {}
-  let lastSeen = {}
+  let bonusTimer = document.getElementById("irBonusTimer")
 
   if (!bonusTimer) {
     bonusTimer = document.createElement("div")
@@ -393,41 +391,27 @@
     const source = window.__IR_BONUS_TIMERS || {}
     if (!G || !G.running) {
       bonusTimer.style.display = "none"
-      for (const k in activeUntil) delete activeUntil[k]
-      lastSeen = {}
       return
     }
 
     const now = Date.now()
-    for (const type of Object.keys(labels)) {
-      const value = Number(source[type] || 0)
-      if (value > 0 && value !== lastSeen[type]) {
-        activeUntil[type] = now + value * 1000
-        lastSeen[type] = value
-      }
-    }
-
     const lines = []
+
     for (const type of Object.keys(labels)) {
-      if (!activeUntil[type]) continue
-      const remaining = Math.max(0, (activeUntil[type] - now) / 1000)
-      if (remaining <= 0) {
-        delete activeUntil[type]
+      const until = Number(source[type] || 0)
+      if (until <= now) {
+        if (until > 0) delete source[type]
         continue
       }
-      lines.push(labels[type] + " " + remaining.toFixed(1) + "s")
-    }
-
-    if (!lines.length) {
-      bonusTimer.style.display = "none"
-      return
+      lines.push(labels[type] + " " + ((until - now) / 1000).toFixed(1) + "s")
     }
 
     bonusTimer.textContent = lines.join("\\n")
-    bonusTimer.style.display = "block"
+    bonusTimer.style.display = lines.length ? "block" : "none"
   }, 50)
 })()
 `;
+
 
 
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
