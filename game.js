@@ -14,6 +14,7 @@
   fetch(ORIGINAL, { cache: 'no-store' })
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
+      code = code.replace('const G = {', 'const G = window.__IR_G = {')
       code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
           if (e.detail?.selected_background && typeof G !== 'undefined' && G.world) G.world = WORLDS[e.detail.selected_background] || G.world
@@ -381,10 +382,10 @@
     document.body.appendChild(bonusTimer)
   }
   setInterval(() => {
-    if (typeof G === "undefined" || !G.running) { bonusTimer.style.display = "none"; return }
+    if (!window.__IR_G || !window.__IR_G.running) { bonusTimer.style.display = "none"; return }
     const active = [
-      [G.shieldT, "🛡️"], [G.jumpBoostT, "🚀"], [G.coinBoostT, "🪙"],
-      [G.jetpackT, "🛩️"], [G.scoreDoubleT, "🏆"], [G.magnetT, "🧲"]
+      [window.__IR_G.shieldT, "🛡️"], [window.__IR_G.jumpBoostT, "🚀"], [window.__IR_G.coinBoostT, "🪙"],
+      [window.__IR_G.jetpackT, "🛩️"], [window.__IR_G.scoreDoubleT, "🏆"], [window.__IR_G.magnetT, "🧲"]
     ].filter(x => Number(x[0] || 0) > 0).sort((a,b) => b[0] - a[0])
     if (!active.length) { bonusTimer.style.display = "none"; return }
     bonusTimer.textContent = active[0][1] + " " + Number(active[0][0]).toFixed(1) + "s"
