@@ -24,7 +24,7 @@
   const notifyCustomization=(type,id)=>window.dispatchEvent(new CustomEvent('ir:customizationChanged',{detail:type==='world'?{selected_background:id}:type==='character'?{selected_character:id}:type==='coin'?{selected_coin:id}:{selected_obstacle_set:id}}))
   async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];return false}const {data}=await sb.from('inventory').select('item_type,item_id').eq('user_id',user.id);cloudInventory=data||[];return true}
   const owned=(type,id,p)=>type==='world'?(p.owned_worlds||['city']).includes(id):type==='character'?(p.owned_characters||['runner']).includes(id):type==='coin'?(p.owned_coins||['gold']).includes(id):(p.owned_obstacles||['classic']).includes(id)
-  const cloudOwned=(type,id)=>{const map={world:'background',character:'character',coin:'obstacle',obstacle:'obstacle'};return !!cloudInventory?.some(x=>x.item_type===map[type]&&x.item_id===id)}
+  const cloudOwned=(type,id)=>{if(type==='coin'&&id==='gold')return true;const map={world:'background',character:'character',coin:'obstacle',obstacle:'obstacle'};return !!cloudInventory?.some(x=>x.item_type===map[type]&&x.item_id===id)}
   async function isOwned(type,id){if(guestMode())return owned(type,id,localProfile());if(!cloudInventory)await getCloud();return cloudOwned(type,id)}
   async function equip(type,id){
     if(!(await isOwned(type,id)))return toast('🔒 Objet non débloqué. Ouvre un pack !')
