@@ -377,27 +377,53 @@
       code += `
 ;(() => {
   let bonusTimer = document.getElementById("irBonusTimer")
+  let shieldUntil = 0
+  let wasShield = false
+
   if (!bonusTimer) {
     bonusTimer = document.createElement("div")
     bonusTimer.id = "irBonusTimer"
-    bonusTimer.style.cssText = "position:fixed;left:16px;top:64px;transform:none;z-index:61;display:none;padding:7px 14px;border:2px solid rgba(0,229,255,.8);border-radius:12px;background:rgba(2,4,10,.9);color:#fff;font:900 18px Orbitron,Inter,sans-serif;box-shadow:0 0 16px rgba(0,229,255,.35);pointer-events:none;text-align:center"
+    bonusTimer.style.cssText = "position:fixed;left:16px;top:64px;z-index:2147483646;display:none;padding:7px 14px;border:2px solid rgba(0,229,255,.8);border-radius:12px;background:rgba(2,4,10,.94);color:#fff;font:900 18px Orbitron,Inter,sans-serif;box-shadow:0 0 16px rgba(0,229,255,.35);pointer-events:none;text-align:center"
     document.body.appendChild(bonusTimer)
   }
+
   setInterval(() => {
-    if (!window.__IR_G || !window.__IR_G.running) { bonusTimer.style.display = "none"; return }
-    if (window.__IR_G.shield && Number(window.__IR_G.shieldT || 0) > 0) {
-      window.__IR_G.shieldT = Math.max(0, Number(window.__IR_G.shieldT) - 0.05)
-      if (window.__IR_G.shieldT <= 0) {
-        window.__IR_G.shieldT = 0
-        window.__IR_G.shield = false
-      }
+    const G = window.__IR_G
+    if (!G || !G.running) {
+      bonusTimer.style.display = "none"
+      wasShield = false
+      shieldUntil = 0
+      return
     }
-    const active = [
-      [window.__IR_G.shieldT, "🛡️"], [window.__IR_G.jumpBoostT, "🚀"], [window.__IR_G.coinBoostT, "🪙"],
-      [window.__IR_G.jetpackT, "🛩️"], [window.__IR_G.scoreDoubleT, "🏆"], [window.__IR_G.magnetT, "🧲"]
-    ].filter(x => Number(x[0] || 0) > 0).sort((a,b) => b[0] - a[0])
-    if (!active.length) { bonusTimer.style.display = "none"; return }
-    bonusTimer.textContent = active[0][1] + " " + Number(active[0][0]).toFixed(1) + "s"
+
+    const active = G.shield === true
+
+    if (active && !wasShield) {
+      shieldUntil = Date.now() + 5000
+    }
+
+    if (active && shieldUntil > 0) {
+      const remaining = Math.max(0, (shieldUntil - Date.now()) / 1000)
+      G.shieldT = remaining
+      if (remaining <= 0) {
+        G.shield = false
+        G.shieldT = 0
+        shieldUntil = 0
+      }
+    } else if (!active) {
+      shieldUntil = 0
+      G.shieldT = 0
+    }
+
+    wasShield = G.shield === true
+
+    if (!wasShield || shieldUntil <= 0) {
+      bonusTimer.style.display = "none"
+      return
+    }
+
+    const remaining = Math.max(0, (shieldUntil - Date.now()) / 1000)
+    bonusTimer.textContent = "🛡️ " + remaining.toFixed(1) + "s"
     bonusTimer.style.display = "block"
   }, 50)
 })()
