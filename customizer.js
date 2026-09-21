@@ -80,123 +80,161 @@
     box.scrollIntoView({behavior:'smooth',block:'nearest'})
   }
   function packName(type){return type==='world'?'PACK MONDE':type==='character'?'PACK PERSONNAGE':type==='coin'?'PACK PIÈCES':'PACK RÉCOMPENSE'}
+
+  const RARITIES = {
+    common:{name:'COMMUN',chance:50,sell:100,icon:'⚪'},
+    uncommon:{name:'PEU COMMUN',chance:25,sell:250,icon:'🟢'},
+    rare:{name:'RARE',chance:15,sell:500,icon:'🔵'},
+    epic:{name:'ÉPIQUE',chance:7,sell:1000,icon:'🟣'},
+    legendary:{name:'LÉGENDAIRE',chance:1.5,sell:5000,icon:'🟠'},
+    mythic:{name:'MYTHIQUE',chance:1,sell:7500,icon:'🔴'},
+    secret:{name:'SECRET',chance:0.5,sell:10000,icon:'🌈'}
+  }
+  const RARITY_ORDER=['common','uncommon','rare','epic','legendary','mythic','secret']
+  const PACK_CATALOG={
+    world:[
+      ['city','🌃','CITY'],['forest','🌲','FOREST'],['desert','🏜️','DESERT'],['space','🚀','SPACE'],['dark','🌑','DARK'],['volcano','🌋','VOLCANO'],['ice','❄️','ICE'],['neon','🌌','NEON'],['ocean','🌊','OCEAN'],['sky','☁️','SKY'],
+      ['sunset','🌇','SUNSET'],['jungle','🌴','JUNGLE'],['candy','🍬','CANDY'],['lava','🔥','LAVA'],['moon','🌙','MOON'],['storm','⛈️','STORM'],['cyber','💻','CYBER'],['crystal','💎','CRYSTAL'],['toxic','☢️','TOXIC'],['void','🕳️','VOID'],
+      ['aurora','🌌','AURORA'],['matrix','🟩','MATRIX'],['rainbow','🌈','RAINBOW'],['galaxy','🌠','GALAXY'],['temple','🏛️','TEMPLE'],['castle','🏰','CASTLE'],['volcanic','🌋','VOLCANIC'],['quantum','⚛️','QUANTUM'],['dream','💫','DREAM'],['glitch','👾','GLITCH'],
+      ['dragon','🐉','DRAGON'],['portal','🌀','PORTAL'],['cosmic','☄️','COSMIC'],['secret','🗝️','SECRET']
+    ],
+    character:[
+      ['runner','🧑','RUNNER'],['ninja','🥷','NINJA'],['robot','🤖','ROBOT'],['ghost','👻','GHOST'],['cyber','🦾','CYBER'],['pilot','🧑‍✈️','PILOT'],['soldier','🪖','SOLDIER'],['wizard','🧙','WIZARD'],['astronaut','🧑‍🚀','ASTRONAUT'],['skater','🛹','SKATER'],
+      ['samurai','👺','SAMURAI'],['pirate','🏴‍☠️','PIRATE'],['detective','🕵️','DETECTIVE'],['vampire','🧛','VAMPIRE'],['zombie','🧟','ZOMBIE'],['alien','👽','ALIEN'],['king','🤴','KING'],['queen','👸','QUEEN'],['knight','🛡️','KNIGHT'],['racer','🏎️','RACER'],
+      ['dragon','🐉','DRAGON'],['phoenix','🔥','PHOENIX'],['shadow','🌑','SHADOW'],['thunder','⚡','THUNDER'],['ice','❄️','ICE'],['flame','🔥','FLAME'],['cosmic','🌌','COSMIC'],['cyborg','🤖','CYBORG'],['reaper','💀','REAPER'],['angel','😇','ANGEL'],
+      ['demon','😈','DEMON'],['time','⏳','TIME'],['void','🕳️','VOID'],['secret','👁️','SECRET']
+    ],
+    coin:[
+      ['gold','🪙','GOLD'],['silver','🥈','SILVER'],['bronze','🥉','BRONZE'],['blue','🔵','BLUE'],['green','🟢','GREEN'],['red','🔴','RED'],['pink','🩷','PINK'],['orange','🟠','ORANGE'],['purple','🟣','PURPLE'],['white','⚪','WHITE'],
+      ['diamond','💎','DIAMOND'],['emerald','💚','EMERALD'],['ruby','❤️','RUBY'],['sapphire','🔷','SAPPHIRE'],['amethyst','🟪','AMETHYST'],['topaz','🔶','TOPAZ'],['pearl','🦪','PEARL'],['crystal','🔮','CRYSTAL'],['neon','💠','NEON'],['star','⭐','STAR'],
+      ['moon','🌙','MOON'],['sun','☀️','SUN'],['fire','🔥','FIRE'],['ice','❄️','ICE'],['thunder','⚡','THUNDER'],['rainbow','🌈','RAINBOW'],['galaxy','🌌','GALAXY'],['cosmic','☄️','COSMIC'],['void','🕳️','VOID'],['crown','👑','CROWN'],
+      ['dragon','🐉','DRAGON'],['secret','🔐','SECRET'],['glitch','👾','GLITCH'],['infinite','♾️','INFINITE']
+    ]
+  }
+  const rarityForIndex=i=>i<10?'common':i<18?'uncommon':i<24?'rare':i<28?'epic':i<31?'legendary':i<33?'mythic':'secret'
+  const packKey=type=>type==='coin'?'coin':type
+  const collectionKey=(uid,type)=>'irRarityCollection_'+uid+'_'+type
+  const loadCollection=(uid,type)=>{
+    try{
+      const raw=localStorage.getItem(collectionKey(uid,type))
+      const obj=raw?JSON.parse(raw):{}
+      return obj&&typeof obj==='object'?obj:{}
+    }catch{return {}}
+  }
+  const saveCollection=(uid,type,obj)=>{try{localStorage.setItem(collectionKey(uid,type),JSON.stringify(obj))}catch{}}
+  const collectionUid=()=>guestMode()?'guest':(cloudUser?.id||'guest')
+  const weightedRarity=()=>{
+    const r=Math.random()*100, cuts=[[50,'common'],[25,'uncommon'],[15,'rare'],[7,'epic'],[1.5,'legendary'],[1,'mythic'],[0.5,'secret']]
+    let n=0
+    for(const [w,id] of cuts){n+=w;if(r<n)return id}
+    return 'secret'
+  }
+  const rarityStyle=id=>({
+    common:'border:2px solid #9aa0a6;background:rgba(154,160,166,.12)',
+    uncommon:'border:2px solid #48d597;background:rgba(72,213,151,.12)',
+    rare:'border:2px solid #4da6ff;background:rgba(77,166,255,.12)',
+    epic:'border:2px solid #b56cff;background:rgba(181,108,255,.12)',
+    legendary:'border:2px solid #ff9f43;background:rgba(255,159,67,.12)',
+    mythic:'border:2px solid #ff4d6d;background:rgba(255,77,109,.12)',
+    secret:'border:2px solid #00e5ff;background:linear-gradient(135deg,rgba(0,229,255,.12),rgba(255,0,200,.12))'
+  }[id]||'')
+  const rarityCards=type=>PACK_CATALOG[type].map((x,i)=>({id:x[0],emoji:x[1],name:x[2],rarity:rarityForIndex(i)}))
+  const packLabel=type=>type==='world'?'PACK MONDE':type==='character'?'PACK PERSONNAGE':'PACK PIÈCES'
+  const displayCollection=(type)=>{
+    const uid=collectionUid(), data=loadCollection(uid,type), cards=rarityCards(type)
+    return RARITY_ORDER.map(r=>{
+      const list=cards.filter(x=>x.rarity===r)
+      return '<div class="custom-section"><h3>'+RARITIES[r].icon+' '+RARITIES[r].name+' <span class="muted">— '+RARITIES[r].chance+'%</span></h3><div class="grid">'+list.map(x=>{
+        const n=Number(data[x.id]||0)
+        return '<div class="card" style="'+rarityStyle(r)+'"><div class="emoji">'+x.emoji+'</div><h3>'+x.name+'</h3><p class="muted">'+(n?'x'+n:'🔒 Pas encore obtenu')+'</p>'+(n?'<button type="button" data-sell-type="'+type+'" data-sell-id="'+x.id+'">VENDRE +'+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</button>':'')+'</div>'
+      }).join('')+'</div></div>'
+    }).join('')
+  }
+
   async function buyPack(type){
-    if(buying)return
+    if(!['world','character','coin'].includes(type)||buying)return
     buying=true
     try{
-      const cost=COSTS[type]
+      const cost=COSTS[type]||1000
       if(guestMode()){
-        const p=localProfile();p.coins=p.coins|0
-        if(p.coins<cost){showPackResult(`<b>${packName(type)}</b><br><span class="muted">Il te faut <b>${cost.toLocaleString('fr-FR')} 🪙</b>.</span>`,false);return toast('Pas assez de pièces.')}
-        if(type==='reward'){
-          const r=REWARD_MIN+Math.floor(Math.random()*(REWARD_MAX-REWARD_MIN+1))
-          p.coins-=cost;p.coins+=r;saveLocal(p);refreshCoins(p.coins);notifyProfile(p)
-          showPackResult(`<div style="font-size:25px">💎</div><h3>+${r.toLocaleString('fr-FR')} 🪙</h3><span class="muted">Tu as gagné entre 200 et 850 pièces.</span>`)
-          toast('💎 Récompense reçue : +'+r+' pièces !');return
-        }
-        if(type==='coin'){
-          const list=Object.keys(COINS), arr=p.owned_coins||['gold'], locked=list.filter(x=>!arr.includes(x))
-          if(!locked.length){showPackResult(`<b>PACK PIÈCES</b><br><span class="muted">Toutes les pièces sont déjà débloquées !</span>`,false);return toast('🎉 Toutes les pièces sont déjà débloquées !')}
-          const id=locked[Math.floor(Math.random()*locked.length)]
-          p.coins-=cost;p.owned_coins=[...new Set([...arr,id])];p.selected_coin=id
-          saveLocal(p);refreshCoins(p.coins);notifyProfile(p);notifyCustomization(type,id)
-          const label=COINS[id]
-          showPackResult(`<div style="font-size:25px">${label.emoji}</div><h3>${label.name}</h3><span class="muted">Pièce débloquée et équipée !</span>`)
-          toast('🪙 '+label.name+' obtenu !')
-          await renderCustomizer();return
-        }
-        const list=type==='world'?Object.keys(WORLDS):Object.keys(CHARS)
-        const key=type==='world'?'owned_worlds':'owned_characters'
-        const def=type==='world'?'city':'runner'
-        const arr=p[key]||[def]
-        const locked=list.filter(x=>!arr.includes(x))
-        if(!locked.length){showPackResult(`<b>${packName(type)}</b><br><span class="muted">Tout est déjà débloqué !</span>`,false);return toast('🎉 Tout est déjà débloqué !')}
-        const id=locked[Math.floor(Math.random()*locked.length)]
-        p.coins-=cost;p[key]=[...new Set([...arr,id])]
-        if(type==='world')p.selected_background=id
-        if(type==='character')p.selected_character=id
-        saveLocal(p);refreshCoins(p.coins);notifyProfile(p);notifyCustomization(type,id)
-        const label=type==='world'?WORLDS[id]:CHARS[id]
-        showPackResult(`<div style="font-size:25px">${label.emoji}</div><h3>${label.name}</h3><span class="muted">Débloqué et équipé !</span>`)
-        toast('🎁 '+(type==='world'?'Monde':'Personnage')+' obtenu : '+label.name)
-        await renderCustomizer();return
+        const p=localProfile();p.coins=Number(p.coins||0)
+        if(p.coins<cost){toast('❌ Pas assez de pièces.');return}
+        const rarity=weightedRarity(), cards=rarityCards(type).filter(x=>x.rarity===rarity), item=cards[Math.floor(Math.random()*cards.length)]
+        p.coins-=cost;saveLocal(p);refreshCoins(p.coins);notifyProfile(p)
+        const data=loadCollection('guest',type);data[item.id]=Number(data[item.id]||0)+1;saveCollection('guest',type,data)
+        const count=data[item.id]
+        showPackResult('<div style="font-size:38px">'+item.emoji+'</div><h3>'+item.name+'</h3><div style="font-weight:900;margin:8px 0">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' — '+RARITIES[rarity].chance+'%</div><p class="muted">'+(count>1?'DOUBLON → x'+count:'NOUVEAU !')+'</p>')
+        toast('🎁 '+RARITIES[rarity].name+' !')
+        renderCustomizer();return
       }
-      if(!sb)return showPackResult(`<b>Cloud indisponible.</b><br><span class="muted">Utilise le mode local ou reconnecte ton compte.</span>`,false)
-      const {data:{user}}=await sb.auth.getUser();if(!user)return showPackResult(`<b>Reconnecte-toi pour acheter un pack.</b>`,false)
+      if(!sb)return toast('❌ Cloud indisponible.')
+      const {data:{user}}=await sb.auth.getUser();if(!user)return toast('❌ Reconnecte-toi.')
       const profQ=await sb.from('profiles').select('coins').eq('id',user.id).single()
-      if(profQ.error||!profQ.data)return showPackResult(`<b>Impossible de lire tes pièces.</b>`,false)
-      const currentCoins=Number(profQ.data.coins||0)
-      if(currentCoins<cost){showPackResult(`<b>${packName(type)}</b><br><span class="muted">Il te faut <b>${cost.toLocaleString('fr-FR')} 🪙</b>.</span>`,false);return toast('Pas assez de pièces.')}
-      if(type==='reward'){
-        const r=REWARD_MIN+Math.floor(Math.random()*(REWARD_MAX-REWARD_MIN+1))
-        const nextCoins=currentCoins-cost+r
-        const {error}=await sb.from('profiles').update({coins:nextCoins}).eq('id',user.id)
-        if(error){showPackResult(`<b>Achat impossible.</b><br><span class="muted">${error.message||'Erreur Supabase.'}</span>`,false);return toast('❌ Achat impossible.')}
-        refreshCoins(nextCoins);notifyProfile({coins:nextCoins})
-        showPackResult(`<div style="font-size:25px">💎</div><h3>+${r.toLocaleString('fr-FR')} 🪙</h3><span class="muted">Récompense obtenue !</span>`)
-        toast('💎 Récompense reçue : +'+r+' pièces !');return
-      }
-      if(type==='coin'){
-        const list=Object.keys(COINS), locked=list.filter(id=>!cloudOwned(type,id))
-        if(!locked.length){showPackResult(`<b>PACK PIÈCES</b><br><span class="muted">Toutes les pièces sont déjà débloquées !</span>`,false);return toast('🎉 Toutes les pièces sont déjà débloquées !')}
-        const id=locked[Math.floor(Math.random()*locked.length)]
-        const nextCoins=currentCoins-cost
-        const {error:coinError}=await sb.from('profiles').update({coins:nextCoins}).eq('id',user.id)
-        if(coinError){showPackResult(`<b>Achat impossible.</b><br><span class="muted">${coinError.message||'Impossible de modifier tes pièces.'}</span>`,false);return toast('❌ Achat impossible.')}
-        const {error:invError}=await sb.from('inventory').insert({user_id:user.id,item_type:'obstacle',item_id:id})
-        if(invError){await sb.from('profiles').update({coins:currentCoins}).eq('id',user.id);showPackResult(`<b>Achat impossible.</b><br><span class="muted">${invError.message||'Impossible d’enregistrer le gain.'}</span>`,false);return toast('❌ Achat impossible.')}
-        refreshCoins(nextCoins);notifyProfile({coins:nextCoins})
-        await getCloud();await autoEquip(type,id,{})
-        const label=COINS[id]
-        showPackResult(`<div style="font-size:25px">${label.emoji}</div><h3>${label.name}</h3><span class="muted">Pièce débloquée et équipée !</span>`)
-        toast('🪙 '+label.name+' obtenu !')
-        await renderCustomizer();return
-      }
-      await getCloud()
-      const list=type==='world'?Object.keys(WORLDS):Object.keys(CHARS)
-      const map={world:'background',character:'character'}
-      const key=type==='world'?'world':'character'
-      const locked=list.filter(id=>!cloudOwned(type,id))
-      if(!locked.length){showPackResult(`<b>${packName(type)}</b><br><span class="muted">Tout est déjà débloqué !</span>`,false);return toast('🎉 Tout est déjà débloqué !')}
-      const id=locked[Math.floor(Math.random()*locked.length)]
-      const nextCoins=currentCoins-cost
-      const {error:coinError}=await sb.from('profiles').update({coins:nextCoins}).eq('id',user.id)
-      if(coinError){showPackResult(`<b>Achat impossible.</b><br><span class="muted">${coinError.message||'Impossible de modifier tes pièces.'}</span>`,false);return toast('❌ Achat impossible.')}
-      const {error:invError}=await sb.from('inventory').insert({user_id:user.id,item_type:map[type],item_id:id})
-      if(invError){await sb.from('profiles').update({coins:currentCoins}).eq('id',user.id);showPackResult(`<b>Achat impossible.</b><br><span class="muted">${invError.message||'Impossible d’enregistrer le gain.'}</span>`,false);return toast('❌ Achat impossible.')}
-      refreshCoins(nextCoins);notifyProfile({coins:nextCoins})
-      await getCloud();await autoEquip(type,id,{})
-      const label=type==='world'?WORLDS[id]:CHARS[id]
-      showPackResult(`<div style="font-size:25px">${label.emoji}</div><h3>${label.name}</h3><span class="muted">Débloqué et équipé !</span>`)
-      toast('🎁 '+(type==='world'?'Monde':'Personnage')+' obtenu : '+label.name)
-      await renderCustomizer();return
+      if(profQ.error||!profQ.data)return toast('❌ Impossible de lire tes pièces.')
+      const coins=Number(profQ.data.coins||0);if(coins<cost)return toast('❌ Pas assez de pièces.')
+      const rarity=weightedRarity(),cards=rarityCards(type).filter(x=>x.rarity===rarity),item=cards[Math.floor(Math.random()*cards.length)]
+      const {error}=await sb.from('profiles').update({coins:coins-cost}).eq('id',user.id)
+      if(error)return toast('❌ Achat impossible.')
+      refreshCoins(coins-cost);notifyProfile({coins:coins-cost})
+      const data=loadCollection(user.id,type);data[item.id]=Number(data[item.id]||0)+1;saveCollection(user.id,type,data)
+      const count=data[item.id]
+      showPackResult('<div style="font-size:38px">'+item.emoji+'</div><h3>'+item.name+'</h3><div style="font-weight:900;margin:8px 0">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' — '+RARITIES[rarity].chance+'%</div><p class="muted">'+(count>1?'DOUBLON → x'+count:'NOUVEAU !')+'</p>')
+      toast('🎁 '+RARITIES[rarity].name+' !')
+      renderCustomizer()
     }finally{buying=false}
   }
+
   const card=html=>`<div class="card">${html}</div>`
+
   function renderPacks(){
     const shop=$('shop');if(!shop)return
     let root=$('customPacks');if(!root){root=document.createElement('div');root.id='customPacks';shop.querySelector('.panel')?.appendChild(root)}
     $('shopGrid')?.style.setProperty('display','none')
     const standard=$('btnFreePack')?.closest('.card');if(standard)standard.style.display='none'
-    root.innerHTML=`<div class="pack-shop-title"><h3>🎁 PACKS</h3><p class="muted">Choisis un pack et achète-le avec tes pièces.</p></div><div class="grid pack-grid-fixed">
-      ${card('<div class="emoji">🌍</div><h3>PACK MONDE</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="world" type="button">ACHETER</button>')}
-      ${card('<div class="emoji">🧑</div><h3>PACK PERSONNAGE</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="character" type="button">ACHETER</button>')}
-      ${card('<div class="emoji">🪙</div><h3>PACK PIÈCES</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="coin" type="button">ACHETER</button>')}
-      ${card('<div class="emoji">💎</div><h3>PACK RÉCOMPENSE</h3><p><b>🪙 500</b></p><button class="pack-buy" data-pack="reward" type="button">ACHETER</button>')}
-    </div><div id="packResult" class="card" style="display:none"></div>`
-    root.querySelectorAll('.pack-buy').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();buyPack(btn.dataset.pack)}))
-    root.querySelectorAll('.card').forEach(c=>{c.style.animation='none';c.style.transition='none'})
+    root.innerHTML='<div class="pack-shop-title"><h3>🎁 PACKS À RARETÉ</h3><p class="muted">Chaque ouverture tire une rareté puis un objet. Les doublons sont autorisés.</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:12px 0">'+RARITY_ORDER.map(r=>'<div style="padding:9px;border-radius:10px;'+rarityStyle(r)+'"><b>'+RARITIES[r].icon+' '+RARITIES[r].name+'</b><br><span class="muted">'+RARITIES[r].chance+'% · vente '+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</span></div>').join('')+'</div><div class="grid pack-grid-fixed">'+
+      card('<div class="emoji">🌍</div><h3>PACK MONDE</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="world" type="button">OUVRIR</button>')+
+      card('<div class="emoji">🧑</div><h3>PACK PERSONNAGE</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="character" type="button">OUVRIR</button>')+
+      card('<div class="emoji">🪙</div><h3>PACK PIÈCES</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="coin" type="button">OUVRIR</button>')+
+      '</div><div id="packResult" class="card" style="display:none"></div>'
+    root.querySelectorAll('.pack-buy').forEach(btn=>btn.onclick=e=>{e.preventDefault();buyPack(btn.dataset.pack)})
   }
+
+
   async function renderCustomizer(){
     const root=$('customizerRoot');if(!root)return
     await getCloud()
-    const p=localProfile();let selected={world:p.selected_background||'city',character:p.selected_character||'runner',coin:p.selected_coin||'gold'}
-    if(!guestMode()&&cloudUser){const {data:prof}=await sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',cloudUser.id).single();if(prof)selected={world:prof.selected_background||'city',character:prof.selected_character||'runner',coin:getSelectedCloudCoin(cloudUser.id)}}
-    const wc=Object.entries(WORLDS).map(([id,w])=>{const ok=guestMode()?owned('world',id,p):cloudOwned('world',id),eq=selected.world===id;return card(`<div class="emoji">${w.emoji}</div><div class="rarity">${w.name}</div><h3>${w.desc}</h3><p class="muted">${ok?'Débloqué':'🔒 Verrouillé'}</p><button data-equip-type="world" data-equip-id="${id}" ${ok?'':'disabled'}>${eq?'✓ ÉQUIPÉ':ok?'ÉQUIPER':'🔒'}</button>`) }).join('')
-    const cc=Object.entries(CHARS).map(([id,c])=>{const ok=guestMode()?owned('character',id,p):cloudOwned('character',id),eq=selected.character===id;return card(`<div class="emoji">${c.emoji}</div><h3>${c.name}</h3><p class="muted">${ok?'Débloqué':'🔒 Verrouillé'}</p><button data-equip-type="character" data-equip-id="${id}" ${ok?'':'disabled'}>${eq?'✓ ÉQUIPÉ':ok?'ÉQUIPER':'🔒'}</button>`) }).join('')
-    const coinCards=Object.entries(COINS).map(([id,o])=>{const ok=guestMode()?owned('coin',id,p):cloudOwned('coin',id),eq=selected.coin===id;return card(`<div class="emoji">${o.emoji}</div><h3>${o.name}</h3><p class="muted">${ok?'Débloqué':'🔒 Verrouillé'}</p><button data-equip-type="coin" data-equip-id="${id}" ${ok?'':'disabled'}>${eq?'✓ ÉQUIPÉ':ok?'ÉQUIPER':'🔒'}</button>`) }).join('')
-    root.innerHTML=`<div class="custom-section"><h3>🌍 MONDES</h3><p class="muted">Tous les styles de monde disponibles dans les packs.</p><div class="grid">${wc}</div></div><div class="custom-section"><h3>🧑 PERSONNAGES</h3><p class="muted">Tous les personnages disponibles dans les packs.</p><div class="grid">${cc}</div></div><div class="custom-section"><h3>🪙 PIÈCES</h3><p class="muted">Tous les styles de pièces disponibles dans le pack pièces.</p><div class="grid">${coinCards}</div></div>`
+    const p=localProfile()
+    const uid=collectionUid()
+    const selected={world:p.selected_background||'city',character:p.selected_character||'runner',coin:p.selected_coin||'gold'}
+    root.innerHTML='<div style="padding:12px 0"><h2>🎨 PERSONNALISER</h2><p class="muted">Les objets des packs sont classés par rareté. Plus le pourcentage est faible, plus l\'objet est rare.</p></div>'+
+      '<div class="custom-section"><h3>📊 RARETÉS</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">'+RARITY_ORDER.map(r=>'<div style="padding:10px;border-radius:10px;'+rarityStyle(r)+'"><b>'+RARITIES[r].icon+' '+RARITIES[r].name+'</b><br><span class="muted">'+RARITIES[r].chance+'% de chance</span><br><span class="muted">Vente : '+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</span></div>').join('')+'</div></div>'+
+      '<div class="custom-section"><h3>🌍 MONDE</h3><p class="muted">Sélection actuelle : '+selected.world+'</p><div class="grid">'+displayCollection('world')+'</div></div>'+
+      '<div class="custom-section"><h3>🧑 PERSONNAGES</h3><p class="muted">Sélection actuelle : '+selected.character+'</p><div class="grid">'+displayCollection('character')+'</div></div>'+
+      '<div class="custom-section"><h3>🪙 PIÈCES</h3><p class="muted">Sélection actuelle : '+selected.coin+'</p><div class="grid">'+displayCollection('coin')+'</div></div>'
   }
+
+
+  document.addEventListener('click',async e=>{
+    const sell=e.target.closest('[data-sell-type]')
+    if(!sell)return
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()
+    const type=sell.dataset.sellType,id=sell.dataset.sellId,uid=collectionUid(),data=loadCollection(uid,type),cards=rarityCards(type),item=cards.find(x=>x.id===id)
+    if(!item||!Number(data[id]||0))return toast('❌ Objet indisponible.')
+    const reward=RARITIES[item.rarity].sell
+    data[id]=Math.max(0,Number(data[id])-1);saveCollection(uid,type,data)
+    if(guestMode()){
+      const p=localProfile();p.coins=Number(p.coins||0)+reward;saveLocal(p);refreshCoins(p.coins);notifyProfile(p)
+    }else if(cloudUser){
+      const {data:prof}=await sb.from('profiles').select('coins').eq('id',cloudUser.id).single()
+      const next=Number(prof?.coins||0)+reward
+      const {error}=await sb.from('profiles').update({coins:next}).eq('id',cloudUser.id)
+      if(error){data[id]=Number(data[id]||0)+1;saveCollection(uid,type,data);return toast('❌ Vente impossible.')}
+      refreshCoins(next);notifyProfile({coins:next})
+    }
+    toast('💰 +'+reward.toLocaleString('fr-FR')+' pièces !')
+    await renderCustomizer()
+  },true)
+
   function setup(){
     document.querySelector('#tabs button[data-tab="pack"]')?.remove();$('pack')?.remove()
     const wt=document.querySelector('#tabs button[data-tab="world"]');if(wt)wt.textContent='🎨 Personnaliser'
