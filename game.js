@@ -240,6 +240,8 @@
   ]
 `)
       code = code.replace('lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1, bonus_level: 1,', 'lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1, bonus_level: 1, bonus_shield_level: 1, bonus_mega_level: 1, bonus_x2_level: 1, bonus_jetpack_level: 1, bonus_scoreDouble_level: 1, bonus_magnet_level: 1,')
+      code = code.replace('  function renderUpgrades() {', `  try { const savedBonus = JSON.parse(localStorage.getItem("ir_bonus_upgrades") || "{}"); for (const k of ["bonus_shield_level","bonus_mega_level","bonus_x2_level","bonus_jetpack_level","bonus_scoreDouble_level","bonus_magnet_level"]) if (savedBonus[k]) profile[k] = Math.max(1, Math.min(6, Number(savedBonus[k]))) } catch(e) {}
+  function renderUpgrades() {`);
       code = replaceBetween(code, "  function renderUpgrades() {", "  function renderShop() {", `  function renderUpgrades() {
     const costFor = (v) => [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
     const durationFor = (id, v) => id === "bonus" ? 0 : (5 + (v - 1) * 2)
@@ -248,7 +250,7 @@
       const cost = costFor(v)
       const maxed = v >= max
       const duration = durationFor(id, v)
-      return '<div class="card"><div class="emoji">' + em + '</div><h3>' + n + '</h3><p class="muted">' + desc + '</p>' +
+      return '<div class="card"><div class="emoji">' + em + '</div><h3>' + n + '</h3>' + (id === "bonus" ? '' : '<p class="muted">' + desc + '</p>') +
         '<p>Niveau ' + v + '/' + max + '</p>' +
         (id === "bonus" ? '<p>⚡ Apparition plus fréquente à chaque niveau.</p>' : '<p>⏱️ Durée : <b>' + duration + 's</b></p>') +
         '<div class="progress"><i style="width:' + ((v / max) * 100) + '%"></i></div>' +
@@ -257,7 +259,7 @@
     $("upgradeGrid").innerHTML = cards
   }
 `)
-      code = replaceBetween(code, "  async function buyUpgrade(id) {", "  function freePack() {", `  function buyUpgrade(id) {
+      code = replaceBetween(code, "  async function buyUpgrade(id) {", "  function freePack() {", `  async function buyUpgrade(id) {
     const entry = UPGRADES.find((u) => u[0] === id)
     if (!entry) return
     const max = entry[3]
