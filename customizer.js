@@ -18,10 +18,13 @@
   const toast=t=>{const e=$('toast');if(!e)return;e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1900)}
   const refreshCoins=n=>{if(n!==undefined&&$('coins'))$('coins').textContent=String(n)}
   const notifyProfile=p=>window.dispatchEvent(new CustomEvent('ir:profileChanged',{detail:p}))
-  const notifyCustomization=(type,id)=>window.dispatchEvent(new CustomEvent('ir:customizationChanged',{detail:type==='world'?{selected_background:id}:type==='character'?{selected_character:id}:{selected_obstacle_set:id}}))
+  const coinStorageKey=uid=>'irSelectedCoin_'+uid
+  const getSelectedCloudCoin=uid=>{try{return localStorage.getItem(coinStorageKey(uid))||'gold'}catch{return 'gold'}}
+  const setSelectedCloudCoin=(uid,id)=>{try{localStorage.setItem(coinStorageKey(uid),id)}catch{}}
+  const notifyCustomization=(type,id)=>window.dispatchEvent(new CustomEvent('ir:customizationChanged',{detail:type==='world'?{selected_background:id}:type==='character'?{selected_character:id}:type==='coin'?{selected_coin:id}:{selected_obstacle_set:id}}))
   async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];return false}const {data}=await sb.from('inventory').select('item_type,item_id').eq('user_id',user.id);cloudInventory=data||[];return true}
   const owned=(type,id,p)=>type==='world'?(p.owned_worlds||['city']).includes(id):type==='character'?(p.owned_characters||['runner']).includes(id):type==='coin'?(p.owned_coins||['gold']).includes(id):(p.owned_obstacles||['classic']).includes(id)
-  const cloudOwned=(type,id)=>{const map={world:'background',character:'character',coin:'coin',obstacle:'obstacle'};return !!cloudInventory?.some(x=>x.item_type===map[type]&&x.item_id===id)}
+  const cloudOwned=(type,id)=>{const map={world:'background',character:'character',coin:'obstacle',obstacle:'obstacle'};return !!cloudInventory?.some(x=>x.item_type===map[type]&&x.item_id===id)}
   async function isOwned(type,id){if(guestMode())return owned(type,id,localProfile());if(!cloudInventory)await getCloud();return cloudOwned(type,id)}
   async function equip(type,id){
     if(!(await isOwned(type,id)))return toast('🔒 Objet non débloqué. Ouvre un pack !')
@@ -33,10 +36,11 @@
       if(type==='coin')p.selected_coin=id;
       saveLocal(p);notifyCustomization(type,id);notifyProfile(p)
     } else if(cloudUser){
-      const field={world:'selected_background',character:'selected_character',coin:'selected_coin',obstacle:'selected_obstacle_set'}[type]
+      if(type==='coin'){setSelectedCloudCoin(cloudUser.id,id);notifyCustomization(type,id)}
+      else {const field={world:'selected_background',character:'selected_character',obstacle:'selected_obstacle_set'}[type]
       const {error}=await sb.from('profiles').update({[field]:id}).eq('id',cloudUser.id)
       if(error)return toast('❌ Impossible d’équiper.')
-      notifyCustomization(type,id)
+      notifyCustomization(type,id)}
     }
     toast('✅ '+(type==='world'?'Monde':type==='character'?'Personnage':'Obstacles')+' équipé !')
     await renderCustomizer()
@@ -54,9 +58,10 @@
       return
     }
     if(cloudUser){
-      const field={world:'selected_background',character:'selected_character',coin:'selected_coin',obstacle:'selected_obstacle_set'}[type]
+      if(type==='coin'){setSelectedCloudCoin(cloudUser.id,id);notifyCustomization(type,id)}
+      else {const field={world:'selected_background',character:'selected_obstacle_set',obstacle:'selected_obstacle_set'}[type]
       const {error}=await sb.from('profiles').update({[field]:id}).eq('id',cloudUser.id)
-      if(!error)notifyCustomization(type,id)
+      if(!error)notifyCustomization(type,id)}
     }
   }
   function showPackResult(html,good=true){
@@ -138,7 +143,7 @@
         const nextCoins=currentCoins-cost
         const {error:coinError}=await sb.from('profiles').update({coins:nextCoins}).eq('id',user.id)
         if(coinError){showPackResult(`<b>Achat impossible.</b><br><span class="muted">${coinError.message||'Impossible de modifier tes pièces.'}</span>`,false);return toast('❌ Achat impossible.')}
-        const {error:invError}=await sb.from('inventory').insert({user_id:user.id,item_type:'coin',item_id:id})
+        const {error:invError}=await sb.from('inventory').insert({user_id:user.id,item_type:'obstacle',item_id:id})
         if(invError){await sb.from('profiles').update({coins:currentCoins}).eq('id',user.id);showPackResult(`<b>Achat impossible.</b><br><span class="muted">${invError.message||'Impossible d’enregistrer le gain.'}</span>`,false);return toast('❌ Achat impossible.')}
         refreshCoins(nextCoins);notifyProfile({coins:nextCoins})
         await getCloud();await autoEquip(type,id,{})
@@ -186,7 +191,7 @@
     const root=$('customizerRoot');if(!root)return
     await getCloud()
     const p=localProfile();let selected={world:p.selected_background||'city',character:p.selected_character||'runner',coin:p.selected_coin||'gold'}
-    if(!guestMode()&&cloudUser){const {data:prof}=await sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',cloudUser.id).single();if(prof)selected={world:prof.selected_background||'city',character:prof.selected_character||'runner',coin:prof.selected_coin||'gold'}}
+    if(!guestMode()&&cloudUser){const {data:prof}=await sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',cloudUser.id).single();if(prof)selected={world:prof.selected_background||'city',character:prof.selected_character||'runner',coin:getSelectedCloudCoin(cloudUser.id)}}
     const wc=Object.entries(WORLDS).map(([id,w])=>{const ok=guestMode()?owned('world',id,p):cloudOwned('world',id),eq=selected.world===id;return card(`<div class="emoji">${w.emoji}</div><div class="rarity">${w.name}</div><h3>${w.desc}</h3><p class="muted">${ok?'Débloqué':'🔒 Verrouillé'}</p><button data-equip-type="world" data-equip-id="${id}" ${ok?'':'disabled'}>${eq?'✓ ÉQUIPÉ':ok?'ÉQUIPER':'🔒'}</button>`) }).join('')
     const cc=Object.entries(CHARS).map(([id,c])=>{const ok=guestMode()?owned('character',id,p):cloudOwned('character',id),eq=selected.character===id;return card(`<div class="emoji">${c.emoji}</div><h3>${c.name}</h3><p class="muted">${ok?'Débloqué':'🔒 Verrouillé'}</p><button data-equip-type="character" data-equip-id="${id}" ${ok?'':'disabled'}>${eq?'✓ ÉQUIPÉ':ok?'ÉQUIPER':'🔒'}</button>`) }).join('')
     const coinCards=Object.entries(COINS).map(([id,o])=>{const ok=guestMode()?owned('coin',id,p):cloudOwned('coin',id),eq=selected.coin===id;return card(`<div class="emoji">${o.emoji}</div><h3>${o.name}</h3><p class="muted">${ok?'Débloqué':'🔒 Verrouillé'}</p><button data-equip-type="coin" data-equip-id="${id}" ${ok?'':'disabled'}>${eq?'✓ ÉQUIPÉ':ok?'ÉQUIPER':'🔒'}</button>`) }).join('')
