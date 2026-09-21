@@ -38,6 +38,9 @@
       if(type==='character')p.selected_character=id;
       if(type==='obstacle')p.selected_obstacle_set=id;
       if(type==='coin')p.selected_coin=id;
+      if(type==='world')p.owned_worlds=Array.from(new Set([...(p.owned_worlds||[]),id]));
+      if(type==='character')p.owned_characters=Array.from(new Set([...(p.owned_characters||[]),id]));
+      if(type==='coin')p.owned_coins=Array.from(new Set([...(p.owned_coins||[]),id]));
       saveLocal(p);notifyCustomization(type,id);notifyProfile(p)
     } else if(cloudUser){
       if(type==='coin'){setSelectedCloudCoin(cloudUser.id,id);notifyCustomization(type,id)}
@@ -150,7 +153,8 @@
       const list=cards.filter(x=>x.rarity===r)
       return '<div class="custom-section"><h3>'+RARITIES[r].icon+' '+RARITIES[r].name+' <span class="muted">— '+RARITIES[r].chance+'%</span></h3><div class="grid">'+list.map(x=>{
         const n=Number(data[x.id]||0)
-        return '<div class="card" style="'+rarityStyle(r)+'"><div class="emoji">'+x.emoji+'</div><h3>'+x.name+'</h3><p class="muted">'+(n?'x'+n:'🔒 Pas encore obtenu')+'</p>'+(n?'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center"><button type="button" data-equip-type="'+type+'" data-equip-id="'+x.id+'">ÉQUIPER</button><button type="button" data-sell-type="'+type+'" data-sell-id="'+x.id+'">VENDRE +'+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</button></div>':'')+'</div>'
+        const current=type==='world'?(localProfile().selected_background||'city'):type==='character'?(localProfile().selected_character||'runner'):type==='coin'?(guestMode()?(localProfile().selected_coin||'gold'):getSelectedCloudCoin(cloudUser?.id||'guest')):''
+        return '<div class="card" style="'+rarityStyle(r)+'"><div class="emoji">'+x.emoji+'</div><h3>'+x.name+'</h3><p class="muted">'+(n?'x'+n:'🔒 Pas encore obtenu')+'</p>'+(n?'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center"><button type="button" '+(current===x.id?'disabled':'data-equip-type="'+type+'" data-equip-id="'+x.id+'"')+'>'+((current===x.id)?'ÉQUIPÉ':'ÉQUIPER')+'</button><button type="button" data-sell-type="'+type+'" data-sell-id="'+x.id+'">VENDRE +'+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</button></div>':'')+'</div>'
       }).join('')+'</div></div>'
     }).join('')
   }
@@ -209,7 +213,7 @@
     await getCloud()
     const p=localProfile()
     const uid=collectionUid()
-    const selected={world:p.selected_background||'city',character:p.selected_character||'runner',coin:p.selected_coin||'gold'}
+    const selected={world:p.selected_background||'city',character:p.selected_character||'runner',coin:guestMode()?(p.selected_coin||'gold'):getSelectedCloudCoin(cloudUser?.id||'guest')}
     root.innerHTML='<div style="padding:12px 0"><h2>🎨 PERSONNALISER</h2><p class="muted">Les objets des packs sont classés par rareté. Plus le pourcentage est faible, plus l\'objet est rare.</p></div>'+
       '<div class="custom-section"><h3>📊 RARETÉS</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">'+RARITY_ORDER.map(r=>'<div style="padding:10px;border-radius:10px;'+rarityStyle(r)+'"><b>'+RARITIES[r].icon+' '+RARITIES[r].name+'</b><br><span class="muted">'+RARITIES[r].chance+'% de chance</span><br><span class="muted">Vente : '+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</span></div>').join('')+'</div></div>'+
       '<div class="custom-section"><h3>🌍 MONDE</h3><p class="muted">Sélection actuelle : '+selected.world+'</p><div class="grid">'+displayCollection('world')+'</div></div>'+
