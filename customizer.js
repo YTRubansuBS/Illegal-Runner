@@ -25,7 +25,11 @@
   async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];return false}const {data}=await sb.from('inventory').select('item_type,item_id').eq('user_id',user.id);cloudInventory=data||[];return true}
   const owned=(type,id,p)=>type==='world'?(p.owned_worlds||['city']).includes(id):type==='character'?(p.owned_characters||['runner']).includes(id):type==='coin'?(p.owned_coins||['gold']).includes(id):(p.owned_obstacles||['classic']).includes(id)
   const cloudOwned=(type,id)=>{if(type==='coin'&&id==='gold')return true;const map={world:'background',character:'character',coin:'obstacle',obstacle:'obstacle'};return !!cloudInventory?.some(x=>x.item_type===map[type]&&x.item_id===id)}
-  async function isOwned(type,id){if(guestMode())return owned(type,id,localProfile());if(!cloudInventory)await getCloud();return cloudOwned(type,id)}
+  async function isOwned(type,id){
+    if(guestMode())return owned(type,id,localProfile())||Number(loadCollection('guest',type)[id]||0)>0
+    if(!cloudInventory)await getCloud()
+    return cloudOwned(type,id)||Number(loadCollection(cloudUser?.id||'guest',type)[id]||0)>0
+  }
   async function equip(type,id){
     if(!(await isOwned(type,id)))return toast('🔒 Objet non débloqué. Ouvre un pack !')
     if(guestMode()){
@@ -42,7 +46,7 @@
       if(error)return toast('❌ Impossible d’équiper.')
       notifyCustomization(type,id)}
     }
-    toast('✅ '+(type==='world'?'Monde':type==='character'?'Personnage':'Obstacles')+' équipé !')
+    toast('✅ '+(type==='world'?'Monde':type==='character'?'Personnage':'Pièce')+' équipé !')
     await renderCustomizer()
   }
   async function autoEquip(type,id,p){
@@ -146,7 +150,7 @@
       const list=cards.filter(x=>x.rarity===r)
       return '<div class="custom-section"><h3>'+RARITIES[r].icon+' '+RARITIES[r].name+' <span class="muted">— '+RARITIES[r].chance+'%</span></h3><div class="grid">'+list.map(x=>{
         const n=Number(data[x.id]||0)
-        return '<div class="card" style="'+rarityStyle(r)+'"><div class="emoji">'+x.emoji+'</div><h3>'+x.name+'</h3><p class="muted">'+(n?'x'+n:'🔒 Pas encore obtenu')+'</p>'+(n?'<button type="button" data-sell-type="'+type+'" data-sell-id="'+x.id+'">VENDRE +'+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</button>':'')+'</div>'
+        return '<div class="card" style="'+rarityStyle(r)+'"><div class="emoji">'+x.emoji+'</div><h3>'+x.name+'</h3><p class="muted">'+(n?'x'+n:'🔒 Pas encore obtenu')+'</p>'+(n?'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center"><button type="button" data-equip-type="'+type+'" data-equip-id="'+x.id+'">ÉQUIPER</button><button type="button" data-sell-type="'+type+'" data-sell-id="'+x.id+'">VENDRE +'+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</button></div>':'')+'</div>'
       }).join('')+'</div></div>'
     }).join('')
   }
