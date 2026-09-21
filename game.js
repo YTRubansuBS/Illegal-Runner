@@ -361,10 +361,10 @@
       code = code.replace('for (const c of G.coinsArr) c.x -= G.speed * dt', 'for (const c of G.coinsArr) { c.x -= G.speed * dt; if (G.magnetT > 0 && !c.got) { const dx = (G.player.x + 20) - c.x, dy = (G.player.y + 20) - c.y, d = Math.hypot(dx, dy); if (d < 260 && d > 1) { c.x += dx / d * 900 * dt; c.y += dy / d * 900 * dt } } }')
       code = code.replace('const grav = 2600\n    p.vy += grav * dt', 'const grav = 2600\n    if (G.jetpackT > 0 && G.jetpackHold) { p.vy = -420; p.y = p.y + p.vy * dt } else p.vy += grav * dt')
       code = code.replace('  function applyBonus(type) {', '  function applyBonus(type) {\n    const level = Math.max(1, Math.min(6, Number(profile.bonus_level || 1)))\n    const duration = 5')
-      code = code.replace('if (type === "shield") { G.shield = true; toast("🛡️ Bouclier !") }', 'if (type === "shield") { G.shield = true; G.shieldT = duration; toast("🛡️ Bouclier !") }')
+      code = code.replace('if (type === "shield") { G.shield = true; toast("🛡️ Bouclier !") }', 'if (type === "shield") { G.shield = true; G.shieldT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.shield = 5; toast("🛡️ Bouclier !") }')
       code = code.replace('G.shield = false\\n      p.inv = 1.1', 'G.shield = false\\n      G.shieldT = 0\\n      p.inv = 1.1')
-      code = code.replace('else if (type === "mega") { G.jumpBoostT = 6 + (profile.bonus_level || 1); toast("🚀 Méga-saut !") }', 'else if (type === "mega") { G.jumpBoostT = duration; toast("🚀 Méga-saut !") }')
-      code = code.replace('else { G.coinBoostT = 8 + (profile.bonus_level || 1); toast("✨ Pièces x2 !") }', 'else if (type === "x2") { G.coinBoostT = duration; toast("🪙 Pièces x2 !") }\n    else if (type === "jetpack") { G.jetpackT = duration; G.jetpackHold = false; toast("🛩️ Jetpack ! Maintiens ton doigt sur l’écran pour voler.") }\n    else if (type === "scoreDouble") { G.scoreDoubleT = duration; toast("🏆 Score x2 !") }\n    else if (type === "magnet") { G.magnetT = duration; toast("🧲 Aimant !") }')
+      code = code.replace('else if (type === "mega") { G.jumpBoostT = 6 + (profile.bonus_level || 1); toast("🚀 Méga-saut !") }', 'else if (type === "mega") { G.jumpBoostT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.mega = 5; toast("🚀 Méga-saut !") }')
+      code = code.replace('else { G.coinBoostT = 8 + (profile.bonus_level || 1); toast("✨ Pièces x2 !") }', 'else if (type === "x2") { G.coinBoostT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.x2 = 5; toast("🪙 Pièces x2 !") }\n    else if (type === "jetpack") { G.jetpackT = duration; G.jetpackHold = false; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.jetpack = 5; toast("🛩️ Jetpack ! Maintiens ton doigt sur l’écran pour voler.") }\n    else if (type === "scoreDouble") { G.scoreDoubleT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.scoreDouble = 5; toast("🏆 Score x2 !") }\n    else if (type === "magnet") { G.magnetT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.magnet = 5; toast("🧲 Aimant !") }')
       code = code.replace('const icon = b.type === "shield" ? "🛡️" : b.type === "mega" ? "🚀" : "✨"', 'const icon = b.type === "shield" ? "🛡️" : b.type === "mega" ? "🚀" : b.type === "x2" ? "🪙" : b.type === "jetpack" ? "🛩️" : b.type === "scoreDouble" ? "🏆" : "🧲"')
       code = code.replace('const STEP = 1 / 120 // fixed physics step', `const STEP = 1 / 120 // fixed physics step
         const jetpackCanvas = document.getElementById("game")
@@ -377,8 +377,9 @@
       code += `
 ;(() => {
   let bonusTimer = document.getElementById("irBonusTimer")
-  let shieldUntil = 0
-  let wasShield = false
+  const labels = { shield:"🛡️", mega:"🚀", x2:"🪙", jetpack:"🛩️", scoreDouble:"🏆", magnet:"🧲" }
+  const activeUntil = {}
+  let lastSeen = {}
 
   if (!bonusTimer) {
     bonusTimer = document.createElement("div")
@@ -389,64 +390,45 @@
 
   setInterval(() => {
     const G = window.__IR_G
+    const source = window.__IR_BONUS_TIMERS || {}
     if (!G || !G.running) {
       bonusTimer.style.display = "none"
-      wasShield = false
-      shieldUntil = 0
+      for (const k in activeUntil) delete activeUntil[k]
+      lastSeen = {}
       return
     }
 
-    const activeShield = G.shield === true
-
-    if (activeShield && !wasShield) {
-      shieldUntil = Date.now() + 5000
-    }
-
-    if (activeShield && shieldUntil > 0) {
-      const shieldRemaining = Math.max(0, (shieldUntil - Date.now()) / 1000)
-      G.shieldT = shieldRemaining
-      if (shieldRemaining <= 0) {
-        G.shield = false
-        G.shieldT = 0
-        shieldUntil = 0
+    const now = Date.now()
+    for (const type of Object.keys(labels)) {
+      const value = Number(source[type] || 0)
+      if (value > 0 && value !== lastSeen[type]) {
+        activeUntil[type] = now + value * 1000
+        lastSeen[type] = value
       }
-    } else if (!activeShield) {
-      shieldUntil = 0
-      G.shieldT = 0
     }
 
-    wasShield = G.shield === true
-
-    const timers = []
-    if (wasShield && shieldUntil > 0) {
-      timers.push("🛡️ " + Math.max(0, (shieldUntil - Date.now()) / 1000).toFixed(1) + "s")
-    }
-    if (Number(G.jumpBoostT || 0) > 0) {
-      timers.push("🚀 " + Number(G.jumpBoostT).toFixed(1) + "s")
-    }
-    if (Number(G.coinBoostT || 0) > 0) {
-      timers.push("🪙 " + Number(G.coinBoostT).toFixed(1) + "s")
-    }
-    if (Number(G.jetpackT || 0) > 0) {
-      timers.push("🛩️ " + Number(G.jetpackT).toFixed(1) + "s")
-    }
-    if (Number(G.scoreDoubleT || 0) > 0) {
-      timers.push("🏆 " + Number(G.scoreDoubleT).toFixed(1) + "s")
-    }
-    if (Number(G.magnetT || 0) > 0) {
-      timers.push("🧲 " + Number(G.magnetT).toFixed(1) + "s")
+    const lines = []
+    for (const type of Object.keys(labels)) {
+      if (!activeUntil[type]) continue
+      const remaining = Math.max(0, (activeUntil[type] - now) / 1000)
+      if (remaining <= 0) {
+        delete activeUntil[type]
+        continue
+      }
+      lines.push(labels[type] + " " + remaining.toFixed(1) + "s")
     }
 
-    if (!timers.length) {
+    if (!lines.length) {
       bonusTimer.style.display = "none"
       return
     }
 
-    bonusTimer.textContent = timers.join("\\n")
+    bonusTimer.textContent = lines.join("\\n")
     bonusTimer.style.display = "block"
   }, 50)
 })()
 `;
+
 
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
