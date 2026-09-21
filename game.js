@@ -263,13 +263,18 @@
     const durationFor = (id, v) => id === "bonus" ? 0 : (5 + (v - 1) * 2)
     const bonusDurationIds = ["bonus_shield","bonus_mega","bonus_x2","bonus_jetpack","bonus_scoreDouble","bonus_magnet"]
     const bonusDurationKey = id => "ir_bonus_duration:" + (user?.id || profile.username || "guest") + ":" + id
+    window.__IR_BONUS_DURATION = window.__IR_BONUS_DURATION || {}
     const selectedDuration = (id, level) => {
       const max = 5 + (Math.max(1, Math.min(6, level)) - 1) * 2
-      let value = 5
-      try { value = Number(localStorage.getItem(bonusDurationKey(id)) || 5) } catch (e) {}
+      let value = Number(window.__IR_BONUS_DURATION[id] || 0)
+      if (!Number.isFinite(value) || value < 5) {
+        try { value = Number(localStorage.getItem(bonusDurationKey(id)) || 5) } catch (e) { value = 5 }
+      }
       if (!Number.isFinite(value)) value = 5
       value = Math.round((value - 5) / 2) * 2 + 5
-      return Math.max(5, Math.min(max, value))
+      value = Math.max(5, Math.min(max, value))
+      window.__IR_BONUS_DURATION[id] = value
+      return value
     }
     const cards = UPGRADES.map(([id, em, n, max, desc]) => {
       const v = Number(profile[id + "_level"] || 1)
@@ -295,7 +300,10 @@
         const max = 5 + (Math.min(6, level) - 1) * 2
         let value = Number(select.value)
         value = Math.max(5, Math.min(max, value))
+        window.__IR_BONUS_DURATION = window.__IR_BONUS_DURATION || {}
+        window.__IR_BONUS_DURATION[id] = value
         try { localStorage.setItem(bonusDurationKey(id), String(value)) } catch (e) {}
+        renderUpgrades()
         toast("⏱️ " + value + "s sélectionnées pour " + (UPGRADES.find(u => u[0] === id)?.[2] || "ce bonus") + ".")
       }
     })
@@ -430,7 +438,7 @@
   if (!bonusTimer) {
     bonusTimer = document.createElement("div")
     bonusTimer.id = "irBonusTimer"
-    bonusTimer.style.cssText = "position:fixed;left:16px;top:64px;z-index:2147483646;display:none;padding:7px 14px;border:2px solid rgba(0,229,255,.8);border-radius:12px;background:rgba(2,4,10,.94);color:#fff;font:900 18px Orbitron,Inter,sans-serif;box-shadow:0 0 16px rgba(0,229,255,.35);pointer-events:none;text-align:center;line-height:1.35;white-space:pre-line"
+    bonusTimer.style.cssText = "position:fixed;left:16px;top:64px;z-index:2147483646;display:none;min-width:112px;padding:8px 10px;border:2px solid #26324a;border-radius:4px;background:linear-gradient(180deg,#111827,#070b12);color:#e8f7ff;font:900 16px Orbitron,Inter,sans-serif;box-shadow:inset 0 0 0 2px #05070b,0 4px 0 #020307,0 0 14px rgba(0,229,255,.22);pointer-events:none;text-align:left;line-height:1.45;white-space:pre-line;text-shadow:2px 2px 0 #020307;letter-spacing:.3px"
     document.body.appendChild(bonusTimer)
   }
   setInterval(() => {
@@ -441,7 +449,8 @@
     for (const type of Object.keys(labels)) {
       const until = Number(source[type] || 0)
       if (until <= now) { if (until > 0) delete source[type]; continue }
-      lines.push(labels[type] + " " + ((until - now) / 1000).toFixed(1) + "s")
+      const secs = Math.max(0, (until - now) / 1000)
+      lines.push(labels[type] + "  " + secs.toFixed(1) + "s")
     }
     bonusTimer.textContent = lines.join("\\n")
     bonusTimer.style.display = lines.length ? "block" : "none"
