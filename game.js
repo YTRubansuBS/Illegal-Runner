@@ -630,6 +630,44 @@
 
   /* ============================================================
      GAME ENGINE`);
+      // Apply the equipped collection items to the actual game renderer.
+      code = code.replace('  function drawPlayer(ctx, w) {', `  function drawPlayer(ctx, w) {
+    const p = G.player
+    if (G.dashT > 0) {
+      for (let i = 1; i <= 5; i++) {
+        ctx.globalAlpha = 0.12 * (6 - i)
+        ctx.fillStyle = w.accent
+        rr(ctx, p.x - i * 16, p.y + 8, p.w, p.h - 12, 12); ctx.fill()
+      }
+      ctx.globalAlpha = 1
+    }
+    ctx.save()
+    ctx.translate(p.x + p.w / 2, p.y + p.h)
+    const sy = clamp(p.sy, 0.6, 1.25)
+    ctx.scale(1 / Math.sqrt(sy), sy)
+    ctx.translate(-(p.w / 2), -p.h)
+    if (p.inv > 0 && Math.floor(p.inv * 12) % 2) ctx.globalAlpha = 0.35
+    if (G.shield) {
+      ctx.strokeStyle = "#54ffc1"; ctx.lineWidth = 3; ctx.shadowBlur = 18; ctx.shadowColor = "#54ffc1"
+      ctx.beginPath(); ctx.arc(p.w / 2, p.h / 2, 44, 0, 7); ctx.stroke(); ctx.shadowBlur = 0
+    }
+    const charId = profile.selected_character || "runner"
+    const icon = ({runner:"🧑",ninja:"🥷",robot:"🤖",ghost:"👻",cyber:"🦾",pilot:"🧑‍✈️",soldier:"🪖",wizard:"🧙",astronaut:"🧑‍🚀",skater:"🛹",samurai:"👺",pirate:"🏴‍☠️",detective:"🕵️",vampire:"🧛",zombie:"🧟",alien:"👽",king:"🤴",queen:"👸",knight:"🛡️",racer:"🏎️",dragon:"🐉",phoenix:"🔥",shadow:"🌑",thunder:"⚡",ice:"❄️",flame:"🔥",cosmic:"🌌",cyborg:"🤖",reaper:"💀",angel:"😇",demon:"😈",time:"⏳",void:"🕳️",secret:"👁️"})[charId] || "🧑"
+    ctx.font = "48px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+    ctx.shadowBlur = 18; ctx.shadowColor = w.accent
+    ctx.fillText(icon, p.w / 2, p.h / 2)
+    ctx.shadowBlur = 0
+    ctx.restore()
+    if (G.level) $("progressBar").style.width = clamp((G.dist / G.goal) * 100, 0, 100) + "%"
+  }`);
+      const coinDraw = `      const coinId = profile.selected_coin || "gold"
+      const coinIcon = ({gold:"🪙",silver:"🥈",bronze:"🥉",blue:"🔵",green:"🟢",red:"🔴",pink:"🩷",orange:"🟠",purple:"🟣",white:"⚪",diamond:"💎",emerald:"💚",ruby:"❤️",sapphire:"🔷",amethyst:"🟪",topaz:"🔶",pearl:"🦪",crystal:"🔮",neon:"💠",star:"⭐",moon:"🌙",sun:"☀️",fire:"🔥",ice:"❄️",thunder:"⚡",rainbow:"🌈",galaxy:"🌌",cosmic:"☄️",void:"🕳️",crown:"👑",dragon:"🐉",secret:"🔐",glitch:"👾",infinite:"♾️"})[coinId] || "🪙"
+      ctx.save(); ctx.font = "28px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.shadowBlur = 14; ctx.shadowColor = w.coin; ctx.fillText(coinIcon, c.x, c.y); ctx.restore()`
+      const coinStart = '      ctx.save(); ctx.shadowBlur = 16; ctx.shadowColor = w.coin; ctx.fillStyle = w.coin'
+      const coinEnd = '      ctx.restore()'
+      const ci = code.indexOf(coinStart)
+      const ce = ci >= 0 ? code.indexOf(coinEnd, ci) : -1
+      if (ci >= 0 && ce >= 0) code = code.slice(0, ci) + coinDraw + "\n" + code.slice(ce + coinEnd.length)
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
