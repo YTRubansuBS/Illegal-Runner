@@ -410,7 +410,7 @@
       code = code.replace('const t = pick(types)', 'const t = pick(types)')
       code = code.replace('if (G.coinBoostT > 0) { G.coinBoostT -= dt; G.coinMult = 2 } else G.coinMult = 1', 'if (G.shieldT > 0) { G.shieldT -= dt; if (G.shieldT <= 0) { G.shieldT = 0; G.shield = false } }\n    if (G.coinBoostT > 0) { G.coinBoostT -= dt; G.coinMult = 2 } else G.coinMult = 1\n    if (G.scoreDoubleT > 0) { G.scoreDoubleT -= dt; G.scoreMult = 2 } else G.scoreMult = 1\n    if (G.jetpackT > 0) G.jetpackT -= dt; else G.jetpackHold = false\n    if (G.magnetT > 0) G.magnetT -= dt')
       code = code.replace('for (const c of G.coinsArr) c.x -= G.speed * dt', 'for (const c of G.coinsArr) { c.x -= G.speed * dt; if (G.magnetT > 0 && !c.got) { const dx = (G.player.x + 20) - c.x, dy = (G.player.y + 20) - c.y, d = Math.hypot(dx, dy); if (d < 260 && d > 1) { c.x += dx / d * 900 * dt; c.y += dy / d * 900 * dt } } }')
-      code = code.replace('const grav = 2600\n    p.vy += grav * dt', 'const grav = 2600\n    if (G.jetpackT > 0 && G.jetpackHold) { p.vy -= 4200 * dt; if (p.vy < -360) p.vy = -360; p.vy += 1200 * dt } else p.vy += grav * dt')
+      code = code.replace('const grav = 2600\n    p.vy += grav * dt', 'const grav = 2600\n    if (G.jetpackT > 0 && G.jetpackHold) { p.vy = -420; p.y = p.y + p.vy * dt } else p.vy += grav * dt')
       code = code.replace('  function applyBonus(type) {', '  function applyBonus(type) {\n    const durationLevel = { shield: "bonus_shield_level", mega: "bonus_mega_level", x2: "bonus_x2_level", jetpack: "bonus_jetpack_level", scoreDouble: "bonus_scoreDouble_level", magnet: "bonus_magnet_level" }[type]\n    const level = Math.max(1, Math.min(6, Number(profile[durationLevel] || 1)))\n    const durationId = { shield: "bonus_shield", mega: "bonus_mega", x2: "bonus_x2", jetpack: "bonus_jetpack", scoreDouble: "bonus_scoreDouble", magnet: "bonus_magnet" }[type] || type\n    const durationKey = "ir_bonus_duration:" + (user?.id || profile.username || "guest") + ":" + durationId\n    let duration = 5 + (level - 1) * 2\n    try { const saved = Number(localStorage.getItem(durationKey) || duration); if (Number.isFinite(saved)) duration = Math.max(5, Math.min(duration, 5 + Math.round((saved - 5) / 2) * 2)) } catch (e) {}')
       code = code.replace('if (type === "shield") { G.shield = true; toast("🛡️ Bouclier !") }', 'if (type === "shield") { G.shield = true; G.shieldT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.shield = Date.now() + duration * 1000; toast("🛡️ Bouclier !") }')
       code = code.replace('G.shield = false\\n      p.inv = 1.1', 'G.shield = false\\n      G.shieldT = 0\\n      p.inv = 1.1')
@@ -420,7 +420,7 @@
       code = code.replace('const STEP = 1 / 120 // fixed physics step', `const STEP = 1 / 120 // fixed physics step
         const jetpackCanvas = document.getElementById("game")
         if (jetpackCanvas) {
-          jetpackCanvas.addEventListener("pointerdown", e => { if (G.running && G.jetpackT > 0) { G.jetpackHold = true; G.player.vy = -260; e.preventDefault() } }, { passive: false })
+          jetpackCanvas.addEventListener("pointerdown", e => { if (G.running && G.jetpackT > 0) { G.jetpackHold = true; e.preventDefault() } }, { passive: false })
           jetpackCanvas.addEventListener("pointerup", e => { if (G.jetpackT > 0) { G.jetpackHold = false; e.preventDefault() } }, { passive: false })
           jetpackCanvas.addEventListener("pointercancel", () => { G.jetpackHold = false })
           jetpackCanvas.addEventListener("pointerleave", () => { G.jetpackHold = false })
@@ -630,183 +630,6 @@
 
   /* ============================================================
      GAME ENGINE`);
-
-      // ===== PACK CUSTOM VISUALS : 34 mondes + 34 personnages + 34 pièces =====
-      code = code.replace('  const WORLD_IDS = Object.keys(WORLDS)', `  const CUSTOM_WORLD_STYLES = {
-        neon:{emoji:"🌌",name:"NEON",desc:"Ville néon infinie",sky:["#071b35","#02030a"],accent:"#00f6ff",ground:"#030812",coin:"#00f6ff",far:"#0b3860",mid:"#0e6b8a"},
-        ocean:{emoji:"🌊",name:"OCEAN",desc:"Cité sous-marine",sky:["#063b59","#020d18"],accent:"#35eaff",ground:"#02131e",coin:"#7fffd4",far:"#075174",mid:"#0b7892"},
-        sky:{emoji:"☁️",name:"SKY",desc:"Royaume des nuages",sky:["#5aa7ff","#d8f4ff"],accent:"#ffffff",ground:"#244c70",coin:"#ffe66d",far:"#83c9ef",mid:"#4f9ac7"},
-        sunset:{emoji:"🌇",name:"SUNSET",desc:"Crépuscule électrique",sky:["#ff704d","#32134d"],accent:"#ffd166",ground:"#170b25",coin:"#ffe082",far:"#8f355d",mid:"#d34e52"},
-        jungle:{emoji:"🌴",name:"JUNGLE",desc:"Jungle bioluminescente",sky:["#063b26","#020b08"],accent:"#8cff66",ground:"#03160d",coin:"#f4ff68",far:"#0d5b34",mid:"#16834c"},
-        candy:{emoji:"🍬",name:"CANDY",desc:"Monde sucré",sky:["#ff9bd4","#5c2a73"],accent:"#fff06a",ground:"#28102f",coin:"#ff7ad9",far:"#a54e9a",mid:"#d86db4"},
-        lava:{emoji:"🔥",name:"LAVA",desc:"Rivières de lave",sky:["#7a160b","#180205"],accent:"#ffdf4d",ground:"#170504",coin:"#fff0a3",far:"#7f2415",mid:"#b83a18"},
-        moon:{emoji:"🌙",name:"MOON",desc:"Nuit lunaire",sky:["#16235c","#030514"],accent:"#b9c7ff",ground:"#080a1c",coin:"#fff2a8",far:"#263a83",mid:"#354eaa"},
-        storm:{emoji:"⛈️",name:"STORM",desc:"Orage permanent",sky:["#26334f","#05070e"],accent:"#9be7ff",ground:"#070b13",coin:"#d6f7ff",far:"#394c70",mid:"#516d91"},
-        cyber:{emoji:"💻",name:"CYBER",desc:"Réseau digital",sky:["#031f28","#01070a"],accent:"#39ff14",ground:"#020907",coin:"#39ff14",far:"#064b50",mid:"#087a68"},
-        crystal:{emoji:"💎",name:"CRYSTAL",desc:"Cavernes de cristal",sky:["#301b63","#090515"],accent:"#d89cff",ground:"#0c0617",coin:"#8ffcff",far:"#4d2c91",mid:"#7042bf"},
-        toxic:{emoji:"☢️",name:"TOXIC",desc:"Zone contaminée",sky:["#254b09","#071104"],accent:"#b8ff2c",ground:"#091405",coin:"#e7ff5a",far:"#3d6d0c",mid:"#5f8f12"},
-        void:{emoji:"🕳️",name:"VOID",desc:"Vide absolu",sky:["#090014","#000000"],accent:"#ff00e5",ground:"#020006",coin:"#ff5df5",far:"#17002c",mid:"#2d004d"},
-        aurora:{emoji:"🌌",name:"AURORA",desc:"Aurores polaires",sky:["#0b3d4c","#17052d"],accent:"#7dffcf",ground:"#041017",coin:"#d8ff86",far:"#12635f",mid:"#198b78"},
-        matrix:{emoji:"🟩",name:"MATRIX",desc:"Réseau de données",sky:["#001c08","#000402"],accent:"#00ff66",ground:"#000a03",coin:"#00ff88",far:"#003d12",mid:"#006c20"},
-        rainbow:{emoji:"🌈",name:"RAINBOW",desc:"Autoroute chromatique",sky:["#4b2a86","#102c64"],accent:"#fff",ground:"#10152c",coin:"#ffe45e",far:"#8d4e9e",mid:"#467fc2"},
-        galaxy:{emoji:"🌠",name:"GALAXY",desc:"Route intergalactique",sky:["#20105b","#03010e"],accent:"#c58cff",ground:"#060316",coin:"#7fe8ff",far:"#3c1f83",mid:"#6334b8"},
-        temple:{emoji:"🏛️",name:"TEMPLE",desc:"Ruines anciennes",sky:["#4a3419","#0c0803"],accent:"#ffd166",ground:"#171006",coin:"#ffe09a",far:"#725023",mid:"#93682f"},
-        castle:{emoji:"🏰",name:"CASTLE",desc:"Château nocturne",sky:["#20244f","#070816"],accent:"#aeb8ff",ground:"#080914",coin:"#ffe58a",far:"#35396f",mid:"#4b5191"},
-        volcanic:{emoji:"🌋",name:"VOLCANIC",desc:"Cratère incandescent",sky:["#5b0c08","#090202"],accent:"#ffb000",ground:"#100302",coin:"#ffe36e",far:"#77160c",mid:"#a6220e"},
-        quantum:{emoji:"⚛️",name:"QUANTUM",desc:"Espace fracturé",sky:["#092d45","#17052d"],accent:"#00ffff",ground:"#050712",coin:"#ff63d8",far:"#124f70",mid:"#1f7895"},
-        dream:{emoji:"💫",name:"DREAM",desc:"Rêve en apesanteur",sky:["#6b4aa8","#182d62"],accent:"#fff0ff",ground:"#11102a",coin:"#ffd6ff",far:"#9472c9",mid:"#6e9bdd"},
-        glitch:{emoji:"👾",name:"GLITCH",desc:"Monde corrompu",sky:["#20002f","#001d21"],accent:"#ff2bd6",ground:"#07020a",coin:"#5dffea",far:"#42005a",mid:"#006d70"},
-        dragon:{emoji:"🐉",name:"DRAGON",desc:"Royaume des dragons",sky:["#3b0c12","#090205"],accent:"#ff7043",ground:"#120507",coin:"#ffd166",far:"#62121a",mid:"#8e1c22"},
-        portal:{emoji:"🌀",name:"PORTAL",desc:"Couloirs dimensionnels",sky:["#112a57","#25053d"],accent:"#65f6ff",ground:"#060918",coin:"#ff7cff",far:"#1d4c85",mid:"#346bb3"},
-        cosmic:{emoji:"☄️",name:"COSMIC",desc:"Autoroute cosmique",sky:["#30104f","#02010a"],accent:"#ff8df5",ground:"#07020d",coin:"#a8fff0",far:"#5b1e78",mid:"#8030a0"},
-        secret:{emoji:"🗝️",name:"SECRET",desc:"Dimension interdite",sky:["#001b25","#12001d"],accent:"#00ffcc",ground:"#03050a",coin:"#fff36b",far:"#003d4c",mid:"#5b005c"}
-      };
-      for (const [id,w] of Object.entries(CUSTOM_WORLD_STYLES)) WORLDS[id]=w;
-      const WORLD_IDS = Object.keys(WORLDS)`);
-      const CHARACTER_STYLES = {
-        runner:{body:"#172033",head:"#f0b38a",visor:"#00e5ff",trim:"#7cf7ff",motif:"dash"},
-        ninja:{body:"#11111c",head:"#d88d72",visor:"#ff3b81",trim:"#ff78a8",motif:"mask"},
-        robot:{body:"#59636f",head:"#9ca9b5",visor:"#39ff14",trim:"#d8e4ed",motif:"bot"},
-        ghost:{body:"#dffaff",head:"#efffff",visor:"#b9ffff",trim:"#ffffff",motif:"ghost"},
-        cyber:{body:"#24164a",head:"#b97866",visor:"#b65cff",trim:"#00f6ff",motif:"cyber"},
-        pilot:{body:"#314b69",head:"#e0a27e",visor:"#ffe36e",trim:"#ffffff",motif:"pilot"},
-        soldier:{body:"#42552f",head:"#c58b68",visor:"#8cff66",trim:"#c4d59b",motif:"armor"},
-        wizard:{body:"#3b1766",head:"#dca27e",visor:"#d7a8ff",trim:"#ffd166",motif:"star"},
-        astronaut:{body:"#e9f2f5",head:"#d79a78",visor:"#5be7ff",trim:"#ffffff",motif:"space"},
-        skater:{body:"#ff5d73",head:"#e0a17e",visor:"#fff",trim:"#43e8ff",motif:"stripe"},
-        samurai:{body:"#2a1b1b",head:"#b87862",visor:"#ffb000",trim:"#e84a5f",motif:"samurai"},
-        pirate:{body:"#20252d",head:"#d69a73",visor:"#ff5d5d",trim:"#ffd166",motif:"pirate"},
-        detective:{body:"#3a3d4d",head:"#d59a78",visor:"#9be7ff",trim:"#d5b27c",motif:"detective"},
-        vampire:{body:"#260d26",head:"#e4b0a1",visor:"#ff335f",trim:"#d86cff",motif:"vampire"},
-        zombie:{body:"#40523d",head:"#8eb08b",visor:"#d5ff69",trim:"#7cff8c",motif:"zombie"},
-        alien:{body:"#204e47",head:"#79d8b1",visor:"#baffff",trim:"#72fff0",motif:"alien"},
-        king:{body:"#4b1b72",head:"#e1a17d",visor:"#ffd166",trim:"#ffe78a",motif:"crown"},
-        queen:{body:"#721d5c",head:"#e3a482",visor:"#ff8edb",trim:"#ffd0ef",motif:"crown"},
-        knight:{body:"#35404c",head:"#c78e70",visor:"#b9d7ff",trim:"#f0f5ff",motif:"armor"},
-        racer:{body:"#d51f2e",head:"#d99b79",visor:"#00e5ff",trim:"#ffffff",motif:"racer"},
-        dragon:{body:"#53151b",head:"#d17d68",visor:"#ffb000",trim:"#ff5a3c",motif:"horn"},
-        phoenix:{body:"#8d2b0d",head:"#e29a70",visor:"#ffe45e",trim:"#ff7a2f",motif:"flame"},
-        shadow:{body:"#090914",head:"#343449",visor:"#ff00e5",trim:"#7a5cff",motif:"shadow"},
-        thunder:{body:"#18355c",head:"#d89b76",visor:"#ffe600",trim:"#74d7ff",motif:"bolt"},
-        ice:{body:"#2c6179",head:"#b9e5ef",visor:"#dfffff",trim:"#78efff",motif:"ice"},
-        flame:{body:"#7a210e",head:"#df9b72",visor:"#ffd23f",trim:"#ff5b2e",motif:"flame"},
-        cosmic:{body:"#29105c",head:"#bd8bc0",visor:"#ff7cff",trim:"#71f5ff",motif:"stars"},
-        cyborg:{body:"#39404a",head:"#8d98a3",visor:"#ff4d6d",trim:"#00e5ff",motif:"cyborg"},
-        reaper:{body:"#15151e",head:"#d4d4df",visor:"#ff315f",trim:"#b4a7ff",motif:"reaper"},
-        angel:{body:"#eef7ff",head:"#efc0a4",visor:"#fff",trim:"#ffe58a",motif:"halo"},
-        demon:{body:"#4a0d16",head:"#c87568",visor:"#ff173d",trim:"#ff7b45",motif:"horn"},
-        time:{body:"#40351d",head:"#d5a07c",visor:"#ffe08a",trim:"#d8b45a",motif:"clock"},
-        void:{body:"#05050a",head:"#24242d",visor:"#ff00ff",trim:"#00ffff",motif:"void"},
-        secret:{body:"#111827",head:"#e7b18d",visor:"#fff36b",trim:"#00ffcc",motif:"eye"}
-      };
-      const COIN_STYLES = {
-        gold:{fill:"#ffd84a",stroke:"#fff1a0",inner:"$",shape:"circle"},
-        silver:{fill:"#dce5ed",stroke:"#fff",inner:"S",shape:"circle"},
-        bronze:{fill:"#c97835",stroke:"#ffd09b",inner:"B",shape:"circle"},
-        blue:{fill:"#3d8cff",stroke:"#b8dcff",inner:"B",shape:"hex"},
-        green:{fill:"#39d353",stroke:"#c7ffcf",inner:"G",shape:"circle"},
-        red:{fill:"#ff3b52",stroke:"#ffc0c8",inner:"R",shape:"diamond"},
-        pink:{fill:"#ff6fcf",stroke:"#ffd3f1",inner:"P",shape:"heart"},
-        orange:{fill:"#ff8a24",stroke:"#ffe0ad",inner:"O",shape:"circle"},
-        purple:{fill:"#a855f7",stroke:"#e2c4ff",inner:"P",shape:"hex"},
-        white:{fill:"#f5fbff",stroke:"#fff",inner:"W",shape:"circle"},
-        diamond:{fill:"#6fe7ff",stroke:"#fff",inner:"◆",shape:"diamond"},
-        emerald:{fill:"#19d88a",stroke:"#c2ffe7",inner:"E",shape:"hex"},
-        ruby:{fill:"#f43f5e",stroke:"#ffd1d9",inner:"R",shape:"diamond"},
-        sapphire:{fill:"#3488ff",stroke:"#cbe0ff",inner:"S",shape:"diamond"},
-        amethyst:{fill:"#9b5de5",stroke:"#efd9ff",inner:"A",shape:"hex"},
-        topaz:{fill:"#ffb83d",stroke:"#fff0bd",inner:"T",shape:"diamond"},
-        pearl:{fill:"#e9f7ff",stroke:"#fff",inner:"P",shape:"circle"},
-        crystal:{fill:"#7dd3fc",stroke:"#e0f7ff",inner:"✦",shape:"diamond"},
-        neon:{fill:"#00f6ff",stroke:"#d9ffff",inner:"N",shape:"hex"},
-        star:{fill:"#ffd84a",stroke:"#fff4ad",inner:"★",shape:"star"},
-        moon:{fill:"#c5d0ff",stroke:"#fff",inner:"☾",shape:"circle"},
-        sun:{fill:"#ffcf4a",stroke:"#fff2a3",inner:"☀",shape:"star"},
-        fire:{fill:"#ff5b22",stroke:"#ffd0a6",inner:"F",shape:"flame"},
-        ice:{fill:"#bff6ff",stroke:"#fff",inner:"❄",shape:"diamond"},
-        thunder:{fill:"#ffe600",stroke:"#fffbc2",inner:"ϟ",shape:"bolt"},
-        rainbow:{fill:"#ff77d7",stroke:"#fff",inner:"🌈",shape:"circle"},
-        galaxy:{fill:"#9d7cff",stroke:"#e1d8ff",inner:"✦",shape:"circle"},
-        cosmic:{fill:"#ff79e8",stroke:"#d4ffff",inner:"☄",shape:"diamond"},
-        void:{fill:"#24103d",stroke:"#ff00e5",inner:"0",shape:"circle"},
-        crown:{fill:"#ffd166",stroke:"#fff3ad",inner:"♛",shape:"star"},
-        dragon:{fill:"#ff5a3c",stroke:"#ffd0c5",inner:"D",shape:"diamond"},
-        secret:{fill:"#00ffcc",stroke:"#fff36b",inner:"?",shape:"hex"},
-        glitch:{fill:"#39ff88",stroke:"#ff39d8",inner:"#",shape:"hex"},
-        infinite:{fill:"#7dd3fc",stroke:"#f0abfc",inner:"∞",shape:"circle"}
-      };
-      code = code.replace('  const CHARS = { runner: "🧑 RUNNER", ninja: "🥷 NINJA", robot: "🤖 ROBOT", ghost: "👻 GHOST", cyber: "🦾 CYBER" }', '  const CHARS = { runner: "🧑 RUNNER", ninja: "🥷 NINJA", robot: "🤖 ROBOT", ghost: "👻 GHOST", cyber: "🦾 CYBER" }');
-      const drawStart = code.indexOf("  function drawPlayer(ctx, w) {");
-      const drawEnd = code.indexOf("\n  function rr(ctx", drawStart);
-      if (drawStart < 0 || drawEnd < 0) throw new Error("drawPlayer introuvable");
-      const customDraw = `  function drawPlayer(ctx, w) {
-    const p = G.player
-    if (G.dashT > 0) { for (let i=1;i<=5;i++){ctx.globalAlpha=.12*(6-i);ctx.fillStyle=w.accent;rr(ctx,p.x-i*16,p.y+8,p.w,p.h-12,12);ctx.fill()} ctx.globalAlpha=1 }
-    const id = String(profile?.selected_character || "runner")
-    const s = CHARACTER_STYLES[id] || CHARACTER_STYLES.runner
-    ctx.save()
-    ctx.translate(p.x+p.w/2,p.y+p.h)
-    const sy=clamp(p.sy,.6,1.25);ctx.scale(1/Math.sqrt(sy),sy);ctx.translate(-p.w/2,-p.h)
-    if(p.inv>0&&Math.floor(p.inv*12)%2)ctx.globalAlpha=.35
-    if(G.shield){ctx.strokeStyle="#54ffc1";ctx.lineWidth=3;ctx.shadowBlur=18;ctx.shadowColor="#54ffc1";ctx.beginPath();ctx.arc(p.w/2,p.h/2,44,0,7);ctx.stroke();ctx.shadowBlur=0}
-    ctx.shadowBlur=16;ctx.shadowColor=s.trim;ctx.fillStyle=s.body;ctx.strokeStyle=s.trim;ctx.lineWidth=3
-    rr(ctx,5,30,32,30,8);ctx.fill();ctx.stroke()
-    ctx.shadowBlur=0;ctx.fillStyle=s.head;ctx.beginPath();ctx.arc(21,16,15,0,7);ctx.fill();ctx.stroke()
-    ctx.fillStyle=s.visor;ctx.fillRect(11,11,21,6)
-    ctx.strokeStyle=s.trim;ctx.lineWidth=4;const t=p.run*16,swing=p.ground?Math.sin(t)*9:5
-    ctx.beginPath();ctx.moveTo(14,58);ctx.lineTo(14-swing,70);ctx.moveTo(28,58);ctx.lineTo(28+swing,70);ctx.stroke()
-    ctx.fillStyle=s.trim;ctx.strokeStyle=s.trim;ctx.lineWidth=2
-    if(s.motif==="mask"){ctx.fillRect(9,20,24,6);ctx.fillRect(14,27,15,3)}
-    else if(s.motif==="bot"){ctx.fillRect(14,6,3,4);ctx.fillRect(25,6,3,4);ctx.fillRect(18,38,6,5)}
-    else if(s.motif==="ghost"){ctx.beginPath();ctx.arc(21,43,13,0,Math.PI);ctx.fill();ctx.fillStyle=s.body;ctx.fillRect(8,44,26,12)}
-    else if(s.motif==="crown"){ctx.beginPath();ctx.moveTo(10,7);ctx.lineTo(14,2);ctx.lineTo(21,7);ctx.lineTo(28,2);ctx.lineTo(32,7);ctx.closePath();ctx.fill()}
-    else if(s.motif==="horn"){ctx.beginPath();ctx.moveTo(12,6);ctx.lineTo(8,0);ctx.lineTo(17,5);ctx.moveTo(25,5);ctx.lineTo(34,0);ctx.lineTo(30,7);ctx.stroke()}
-    else if(s.motif==="halo"){ctx.beginPath();ctx.ellipse(21,0,18,4,0,0,7);ctx.stroke()}
-    else if(s.motif==="bolt"){ctx.beginPath();ctx.moveTo(24,33);ctx.lineTo(18,43);ctx.lineTo(23,42);ctx.lineTo(18,52);ctx.lineTo(29,39);ctx.lineTo(24,40);ctx.closePath();ctx.fill()}
-    else if(s.motif==="flame"){ctx.beginPath();ctx.moveTo(21,29);ctx.quadraticCurveTo(34,42,21,55);ctx.quadraticCurveTo(8,42,21,29);ctx.fill()}
-    else if(s.motif==="star"||s.motif==="stars"){ctx.fillText("✦",15,48);ctx.fillText("·",28,42)}
-    else if(s.motif==="clock"){ctx.beginPath();ctx.arc(21,44,8,0,7);ctx.stroke();ctx.beginPath();ctx.moveTo(21,44);ctx.lineTo(21,38);ctx.moveTo(21,44);ctx.lineTo(25,47);ctx.stroke()}
-    else if(s.motif==="eye"||s.motif==="void"){ctx.beginPath();ctx.ellipse(21,43,9,5,0,0,7);ctx.stroke();ctx.beginPath();ctx.arc(21,43,2,0,7);ctx.fill()}
-    else if(s.motif==="cyber"||s.motif==="cyborg"){ctx.fillRect(8,34,5,15);ctx.fillRect(29,34,5,15);ctx.fillRect(17,36,8,3)}
-    else if(s.motif==="space"||s.motif==="alien"){ctx.beginPath();ctx.arc(21,44,8,0,7);ctx.stroke();ctx.fillRect(17,41,3,3);ctx.fillRect(23,41,3,3)}
-    else {ctx.fillRect(12,38,18,3);ctx.fillRect(16,46,10,3)}
-    ctx.restore()
-    if(G.level){const pb=$("progressBar");if(pb)pb.style.width=clamp((G.dist/G.goal)*100,0,100)+"%"}
-  }`;
-      code = code.slice(0,drawStart)+customDraw+code.slice(drawEnd);
-      const coinStart=code.indexOf("    // coins\n    for (const c of G.coinsArr) {");
-      const coinEnd=code.indexOf("\n\n    // bonuses",coinStart);
-      if(coinStart<0||coinEnd<0)throw new Error("rendu pièces introuvable");
-      const customCoins=`    // coins : rendu personnalisé selon l'objet équipé
-    for (const c of G.coinsArr) {
-      if(c.got)continue
-      const s=COIN_STYLES[String(profile?.selected_coin||"gold")]||COIN_STYLES.gold
-      ctx.save();ctx.translate(c.x,c.y);ctx.rotate(Math.sin(performance.now()/180+c.x)*.12);ctx.shadowBlur=18;ctx.shadowColor=s.fill;ctx.strokeStyle=s.stroke;ctx.fillStyle=s.fill;ctx.lineWidth=2
-      const r=c.r
-      if(s.shape==="diamond"){ctx.beginPath();ctx.moveTo(0,-r);ctx.lineTo(r,0);ctx.lineTo(0,r);ctx.lineTo(-r,0);ctx.closePath();ctx.fill();ctx.stroke()}
-      else if(s.shape==="hex"){ctx.beginPath();for(let i=0;i<6;i++){const a=-Math.PI/2+i*Math.PI/3;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r)}ctx.closePath();ctx.fill();ctx.stroke()}
-      else if(s.shape==="star"){ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*.48:r;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr)}ctx.closePath();ctx.fill();ctx.stroke()}
-      else if(s.shape==="heart"){ctx.beginPath();ctx.moveTo(0,r);ctx.bezierCurveTo(-r*1.6,-r*.1,-r*.8,-r*1.5,0,-r*.55);ctx.bezierCurveTo(r*.8,-r*1.5,r*1.6,-r*.1,0,r);ctx.fill();ctx.stroke()}
-      else if(s.shape==="bolt"){ctx.beginPath();ctx.moveTo(4,-r);ctx.lineTo(-5,-2);ctx.lineTo(2,-2);ctx.lineTo(-4,r);ctx.lineTo(7,0);ctx.lineTo(0,0);ctx.closePath();ctx.fill();ctx.stroke()}
-      else {ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.fill();ctx.stroke()}
-      ctx.shadowBlur=0;ctx.fillStyle=s.stroke;ctx.font="900 9px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(s.inner,0,1);ctx.restore()
-    }`;
-      code=code.slice(0,coinStart)+customCoins+code.slice(coinEnd);
-      // Keep selected world IDs playable by generating a matching world palette at runtime.
-      code = code.replace('        window.addEventListener(\'ir:customizationChanged\'', `        window.addEventListener('ir:customizationChanged'`);
-      const runtimeWorldHook = `
-        ;(() => {
-          const selected = () => String(profile?.selected_background || "city")
-          const applyCustomWorld = () => {
-            const id=selected()
-            if (typeof WORLDS !== "undefined" && WORLDS[id]) G.world=WORLDS[id]
-          }
-          window.addEventListener("ir:customizationChanged", applyCustomWorld)
-          setInterval(() => { if (G && G.running) applyCustomWorld() }, 250)
-        })()
-`;
-      code = code.replace('        window.addEventListener("ir:finishFlagTick", () => {})', runtimeWorldHook+'        window.addEventListener("ir:finishFlagTick", () => {})');
-
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
