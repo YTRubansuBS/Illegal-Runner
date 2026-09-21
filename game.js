@@ -15,7 +15,39 @@
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
       code = code.replace('const G = {', 'const G = window.__IR_G = {')
-      code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
+      code = code.replace('  const CHARS = { runner: "🧑 RUNNER", ninja: "🥷 NINJA", robot: "🤖 ROBOT", ghost: "👻 GHOST", cyber: "🦾 CYBER" }', '  const CHARS = { runner: "🧑 RUNNER", ninja: "🥷 NINJA", robot: "🤖 ROBOT", ghost: "👻 GHOST", cyber: "🦾 CYBER" }')
+      code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.__IR_CUSTOM = {
+          characters:{runner:"🧑",ninja:"🥷",robot:"🤖",ghost:"👻",cyber:"🦾",pilot:"🧑‍✈️",soldier:"🪖",wizard:"🧙",astronaut:"🧑‍🚀",skater:"🛹",samurai:"👺",pirate:"🏴‍☠️",detective:"🕵️",vampire:"🧛",zombie:"🧟",alien:"👽",king:"🤴",queen:"👸",knight:"🛡️",racer:"🏎️",dragon:"🐉",phoenix:"🔥",shadow:"🌑",thunder:"⚡",ice:"❄️",flame:"🔥",cosmic:"🌌",cyborg:"🤖",reaper:"💀",angel:"😇",demon:"😈",time:"⏳",void:"🕳️",secret:"👁️"},
+          coins:{gold:"🪙",silver:"🥈",bronze:"🥉",blue:"🔵",green:"🟢",red:"🔴",pink:"🩷",orange:"🟠",purple:"🟣",white:"⚪",diamond:"💎",emerald:"💚",ruby:"❤️",sapphire:"🔷",amethyst:"🟪",topaz:"🔶",pearl:"🦪",crystal:"🔮",neon:"💠",star:"⭐",moon:"🌙",sun:"☀️",fire:"🔥",ice:"❄️",thunder:"⚡",rainbow:"🌈",galaxy:"🌌",cosmic:"☄️",void:"🕳️",crown:"👑",dragon:"🐉",secret:"🔐",glitch:"👾",infinite:"♾️"}
+        };
+        window.addEventListener("ir:customizationChanged",e=>{
+          if(e.detail&&typeof profile==="object"&&profile)Object.assign(profile,e.detail);
+          if(e.detail?.selected_background&&typeof G!=="undefined")G.world=WORLDS[e.detail.selected_background]||G.world;
+          if(e.detail?.selected_character&&typeof G!=="undefined")G.playerCharacter=e.detail.selected_character;
+          if(e.detail?.selected_coin&&typeof G!=="undefined")G.coinSkin=e.detail.selected_coin;
+        });
+        const STEP = 1 / 120 // fixed physics step`)
+      code = code.replace('    // body\n    ctx.fillStyle = "#0b1220"; ctx.strokeStyle = w.accent; ctx.lineWidth = 3; ctx.shadowBlur = 14; ctx.shadowColor = w.accent', `    const charId = G.playerCharacter || profile.selected_character || "runner";
+    const charIcon = window.__IR_CUSTOM?.characters?.[charId];
+    if (charIcon) {
+      ctx.font = "48px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.shadowBlur = 18; ctx.shadowColor = w.accent;
+      ctx.fillText(charIcon, p.w / 2, p.h / 2);
+      ctx.shadowBlur = 0;
+    } else {
+      // body
+      ctx.fillStyle = "#0b1220"; ctx.strokeStyle = w.accent; ctx.lineWidth = 3; ctx.shadowBlur = 14; ctx.shadowColor = w.accent`);
+      code = code.replace('    // bonuses\n    for (const b of G.bonuses)', `    // bonuses\n    for (const b of G.bonuses)`) `window.__IR_CUSTOM = {
+          characters:{runner:"🧑",ninja:"🥷",robot:"🤖",ghost:"👻",cyber:"🦾",pilot:"🧑‍✈️",soldier:"🪖",wizard:"🧙",astronaut:"🧑‍🚀",skater:"🛹",samurai:"👺",pirate:"🏴‍☠️",detective:"🕵️",vampire:"🧛",zombie:"🧟",alien:"👽",king:"🤴",queen:"👸",knight:"🛡️",racer:"🏎️",dragon:"🐉",phoenix:"🔥",shadow:"🌑",thunder:"⚡",ice:"❄️",flame:"🔥",cosmic:"🌌",cyborg:"🤖",reaper:"💀",angel:"😇",demon:"😈",time:"⏳",void:"🕳️",secret:"👁️"},
+          coins:{gold:"🪙",silver:"🥈",bronze:"🥉",blue:"🔵",green:"🟢",red:"🔴",pink:"🩷",orange:"🟠",purple:"🟣",white:"⚪",diamond:"💎",emerald:"💚",ruby:"❤️",sapphire:"🔷",amethyst:"🟪",topaz:"🔶",pearl:"🦪",crystal:"🔮",neon:"💠",star:"⭐",moon:"🌙",sun:"☀️",fire:"🔥",ice:"❄️",thunder:"⚡",rainbow:"🌈",galaxy:"🌌",cosmic:"☄️",void:"🕳️",crown:"👑",dragon:"🐉",secret:"🔐",glitch:"👾",infinite:"♾️"}
+        };
+        window.addEventListener("ir:customizationChanged",e=>{
+          if(e.detail&&typeof profile==="object"&&profile)Object.assign(profile,e.detail);
+          if(e.detail?.selected_background&&typeof G!=="undefined")G.world=WORLDS[e.detail.selected_background]||G.world;
+          if(e.detail?.selected_character&&typeof G!=="undefined")G.playerCharacter=e.detail.selected_character;
+          if(e.detail?.selected_coin&&typeof G!=="undefined")G.coinSkin=e.detail.selected_coin;
+        });
+        const STEP = 1 / 120 // fixed physics step`) `window.addEventListener('ir:customizationChanged', e => {
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
           if (e.detail?.selected_background && typeof G !== 'undefined' && G.world) G.world = WORLDS[e.detail.selected_background] || G.world
         })
