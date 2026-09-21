@@ -224,35 +224,20 @@
           hurt(false)
         }`)
       code = code.replace('["jump", "⬆️", "Saut", 6, "Hauteur et double-saut renforcés."]', '["jump", "🪽", "Saut", 2, "Niveau 2 : débloque le double saut pour 5000 pièces."]')
-      code = code.replace('const UPGRADES = [', 'const UPGRADES = [')
-      code = code.replace(/const UPGRADES = \[[\\s\\S]*?\n  \]/, `const UPGRADES = [
+      code = replaceBetween(code, "  const UPGRADES = [", "  const DEFAULTS = {", `  const UPGRADES = [
     ["lives", "❤️", "Vies", 5, "Plus de vies par partie."],
     ["distance", "🏃", "Distance", 6, "Augmente la vitesse et le score de départ."],
     ["dash", "⚡", "Dash", 5, "Réduit le cooldown. Niveau 5 = traverse/détruit les obstacles."],
     ["jump", "🪽", "Saut", 2, "Niveau 2 = débloque le double saut."],
     ["coin", "🪙", "Pièces", 6, "Multiplie les pièces ramassées."],
-    ["bonus", "✨", "Bonus", 6, "Augmente la durée et la fréquence des bonus."],
-    ["bonus_shield", "🛡️", "Bouclier", 6, "Augmente la durée du bouclier."],
-    ["bonus_mega", "🚀", "Méga-saut", 6, "Augmente la durée du méga-saut."],
-    ["bonus_x2", "🪙", "Pièces x2", 6, "Augmente la durée du bonus pièces x2."],
-    ["bonus_jetpack", "🛩️", "Jetpack", 6, "Augmente la durée du jetpack."],
-    ["bonus_scoreDouble", "🏆", "Score x2", 6, "Augmente la durée du score x2."],
-    ["bonus_magnet", "🧲", "Aimant", 6, "Augmente la durée de l'aimant."]
-  ]`)
-      code = code.replace('lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1, bonus_level: 1,', 'lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1, bonus_level: 1, bonus_shield_level: 1, bonus_mega_level: 1, bonus_x2_level: 1, bonus_jetpack_level: 1, bonus_scoreDouble_level: 1, bonus_magnet_level: 1,')
-      code = code.replace(/  function renderUpgrades\(\) \{[\\s\\S]*?\n  \}\n(?=  function renderShop)/, `  function renderUpgrades() {
-    const costFor = (v) => [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
-    $(\"upgradeGrid\").innerHTML = UPGRADES.map(([id, em, n, max, desc]) => {
-      const v = Number(profile[id + \"_level\"] || 1)
-      const cost = costFor(v)
-      const maxed = v >= max
-      return \`<div class="card"><div class="emoji">\${em}</div><h3>\${n}</h3><p class="muted">\${desc}</p>
-        <p>Niveau \${v}/\${max}</p><div class="progress"><i style="width:\${(v / max) * 100}%"></i></div>
-        <button data-up="\${id}" \${maxed ? "disabled" : ""}>\${maxed ? "MAX" : "⚡ AMÉLIORER · 🪙 " + cost}</button></div>\`
-    }).join("")
-  }
+    ["bonus", "✨", "Bonus", 6, "Chaque niveau ajoute +2 secondes aux bonus (5s → 15s)."]
+  ]
 `)
-      code = code.replace(/  function buyUpgrade\(id\) \{[\\s\\S]*?\n  \}\n(?=  function freePack)/, `  function buyUpgrade(id) {
+      code = code.replace('lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1, bonus_level: 1,', 'lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1, bonus_level: 1, bonus_shield_level: 1, bonus_mega_level: 1, bonus_x2_level: 1, bonus_jetpack_level: 1, bonus_scoreDouble_level: 1, bonus_magnet_level: 1,')
+      code = replaceBetween(code, "  function renderUpgrades() {", "  function renderShop() {", `  function renderUpgrades() {
+    const costFor = (v) => [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
+    const cards = UPGRADES.map(([id, em, n, max, desc]) => {
+      const v = Number(profile[i      code = replaceBetween(code, "  function buyUpgrade(id) {", "  function freePack() {", `  function buyUpgrade(id) {
     const entry = UPGRADES.find((u) => u[0] === id)
     if (!entry) return
     const max = entry[3]
@@ -269,7 +254,6 @@
     toast("⚡ " + entry[2] + " amélioré ! Niveau " + (v + 1) + "/" + max)
   }
 `)
-
       code = code.replace('const v = profile[id + "_level"] || 1\n      const cost = 100 * v', 'const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[id + "_level"] || 1)\n      const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
       code = code.replace('} else if (G.canDouble) {', '} else if ((profile.jump_level || 1) >= 2 && G.canDouble) {')
       code = code.replace('    const v = profile[key] || 1\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = 100 * v', '    const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[key] || 1)\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
