@@ -532,6 +532,76 @@
   }, true)
 })()
 `;
+      code = replaceBetween(code, "async function adminSearch() {", "  /* ============================================================\n     GAME ENGINE", `async function adminSearch() {
+    if ((profile.username || "").toLowerCase() !== ADMIN || !sb) return
+    const n = cleanName($("adminSearch").value)
+    let q = sb.from("profiles").select("id,username,coins,best_distance,total_distance,highest_level,lives_level,distance_level,dash_level,jump_level,coin_level,bonus_level").order("coins", { ascending: false }).limit(20)
+    if (n) q = q.ilike("username", "%" + n + "%")
+    const r = await q
+    const box = $("adminResults")
+    if (r.error) { box.innerHTML = \`<div class="card">❌ \${escapeHtml(r.error.message)}</div>\`; return }
+    const rows = r.data || []
+    if (!rows.length) { box.innerHTML = \`<div class="card">Aucun résultat.</div>\`; return }
+    box.innerHTML = rows.map((u) => \`
+      <div class="card" style="margin-bottom:10px;cursor:pointer" data-admin-player="\${escapeHtml(u.id)}">
+        <div class="row" style="align-items:center">
+          <div style="flex:1">
+            <b>👤 \${escapeHtml(u.username)}</b>
+            <div class="muted">🪙 \${Number(u.coins||0).toLocaleString("fr-FR")} · 🏆 \${Number(u.best_distance||0)}m · LV \${Number(u.highest_level||1)}</div>
+          </div>
+          <button type="button" data-admin-edit="\${escapeHtml(u.id)}">🛠️ MODIFIER</button>
+        </div>
+      </div>\`).join("")
+    const edit = (id) => {
+      const p = rows.find(x => String(x.id) === String(id))
+      if (!p) return
+      box.innerHTML = \`
+        <div class="card">
+          <h3>🛠️ Modifier : \${escapeHtml(p.username)}</h3>
+          <p class="muted">Ressources et progression du joueur</p>
+          <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">
+            <label>🪙 Pièces<input type="number" min="0" data-af="coins" value="\${Number(p.coins||0)}"></label>
+            <label>🏁 Niveau max<input type="number" min="1" max="300" data-af="highest_level" value="\${Number(p.highest_level||1)}"></label>
+            <label>🏆 Meilleure distance<input type="number" min="0" data-af="best_distance" value="\${Number(p.best_distance||0)}"></label>
+            <label>📏 Distance totale<input type="number" min="0" data-af="total_distance" value="\${Number(p.total_distance||0)}"></label>
+            <label>❤️ Vies<input type="number" min="1" max="5" data-af="lives_level" value="\${Number(p.lives_level||1)}"></label>
+            <label>🏃 Distance<input type="number" min="1" max="6" data-af="distance_level" value="\${Number(p.distance_level||1)}"></label>
+            <label>⚡ Dash<input type="number" min="1" max="5" data-af="dash_level" value="\${Number(p.dash_level||1)}"></label>
+            <label>🪽 Saut<input type="number" min="1" max="2" data-af="jump_level" value="\${Number(p.jump_level||1)}"></label>
+            <label>🪙 Pièces upgrade<input type="number" min="1" max="6" data-af="coin_level" value="\${Number(p.coin_level||1)}"></label>
+            <label>✨ Bonus<input type="number" min="1" max="6" data-af="bonus_level" value="\${Number(p.bonus_level||1)}"></label>
+          </div>
+          <div class="row" style="margin-top:14px">
+            <button class="primary" type="button" id="adminSaveEdit">💾 ENREGISTRER</button>
+            <button type="button" id="adminCancelEdit">ANNULER</button>
+          </div>
+          <div id="adminEditStatus" class="muted" style="margin-top:8px"></div>
+        </div>\`
+      $("adminSaveEdit").onclick = async () => {
+        const patch = {}
+        const mins = {coins:0,best_distance:0,total_distance:0,highest_level:1,lives_level:1,distance_level:1,dash_level:1,jump_level:1,coin_level:1,bonus_level:1}
+        const maxs = {highest_level:300,lives_level:5,distance_level:6,dash_level:5,jump_level:2,coin_level:6,bonus_level:6}
+        for (const k of Object.keys(mins)) {
+          let v = Math.floor(Number(box.querySelector('[data-af="' + k + '"]').value))
+          if (!Number.isFinite(v)) v = Number(p[k] || mins[k])
+          patch[k] = Math.max(mins[k], Math.min(maxs[k] ?? Number.MAX_SAFE_INTEGER, v))
+        }
+        const status=$("adminEditStatus"), btn=$("adminSaveEdit")
+        btn.disabled=true; status.textContent="⏳ Enregistrement..."
+        const save=await sb.from("profiles").update(patch).eq("id",p.id)
+        if(save.error){status.textContent="❌ "+save.error.message;btn.disabled=false;return}
+        status.textContent="✅ Modifications enregistrées !"
+        toast("✅ "+p.username+" a été modifié.")
+        await adminSearch()
+      }
+      $("adminCancelEdit").onclick=()=>adminSearch()
+    }
+    box.querySelectorAll("[data-admin-edit]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();edit(b.dataset.adminEdit)})
+    box.querySelectorAll("[data-admin-player]").forEach(card=>card.onclick=e=>{if(e.target.closest("button"))return;edit(card.dataset.adminPlayer)})
+  }
+
+  /* ============================================================
+     GAME ENGINE`);
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
