@@ -426,6 +426,112 @@
 
 
 
+
+      code += `
+;(() => {
+  const adminAllowed = () => {
+    try {
+      const wanted = String((window.IR_CONFIG || {}).ADMIN_USERNAME || "Rubansu1").trim().toLowerCase()
+      return String(profile?.username || "").trim().toLowerCase() === wanted
+    } catch (e) { return false }
+  }
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]))
+  const adminRenderEditor = (p) => {
+    const box = document.getElementById("adminResults")
+    if (!box || !p) return
+    const fields = [
+      ["coins","🪙 Pièces",p.coins,0],
+      ["highest_level","🏁 Niveau max",p.highest_level,1],
+      ["best_distance","🏆 Meilleure distance",p.best_distance,0],
+      ["total_distance","📏 Distance totale",p.total_distance,0],
+      ["lives_level","❤️ Vies",p.lives_level,1],
+      ["distance_level","🏃 Distance",p.distance_level,1],
+      ["dash_level","⚡ Dash",p.dash_level,1],
+      ["jump_level","🪽 Saut",p.jump_level,1],
+      ["coin_level","🪙 Pièces x",p.coin_level,1],
+      ["bonus_level","✨ Bonus",p.bonus_level,1]
+    ]
+    box.innerHTML = '<div class="card" id="adminEditor">' +
+      '<h3>🛠️ Modifier : ' + esc(p.username) + '</h3>' +
+      '<p class="muted">Modifie les ressources et la progression du joueur.</p>' +
+      '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">' +
+      fields.map(f => '<label style="display:flex;flex-direction:column;gap:6px"><span>' + f[1] + '</span><input type="number" min="' + f[3] + '" data-admin-field="' + f[0] + '" value="' + Number(f[2] ?? 0) + '"></label>').join("") +
+      '</div>' +
+      '<div class="row" style="margin-top:14px"><button class="primary" id="btnAdminSave">💾 ENREGISTRER</button><button id="btnAdminCancel">ANNULER</button></div>' +
+      '<div id="adminEditStatus" class="muted" style="margin-top:8px"></div>' +
+      '</div>'
+    const save = document.getElementById("btnAdminSave")
+    const cancel = document.getElementById("btnAdminCancel")
+    if (cancel) cancel.onclick = () => adminSearch()
+    if (save) save.onclick = async () => {
+      if (!adminAllowed()) return toast("⛔ Accès admin refusé.")
+      const status = document.getElementById("adminEditStatus")
+      const patch = {}
+      fields.forEach(f => {
+        const input = box.querySelector('[data-admin-field="' + f[0] + '"]')
+        let v = Math.floor(Number(input?.value))
+        if (!Number.isFinite(v)) v = Number(f[2] || 0)
+        if (f[0] === "highest_level") v = Math.max(1, Math.min(300, v))
+        if (f[0].endsWith("_level")) v = Math.max(1, Math.min(6, v))
+        v = Math.max(f[3], v)
+        patch[f[0]] = v
+      })
+      save.disabled = true
+      if (status) status.textContent = "⏳ Enregistrement..."
+      const q = await sb.from("profiles").update(patch).eq("id", p.id)
+      if (q.error) {
+        if (status) status.textContent = "❌ " + q.error.message
+        save.disabled = false
+        return
+      }
+      if (String(p.id) === String(user?.id)) Object.assign(profile, patch)
+      if (status) status.textContent = "✅ Modifications enregistrées !"
+      toast("✅ Ressources de " + p.username + " modifiées.")
+      await adminSearch()
+    }
+  }
+  async function adminSearch() {
+    if (!adminAllowed()) return toast("⛔ Accès admin refusé.")
+    const box = document.getElementById("adminResults")
+    const input = document.getElementById("adminSearch")
+    const qname = String(input?.value || "").trim()
+    if (!qname) return toast("Entre un pseudo.")
+    if (!sb) return toast("☁️ Supabase indisponible.")
+    box.innerHTML = '<div class="card">⏳ Recherche...</div>'
+    const q = await sb.from("profiles").select("id,username,coins,best_distance,total_distance,highest_level,lives_level,distance_level,dash_level,jump_level,coin_level,bonus_level").ilike("username", "%" + qname + "%").limit(20)
+    if (q.error) { box.innerHTML = '<div class="card">❌ ' + esc(q.error.message) + '</div>'; return }
+    const rows = q.data || []
+    if (!rows.length) { box.innerHTML = '<div class="card">Aucun joueur trouvé.</div>'; return }
+    box.innerHTML = rows.map(p => '<div class="card admin-player" data-admin-player="' + esc(p.id) + '" style="cursor:pointer;margin-bottom:10px">' +
+      '<div class="row" style="align-items:center"><div style="flex:1"><b>👤 ' + esc(p.username) + '</b><div class="muted">🪙 ' + Number(p.coins || 0).toLocaleString("fr-FR") + ' · 🏆 ' + Number(p.best_distance || 0) + 'm · LV ' + Number(p.highest_level || 1) + '</div></div><button data-admin-edit="' + esc(p.id) + '">🛠️ MODIFIER</button></div></div>').join("")
+    box.querySelectorAll("[data-admin-edit]").forEach(btn => btn.onclick = e => {
+      e.preventDefault(); e.stopPropagation()
+      const p = rows.find(x => String(x.id) === String(btn.dataset.adminEdit))
+      if (p) adminRenderEditor(p)
+    })
+    box.querySelectorAll(".admin-player").forEach(card => card.onclick = () => {
+      const p = rows.find(x => String(x.id) === String(card.dataset.adminPlayer))
+      if (p) adminRenderEditor(p)
+    })
+  }
+  const searchBtn = document.getElementById("btnAdminSearch")
+  if (searchBtn) {
+    searchBtn.addEventListener("click", e => {
+      if (!adminAllowed()) return
+      e.preventDefault(); e.stopImmediatePropagation()
+      adminSearch()
+    }, true)
+  }
+  const searchInput = document.getElementById("adminSearch")
+  if (searchInput) searchInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" && adminAllowed()) {
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      adminSearch()
+    }
+  }, true)
+})()
+`;
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
