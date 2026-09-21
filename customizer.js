@@ -11,7 +11,7 @@
   const REWARD_MIN=200, REWARD_MAX=850
   const cfg=window.IR_CONFIG||{}
   const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
-  let cloudUser=null,cloudInventory=null,buying=false
+  let cloudUser=null,cloudInventory=null,cloudProfile=null,buying=false
   const localProfile=()=>{try{const p=JSON.parse(localStorage.getItem('irGuest')||'{}');if(!Array.isArray(p.owned_coins)||!p.owned_coins.length)p.owned_coins=['gold'];if(!p.selected_coin)p.selected_coin='gold';return p}catch{return {owned_coins:['gold'],selected_coin:'gold'}}}
   const saveLocal=p=>localStorage.setItem('irGuest',JSON.stringify(p))
   const guestMode=()=>($('userBadge')?.textContent||'').includes('local')
@@ -22,7 +22,7 @@
   const getSelectedCloudCoin=uid=>{try{return localStorage.getItem(coinStorageKey(uid))||'gold'}catch{return 'gold'}}
   const setSelectedCloudCoin=(uid,id)=>{try{localStorage.setItem(coinStorageKey(uid),id)}catch{}}
   const notifyCustomization=(type,id)=>window.dispatchEvent(new CustomEvent('ir:customizationChanged',{detail:type==='world'?{selected_background:id}:type==='character'?{selected_character:id}:type==='coin'?{selected_coin:id}:{selected_obstacle_set:id}}))
-  async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];return false}const {data}=await sb.from('inventory').select('item_type,item_id').eq('user_id',user.id);cloudInventory=data||[];return true}
+  async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;cloudProfile=null;return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];cloudProfile=null;return false}const [{data:inv},{data:prof}]=await Promise.all([sb.from('inventory').select('item_type,item_id').eq('user_id',user.id),sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',user.id).maybeSingle()]);cloudInventory=inv||[];cloudProfile=prof||null;return true}
   const owned=(type,id,p)=>type==='world'?(p.owned_worlds||['city']).includes(id):type==='character'?(p.owned_characters||['runner']).includes(id):type==='coin'?(p.owned_coins||['gold']).includes(id):(p.owned_obstacles||['classic']).includes(id)
   const cloudOwned=(type,id)=>{if(type==='coin'&&id==='gold')return true;const map={world:'background',character:'character',coin:'obstacle',obstacle:'obstacle'};return !!cloudInventory?.some(x=>x.item_type===map[type]&&x.item_id===id)}
   async function isOwned(type,id){
@@ -149,14 +149,14 @@
   const packLabel=type=>type==='world'?'PACK MONDE':type==='character'?'PACK PERSONNAGE':'PACK PIÈCES'
   const displayCollection=(type)=>{
     const uid=collectionUid(), data=loadCollection(uid,type), cards=rarityCards(type)
-    const current=type==='world'?(localProfile().selected_background||'city'):type==='character'?(localProfile().selected_character||'runner'):type==='coin'?(guestMode()?(localProfile().selected_coin||'gold'):getSelectedCloudCoin(cloudUser?.id||'guest')):''
+    const current=type==='world'?(guestMode()?(localProfile().selected_background||'city'):(cloudProfile?.selected_background||'city')):type==='character'?(guestMode()?(localProfile().selected_character||'runner'):(cloudProfile?.selected_character||'runner')):type==='coin'?(guestMode()?(localProfile().selected_coin||'gold'):getSelectedCloudCoin(cloudUser?.id||'guest')):''
     return RARITY_ORDER.map(r=>{
       const list=cards.filter(x=>x.rarity===r)
       return '<div class="custom-section ir-rarity-section" style="margin:18px 0;padding:14px;border-radius:16px;'+rarityStyle(r)+'"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px"><h3 style="margin:0">'+RARITIES[r].icon+' '+RARITIES[r].name+'</h3><span class="muted" style="font-size:12px">'+RARITIES[r].chance+'% · vente '+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</span></div><div class="grid">'+list.map(x=>{
         const n=Number(data[x.id]||0), equipped=current===x.id
         const action=equipped
-          ? '<button type="button" disabled style="opacity:1;cursor:default;border:1px solid #19ff88;background:rgba(25,255,136,.12);color:#19ff88;font-weight:900">✓ ÉQUIPÉ</button>'
-          : '<button type="button" data-equip-type="'+type+'" data-equip-id="'+x.id+'" style="font-weight:900">ÉQUIPER</button>'
+          ? '<button type="button" disabled aria-label="Objet actuellement équipé" style="width:100%;opacity:1;cursor:default;border:2px solid #19ff88;background:linear-gradient(180deg,rgba(25,255,136,.22),rgba(25,255,136,.08));color:#19ff88;font-weight:1000;letter-spacing:.5px;box-shadow:0 0 14px rgba(25,255,136,.22)">✓ ÉQUIPÉ</button>'
+          : (n ? '<button type="button" data-equip-type="'+type+'" data-equip-id="'+x.id+'" style="width:100%;font-weight:1000;letter-spacing:.5px">ÉQUIPER</button>' : '<button type="button" disabled style="width:100%;opacity:.38;cursor:not-allowed">🔒 VERROUILLÉ</button>')
         const sell=n?'<button type="button" data-sell-type="'+type+'" data-sell-id="'+x.id+'">VENDRE +'+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</button>':''
         return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:hidden;min-height:170px"><div style="position:absolute;top:8px;right:8px;font-size:11px;font-weight:900;opacity:.8">'+(n?'x'+n:'🔒')+'</div><div class="emoji" style="font-size:42px;margin-top:8px">'+x.emoji+'</div><h3 style="margin:6px 0">'+x.name+'</h3><p class="muted" style="margin:4px 0 12px">'+(n?RARITIES[r].name:'Pas encore obtenu')+'</p>'+(n?'<div style="display:flex;flex-direction:column;gap:6px">'+action+sell+'</div>':'')+'</div>'
       }).join('')+'</div></div>'
@@ -217,7 +217,7 @@
     const root=$('customizerRoot');if(!root)return
     await getCloud()
     const p=localProfile()
-    const selected={world:p.selected_background||'city',character:p.selected_character||'runner',coin:guestMode()?(p.selected_coin||'gold'):getSelectedCloudCoin(cloudUser?.id||'guest')}
+    const selected={world:guestMode()?(p.selected_background||'city'):(cloudProfile?.selected_background||'city'),character:guestMode()?(p.selected_character||'runner'):(cloudProfile?.selected_character||'runner'),coin:guestMode()?(p.selected_coin||'gold'):getSelectedCloudCoin(cloudUser?.id||'guest')}
     root.innerHTML='<div style="padding:18px 0 8px"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><h2 style="margin:0">🎨 PERSONNALISATION</h2><p class="muted" style="margin:6px 0">Équipe tes objets débloqués et construis ton style Illegal Runner.</p></div><div style="padding:8px 12px;border:1px solid #00e5ff;border-radius:12px;background:rgba(0,229,255,.08);font-weight:900">⚡ '+[selected.world,selected.character,selected.coin].join(' · ')+'</div></div></div>'+
       '<div class="custom-section" style="padding:14px;border-radius:16px;border:1px solid rgba(0,229,255,.35);background:linear-gradient(135deg,rgba(0,229,255,.07),rgba(5,8,15,.9))"><h3 style="margin-top:0">📊 RARETÉS</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px">'+RARITY_ORDER.map(r=>'<div style="padding:10px;border-radius:11px;'+rarityStyle(r)+'"><b>'+RARITIES[r].icon+' '+RARITIES[r].name+'</b><br><span class="muted">'+RARITIES[r].chance+'% · '+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</span></div>').join('')+'</div></div>'+
       '<div class="custom-section"><h3>🌍 MONDES</h3>'+displayCollection('world')+'</div>'+
