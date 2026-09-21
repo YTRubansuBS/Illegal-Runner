@@ -377,7 +377,7 @@
   if (!bonusTimer) {
     bonusTimer = document.createElement("div")
     bonusTimer.id = "irBonusTimer"
-    bonusTimer.style.cssText = "position:fixed;left:50%;top:112px;transform:translateX(-50%);z-index:30;display:none;padding:7px 14px;border:2px solid rgba(0,229,255,.8);border-radius:12px;background:rgba(2,4,10,.9);color:#fff;font:900 18px Orbitron,Inter,sans-serif;box-shadow:0 0 16px rgba(0,229,255,.35);pointer-events:none;text-align:center"
+    bonusTimer.style.cssText = "position:fixed;left:16px;top:64px;transform:none;z-index:61;display:none;padding:7px 14px;border:2px solid rgba(0,229,255,.8);border-radius:12px;background:rgba(2,4,10,.9);color:#fff;font:900 18px Orbitron,Inter,sans-serif;box-shadow:0 0 16px rgba(0,229,255,.35);pointer-events:none;text-align:center"
     document.body.appendChild(bonusTimer)
   }
   setInterval(() => {
