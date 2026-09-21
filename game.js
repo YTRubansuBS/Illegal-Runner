@@ -283,21 +283,23 @@
         : ''
       return '<div class="card"><div class="emoji">' + em + '</div><h3>' + n + '</h3>' + (id === "bonus" ? '' : '<p class="muted">' + desc + '</p>') +
         '<p>Niveau ' + v + '/' + max + '</p>' +
-        (id === "bonus" ? '<p>⚡ Apparition plus fréquente à chaque niveau.</p>' : isDuration ? '<label style="display:flex;flex-direction:column;gap:6px;margin:10px 0"><span>⏱️ Durée choisie</span><select data-bonus-duration="' + id + '">' + options + '</select></label>' : '<p>⏱️ Durée : <b>' + duration + 's</b></p>') +
+        (id === "bonus" ? '<p>⚡ Apparition plus fréquente à chaque niveau.</p>' : isDuration ? '<div style="margin:10px 0"><div class="muted" style="margin-bottom:6px">⏱️ Choisir la durée</div><div style="display:flex;gap:6px;flex-wrap:wrap" data-bonus-duration="' + id + '">' + [5,7,9,11,13,15].filter(s => s <= 5 + (Math.min(6, v) - 1) * 2).map(s => '<button type="button" data-duration-value="' + s + '" style="min-width:52px;padding:7px 9px;font-weight:900;border:2px solid ' + (s === chosen ? '#00e5ff' : '#26324a') + ';background:' + (s === chosen ? '#0b2430' : '#0a0f18') + ';color:#fff;border-radius:6px;cursor:pointer">' + s + 's</button>').join('') + '</div></div>' : '<p>⏱️ Durée : <b>' + duration + 's</b></p>') +
         '<div class="progress"><i style="width:' + ((v / max) * 100) + '%"></i></div>' +
         '<button data-up="' + id + '" ' + (maxed ? 'disabled' : '') + '>' + (maxed ? 'MAX' : '⚡ AMÉLIORER · 🪙 ' + cost) + '</button></div>'
     }).join("")
     $("upgradeGrid").innerHTML = cards
-    $("upgradeGrid").querySelectorAll("[data-bonus-duration]").forEach(select => {
-      select.onchange = () => {
-        const id = select.dataset.bonusDuration
-        const level = Number(profile[id + "_level"] || 1)
-        const max = 5 + (Math.min(6, level) - 1) * 2
-        let value = Number(select.value)
-        value = Math.max(5, Math.min(max, value))
-        try { localStorage.setItem(bonusDurationKey(id), String(value)) } catch (e) {}
-        toast("⏱️ " + value + "s sélectionnées pour " + (UPGRADES.find(u => u[0] === id)?.[2] || "ce bonus") + ".")
-      }
+    $("upgradeGrid").querySelectorAll("[data-bonus-duration]").forEach(box => {
+      box.querySelectorAll("[data-duration-value]").forEach(btn => {
+        btn.onclick = () => {
+          const id = box.dataset.bonusDuration
+          const level = Number(profile[id + "_level"] || 1)
+          const max = 5 + (Math.min(6, level) - 1) * 2
+          const value = Math.max(5, Math.min(max, Number(btn.dataset.durationValue)))
+          try { localStorage.setItem(bonusDurationKey(id), String(value)) } catch (e) {}
+          renderUpgrades()
+          toast("⏱️ " + value + "s sélectionnées pour " + (UPGRADES.find(u => u[0] === id)?.[2] || "ce bonus") + ".")
+        }
+      })
     })
   }
 `)
