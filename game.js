@@ -261,18 +261,44 @@
       code = replaceBetween(code, "  function renderUpgrades() {", "  function renderShop() {", `  function renderUpgrades() {
     const costFor = (v) => [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
     const durationFor = (id, v) => id === "bonus" ? 0 : (5 + (v - 1) * 2)
+    const bonusDurationIds = ["bonus_shield","bonus_mega","bonus_x2","bonus_jetpack","bonus_scoreDouble","bonus_magnet"]
+    const bonusDurationKey = id => "ir_bonus_duration:" + (user?.id || profile.username || "guest") + ":" + id
+    const selectedDuration = (id, level) => {
+      const max = 5 + (Math.max(1, Math.min(6, level)) - 1) * 2
+      let value = 5
+      try { value = Number(localStorage.getItem(bonusDurationKey(id)) || 5) } catch (e) {}
+      if (!Number.isFinite(value)) value = 5
+      value = Math.round((value - 5) / 2) * 2 + 5
+      return Math.max(5, Math.min(max, value))
+    }
     const cards = UPGRADES.map(([id, em, n, max, desc]) => {
       const v = Number(profile[id + "_level"] || 1)
       const cost = costFor(v)
       const maxed = v >= max
       const duration = durationFor(id, v)
+      const isDuration = bonusDurationIds.includes(id)
+      const chosen = isDuration ? selectedDuration(id, v) : duration
+      const options = isDuration
+        ? [5,7,9,11,13,15].filter(s => s <= 5 + (Math.min(6, v) - 1) * 2).map(s => '<option value="' + s + '"' + (s === chosen ? ' selected' : '') + '>' + s + ' secondes</option>').join('')
+        : ''
       return '<div class="card"><div class="emoji">' + em + '</div><h3>' + n + '</h3>' + (id === "bonus" ? '' : '<p class="muted">' + desc + '</p>') +
         '<p>Niveau ' + v + '/' + max + '</p>' +
-        (id === "bonus" ? '<p>⚡ Apparition plus fréquente à chaque niveau.</p>' : '<p>⏱️ Durée : <b>' + duration + 's</b></p>') +
+        (id === "bonus" ? '<p>⚡ Apparition plus fréquente à chaque niveau.</p>' : isDuration ? '<label style="display:flex;flex-direction:column;gap:6px;margin:10px 0"><span>⏱️ Durée choisie</span><select data-bonus-duration="' + id + '">' + options + '</select></label>' : '<p>⏱️ Durée : <b>' + duration + 's</b></p>') +
         '<div class="progress"><i style="width:' + ((v / max) * 100) + '%"></i></div>' +
         '<button data-up="' + id + '" ' + (maxed ? 'disabled' : '') + '>' + (maxed ? 'MAX' : '⚡ AMÉLIORER · 🪙 ' + cost) + '</button></div>'
     }).join("")
     $("upgradeGrid").innerHTML = cards
+    $("upgradeGrid").querySelectorAll("[data-bonus-duration]").forEach(select => {
+      select.onchange = () => {
+        const id = select.dataset.bonusDuration
+        const level = Number(profile[id + "_level"] || 1)
+        const max = 5 + (Math.min(6, level) - 1) * 2
+        let value = Number(select.value)
+        value = Math.max(5, Math.min(max, value))
+        try { localStorage.setItem(bonusDurationKey(id), String(value)) } catch (e) {}
+        toast("⏱️ " + value + "s sélectionnées pour " + (UPGRADES.find(u => u[0] === id)?.[2] || "ce bonus") + ".")
+      }
+    })
   }
 `)
       code = replaceBetween(code, "  async function buyUpgrade(id) {", "  function freePack() {", `  async function buyUpgrade(id) {
@@ -383,7 +409,7 @@
       code = code.replace('if (G.coinBoostT > 0) { G.coinBoostT -= dt; G.coinMult = 2 } else G.coinMult = 1', 'if (G.shieldT > 0) { G.shieldT -= dt; if (G.shieldT <= 0) { G.shieldT = 0; G.shield = false } }\n    if (G.coinBoostT > 0) { G.coinBoostT -= dt; G.coinMult = 2 } else G.coinMult = 1\n    if (G.scoreDoubleT > 0) { G.scoreDoubleT -= dt; G.scoreMult = 2 } else G.scoreMult = 1\n    if (G.jetpackT > 0) G.jetpackT -= dt; else G.jetpackHold = false\n    if (G.magnetT > 0) G.magnetT -= dt')
       code = code.replace('for (const c of G.coinsArr) c.x -= G.speed * dt', 'for (const c of G.coinsArr) { c.x -= G.speed * dt; if (G.magnetT > 0 && !c.got) { const dx = (G.player.x + 20) - c.x, dy = (G.player.y + 20) - c.y, d = Math.hypot(dx, dy); if (d < 260 && d > 1) { c.x += dx / d * 900 * dt; c.y += dy / d * 900 * dt } } }')
       code = code.replace('const grav = 2600\n    p.vy += grav * dt', 'const grav = 2600\n    if (G.jetpackT > 0 && G.jetpackHold) { p.vy = -420; p.y = p.y + p.vy * dt } else p.vy += grav * dt')
-      code = code.replace('  function applyBonus(type) {', '  function applyBonus(type) {\n    const durationLevel = { shield: "bonus_shield_level", mega: "bonus_mega_level", x2: "bonus_x2_level", jetpack: "bonus_jetpack_level", scoreDouble: "bonus_scoreDouble_level", magnet: "bonus_magnet_level" }[type]\n    const level = Math.max(1, Math.min(6, Number(profile[durationLevel] || 1)))\n    const duration = 5 + (level - 1) * 2')
+      code = code.replace('  function applyBonus(type) {', '  function applyBonus(type) {\n    const durationLevel = { shield: "bonus_shield_level", mega: "bonus_mega_level", x2: "bonus_x2_level", jetpack: "bonus_jetpack_level", scoreDouble: "bonus_scoreDouble_level", magnet: "bonus_magnet_level" }[type]\n    const level = Math.max(1, Math.min(6, Number(profile[durationLevel] || 1)))\n    const durationKey = "ir_bonus_duration:" + (user?.id || profile.username || "guest") + ":" + type\n    let duration = 5 + (level - 1) * 2\n    try { const saved = Number(localStorage.getItem(durationKey) || duration); if (Number.isFinite(saved)) duration = Math.max(5, Math.min(duration, 5 + Math.round((saved - 5) / 2) * 2)) } catch (e) {}')
       code = code.replace('if (type === "shield") { G.shield = true; toast("🛡️ Bouclier !") }', 'if (type === "shield") { G.shield = true; G.shieldT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.shield = Date.now() + duration * 1000; toast("🛡️ Bouclier !") }')
       code = code.replace('G.shield = false\\n      p.inv = 1.1', 'G.shield = false\\n      G.shieldT = 0\\n      p.inv = 1.1')
       code = code.replace('else if (type === "mega") { G.jumpBoostT = 6 + (profile.bonus_level || 1); toast("🚀 Méga-saut !") }', 'else if (type === "mega") { G.jumpBoostT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.mega = Date.now() + duration * 1000; toast("🚀 Méga-saut !") }')
