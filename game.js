@@ -256,47 +256,9 @@
       }
     } catch (e) {}
 `);
-      code = code.replace('  function renderUpgrades() {
-    const costFor = (v) => [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
-    const durationFor = (id, v) => id === "bonus" ? 0 : (5 + (v - 1) * 2)
-    const durationBonusIds = ["bonus_shield", "bonus_mega", "bonus_x2", "bonus_jetpack", "bonus_scoreDouble", "bonus_magnet"]
-    let savedDurations = {}
-    try { savedDurations = JSON.parse(localStorage.getItem("ir_bonus_durations:" + (user?.id || profile.username || "guest")) || "{}") || {} } catch (e) {}
-    const cards = UPGRADES.map(([id, em, n, max, desc]) => {
-      const v = Number(profile[id + "_level"] || 1)
-      const cost = costFor(v)
-      const maxed = v >= max
-      const duration = durationFor(id, v)
-      const selectedDuration = durationBonusIds.includes(id) ? Math.max(5, Math.min(duration, Number(savedDurations[id] || duration))) : 0
-      const choices = durationBonusIds.includes(id)
-        ? '<label style="display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0">⏱️ <select data-bonus-duration="' + id + '">'
-          + Array.from({length: Math.floor((duration - 5) / 2) + 1}, (_, i) => 5 + i * 2).map(s => '<option value="' + s + '"' + (s === selectedDuration ? ' selected' : '') + '>' + s + ' secondes</option>').join("") + '</select></label>'
-        : ''
-      return '<div class="card"><div class="emoji">' + em + '</div><h3>' + n + '</h3>' + (id === "bonus" ? '' : '<p class="muted">' + desc + '</p>') +
-        '<p>Niveau ' + v + '/' + max + '</p>' +
-        (id === "bonus" ? '<p>⚡ Apparition plus fréquente à chaque niveau.</p>' : '<p>⏱️ Durée choisie : <b>' + selectedDuration + 's</b> / ' + duration + 's max</p>' + choices) +
-        '<div class="progress"><i style="width:' + ((v / max) * 100) + '%"></i></div>' +
-        '<button data-up="' + id + '" ' + (maxed ? 'disabled' : '') + '>' + (maxed ? 'MAX' : '⚡ AMÉLIORER · 🪙 ' + cost) + '</button></div>'
-    }).join("")
-    $("upgradeGrid").innerHTML = cards
-    document.querySelectorAll("[data-bonus-duration]").forEach(select => {
-      select.onchange = () => {
-        const id = select.dataset.bonusDuration
-        const level = Number(profile[id + "_level"] || 1)
-        const maxDuration = 5 + (level - 1) * 2
-        const value = Math.max(5, Math.min(maxDuration, Number(select.value) || 5))
-        try {
-          const key = "ir_bonus_durations:" + (user?.id || profile.username || "guest")
-          const current = JSON.parse(localStorage.getItem(key) || "{}") || {}
-          current[id] = value
-          localStorage.setItem(key, JSON.stringify(current))
-          select.value = String(value)
-          toast("⏱️ Durée du bonus : " + value + "s")
-        } catch (e) { toast("❌ Impossible de sauvegarder la durée.") }
-      }
-    })
-  }
-  function renderShop() {", `  function renderUpgrades() {
+      code = code.replace('  function renderUpgrades() {', `  try { const savedBonus = JSON.parse(localStorage.getItem("ir_bonus_upgrades") || "{}"); for (const k of ["bonus_shield_level","bonus_mega_level","bonus_x2_level","bonus_jetpack_level","bonus_scoreDouble_level","bonus_magnet_level"]) if (savedBonus[k]) profile[k] = Math.max(1, Math.min(6, Number(savedBonus[k]))) } catch(e) {}
+  function renderUpgrades() {`);
+      code = replaceBetween(code, "  function renderUpgrades() {", "  function renderShop() {", `  function renderUpgrades() {
     const costFor = (v) => [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
     const durationFor = (id, v) => id === "bonus" ? 0 : (5 + (v - 1) * 2)
     const cards = UPGRADES.map(([id, em, n, max, desc]) => {
@@ -421,7 +383,7 @@
       code = code.replace('if (G.coinBoostT > 0) { G.coinBoostT -= dt; G.coinMult = 2 } else G.coinMult = 1', 'if (G.shieldT > 0) { G.shieldT -= dt; if (G.shieldT <= 0) { G.shieldT = 0; G.shield = false } }\n    if (G.coinBoostT > 0) { G.coinBoostT -= dt; G.coinMult = 2 } else G.coinMult = 1\n    if (G.scoreDoubleT > 0) { G.scoreDoubleT -= dt; G.scoreMult = 2 } else G.scoreMult = 1\n    if (G.jetpackT > 0) G.jetpackT -= dt; else G.jetpackHold = false\n    if (G.magnetT > 0) G.magnetT -= dt')
       code = code.replace('for (const c of G.coinsArr) c.x -= G.speed * dt', 'for (const c of G.coinsArr) { c.x -= G.speed * dt; if (G.magnetT > 0 && !c.got) { const dx = (G.player.x + 20) - c.x, dy = (G.player.y + 20) - c.y, d = Math.hypot(dx, dy); if (d < 260 && d > 1) { c.x += dx / d * 900 * dt; c.y += dy / d * 900 * dt } } }')
       code = code.replace('const grav = 2600\n    p.vy += grav * dt', 'const grav = 2600\n    if (G.jetpackT > 0 && G.jetpackHold) { p.vy = -420; p.y = p.y + p.vy * dt } else p.vy += grav * dt')
-      code = code.replace('  function applyBonus(type) {', '  function applyBonus(type) {\n    const durationLevel = { shield: "bonus_shield_level", mega: "bonus_mega_level", x2: "bonus_x2_level", jetpack: "bonus_jetpack_level", scoreDouble: "bonus_scoreDouble_level", magnet: "bonus_magnet_level" }[type]\n    const bonusId = "bonus_" + type\n    const level = Math.max(1, Math.min(6, Number(profile[durationLevel] || 1)))\n    const maxDuration = 5 + (level - 1) * 2\n    let duration = maxDuration\n    try {\n      const savedDurations = JSON.parse(localStorage.getItem("ir_bonus_durations:" + (user?.id || profile.username || "guest")) || "{}") || {}\n      duration = Math.max(5, Math.min(maxDuration, Number(savedDurations[bonusId] || maxDuration)))\n    } catch (e) {}
+      code = code.replace('  function applyBonus(type) {', '  function applyBonus(type) {\n    const durationLevel = { shield: "bonus_shield_level", mega: "bonus_mega_level", x2: "bonus_x2_level", jetpack: "bonus_jetpack_level", scoreDouble: "bonus_scoreDouble_level", magnet: "bonus_magnet_level" }[type]\n    const level = Math.max(1, Math.min(6, Number(profile[durationLevel] || 1)))\n    const duration = 5 + (level - 1) * 2')
       code = code.replace('if (type === "shield") { G.shield = true; toast("🛡️ Bouclier !") }', 'if (type === "shield") { G.shield = true; G.shieldT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.shield = Date.now() + duration * 1000; toast("🛡️ Bouclier !") }')
       code = code.replace('G.shield = false\\n      p.inv = 1.1', 'G.shield = false\\n      G.shieldT = 0\\n      p.inv = 1.1')
       code = code.replace('else if (type === "mega") { G.jumpBoostT = 6 + (profile.bonus_level || 1); toast("🚀 Méga-saut !") }', 'else if (type === "mega") { G.jumpBoostT = duration; window.__IR_BONUS_TIMERS = window.__IR_BONUS_TIMERS || {}; window.__IR_BONUS_TIMERS.mega = Date.now() + duration * 1000; toast("🚀 Méga-saut !") }')
