@@ -6,12 +6,13 @@
   }
   const CHARS = {runner:{emoji:'🧑',name:'RUNNER'},ninja:{emoji:'🥷',name:'NINJA'},robot:{emoji:'🤖',name:'ROBOT'},ghost:{emoji:'👻',name:'GHOST'},cyber:{emoji:'🦾',name:'CYBER'}}
   const OBS = {classic:{emoji:'🔺',name:'CLASSIC'},tech:{emoji:'🧱',name:'TECH'},drone:{emoji:'🚁',name:'DRONES'},energy:{emoji:'⚡',name:'ENERGY'},chaos:{emoji:'☠️',name:'CHAOS'}}
-  const COSTS={world:1000,character:1000,obstacle:1000,reward:500}
+  const COINS = {gold:{emoji:'🪙',name:'GOLD'},diamond:{emoji:'💎',name:'DIAMOND'},ruby:{emoji:'🔴',name:'RUBY'},emerald:{emoji:'🟢',name:'EMERALD'},neon:{emoji:'💠',name:'NEON'}}
+  const COSTS={world:1000,character:1000,coin:1000,reward:500}
   const REWARD_MIN=200, REWARD_MAX=850
   const cfg=window.IR_CONFIG||{}
   const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
   let cloudUser=null,cloudInventory=null,buying=false
-  const localProfile=()=>{try{return JSON.parse(localStorage.getItem('irGuest')||'{}')}catch{return {}}}
+  const localProfile=()=>{try{const p=JSON.parse(localStorage.getItem('irGuest')||'{}');if(!Array.isArray(p.owned_coins)||!p.owned_coins.length)p.owned_coins=['gold'];if(!p.selected_coin)p.selected_coin='gold';return p}catch{return {owned_coins:['gold'],selected_coin:'gold'}}}
   const saveLocal=p=>localStorage.setItem('irGuest',JSON.stringify(p))
   const guestMode=()=>($('userBadge')?.textContent||'').includes('local')
   const toast=t=>{const e=$('toast');if(!e)return;e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1900)}
@@ -19,8 +20,8 @@
   const notifyProfile=p=>window.dispatchEvent(new CustomEvent('ir:profileChanged',{detail:p}))
   const notifyCustomization=(type,id)=>window.dispatchEvent(new CustomEvent('ir:customizationChanged',{detail:type==='world'?{selected_background:id}:type==='character'?{selected_character:id}:{selected_obstacle_set:id}}))
   async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];return false}const {data}=await sb.from('inventory').select('item_type,item_id').eq('user_id',user.id);cloudInventory=data||[];return true}
-  const owned=(type,id,p)=>type==='world'?(p.owned_worlds||['city']).includes(id):type==='character'?(p.owned_characters||['runner']).includes(id):(p.owned_obstacles||['classic']).includes(id)
-  const cloudOwned=(type,id)=>{const map={world:'background',character:'character',obstacle:'obstacle'};return !!cloudInventory?.some(x=>x.item_type===map[type]&&x.item_id===id)}
+  const owned=(type,id,p)=>type==='world'?(p.owned_worlds||['city']).includes(id):type==='character'?(p.owned_characters||['runner']).includes(id):type==='coin'?(p.owned_coins||['gold']).includes(id):(p.owned_obstacles||['classic']).includes(id)
+  const cloudOwned=(type,id)=>{const map={world:'background',character:'character',coin:'coin',obstacle:'obstacle'};return !!cloudInventory?.some(x=>x.item_type===map[type]&&x.item_id===id)}
   async function isOwned(type,id){if(guestMode())return owned(type,id,localProfile());if(!cloudInventory)await getCloud();return cloudOwned(type,id)}
   async function equip(type,id){
     if(!(await isOwned(type,id)))return toast('🔒 Objet non débloqué. Ouvre un pack !')
@@ -29,9 +30,10 @@
       if(type==='world')p.selected_background=id;
       if(type==='character')p.selected_character=id;
       if(type==='obstacle')p.selected_obstacle_set=id;
+      if(type==='coin')p.selected_coin=id;
       saveLocal(p);notifyCustomization(type,id);notifyProfile(p)
     } else if(cloudUser){
-      const field={world:'selected_background',character:'selected_character',obstacle:'selected_obstacle_set'}[type]
+      const field={world:'selected_background',character:'selected_character',coin:'selected_coin',obstacle:'selected_obstacle_set'}[type]
       const {error}=await sb.from('profiles').update({[field]:id}).eq('id',cloudUser.id)
       if(error)return toast('❌ Impossible d’équiper.')
       notifyCustomization(type,id)
@@ -45,13 +47,14 @@
       if(type==='world')p.selected_background=id
       if(type==='character')p.selected_character=id
       if(type==='obstacle')p.selected_obstacle_set=id
+      if(type==='coin')p.selected_coin=id
       saveLocal(p)
       notifyCustomization(type,id)
       notifyProfile(p)
       return
     }
     if(cloudUser){
-      const field={world:'selected_background',character:'selected_character',obstacle:'selected_obstacle_set'}[type]
+      const field={world:'selected_background',character:'selected_character',coin:'selected_coin',obstacle:'selected_obstacle_set'}[type]
       const {error}=await sb.from('profiles').update({[field]:id}).eq('id',cloudUser.id)
       if(!error)notifyCustomization(type,id)
     }
@@ -87,13 +90,15 @@
           toast('💎 Récompense reçue : +'+r+' pièces !');return
         }
         if(type==='coin'){
-          const rewards=[800,1000,1200,1500,2000]
-          const reward=rewards[Math.floor(Math.random()*rewards.length)]
-          p.coins-=cost;p.coins+=reward
-          saveLocal(p);refreshCoins(p.coins);notifyProfile(p)
-          showPackResult(`<div style="font-size:25px">🪙</div><h3>+${reward.toLocaleString('fr-FR')} 🪙</h3><span class="muted">Contenu du pack pièces.</span>`)
-          toast('🪙 Pack pièces : +'+reward.toLocaleString('fr-FR')+' pièces !')
-          return
+          const list=Object.keys(COINS), arr=p.owned_coins||['gold'], locked=list.filter(x=>!arr.includes(x))
+          if(!locked.length){showPackResult(`<b>PACK PIÈCES</b><br><span class="muted">Toutes les pièces sont déjà débloquées !</span>`,false);return toast('🎉 Toutes les pièces sont déjà débloquées !')}
+          const id=locked[Math.floor(Math.random()*locked.length)]
+          p.coins-=cost;p.owned_coins=[...new Set([...arr,id])];p.selected_coin=id
+          saveLocal(p);refreshCoins(p.coins);notifyProfile(p);notifyCustomization(type,id)
+          const label=COINS[id]
+          showPackResult(`<div style="font-size:25px">${label.emoji}</div><h3>${label.name}</h3><span class="muted">Pièce débloquée et équipée !</span>`)
+          toast('🪙 '+label.name+' obtenu !')
+          await renderCustomizer();return
         }
         const list=type==='world'?Object.keys(WORLDS):Object.keys(CHARS)
         const key=type==='world'?'owned_worlds':'owned_characters'
@@ -127,15 +132,20 @@
         toast('💎 Récompense reçue : +'+r+' pièces !');return
       }
       if(type==='coin'){
-        const rewards=[800,1000,1200,1500,2000]
-        const reward=rewards[Math.floor(Math.random()*rewards.length)]
-        const nextCoins=currentCoins-cost+reward
-        const {error}=await sb.from('profiles').update({coins:nextCoins}).eq('id',user.id)
-        if(error){showPackResult(`<b>Achat impossible.</b><br><span class="muted">${error.message||'Impossible de modifier tes pièces.'}</span>`,false);return toast('❌ Achat impossible.')}
+        const list=Object.keys(COINS), locked=list.filter(id=>!cloudOwned(type,id))
+        if(!locked.length){showPackResult(`<b>PACK PIÈCES</b><br><span class="muted">Toutes les pièces sont déjà débloquées !</span>`,false);return toast('🎉 Toutes les pièces sont déjà débloquées !')}
+        const id=locked[Math.floor(Math.random()*locked.length)]
+        const nextCoins=currentCoins-cost
+        const {error:coinError}=await sb.from('profiles').update({coins:nextCoins}).eq('id',user.id)
+        if(coinError){showPackResult(`<b>Achat impossible.</b><br><span class="muted">${coinError.message||'Impossible de modifier tes pièces.'}</span>`,false);return toast('❌ Achat impossible.')}
+        const {error:invError}=await sb.from('inventory').insert({user_id:user.id,item_type:'coin',item_id:id})
+        if(invError){await sb.from('profiles').update({coins:currentCoins}).eq('id',user.id);showPackResult(`<b>Achat impossible.</b><br><span class="muted">${invError.message||'Impossible d’enregistrer le gain.'}</span>`,false);return toast('❌ Achat impossible.')}
         refreshCoins(nextCoins);notifyProfile({coins:nextCoins})
-        showPackResult(`<div style="font-size:25px">🪙</div><h3>+${reward.toLocaleString('fr-FR')} 🪙</h3><span class="muted">Contenu du pack pièces.</span>`)
-        toast('🪙 Pack pièces : +'+reward.toLocaleString('fr-FR')+' pièces !')
-        return
+        await getCloud();await autoEquip(type,id,{})
+        const label=COINS[id]
+        showPackResult(`<div style="font-size:25px">${label.emoji}</div><h3>${label.name}</h3><span class="muted">Pièce débloquée et équipée !</span>`)
+        toast('🪙 '+label.name+' obtenu !')
+        await renderCustomizer();return
       }
       await getCloud()
       const list=type==='world'?Object.keys(WORLDS):Object.keys(CHARS)
@@ -175,12 +185,12 @@
   async function renderCustomizer(){
     const root=$('customizerRoot');if(!root)return
     await getCloud()
-    const p=localProfile();let selected={world:p.selected_background||'city',character:p.selected_character||'runner',obstacle:p.selected_obstacle_set||'classic'}
-    if(!guestMode()&&cloudUser){const {data:prof}=await sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',cloudUser.id).single();if(prof)selected={world:prof.selected_background||'city',character:prof.selected_character||'runner',obstacle:prof.selected_obstacle_set||'classic'}}
+    const p=localProfile();let selected={world:p.selected_background||'city',character:p.selected_character||'runner',coin:p.selected_coin||'gold'}
+    if(!guestMode()&&cloudUser){const {data:prof}=await sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',cloudUser.id).single();if(prof)selected={world:prof.selected_background||'city',character:prof.selected_character||'runner',coin:prof.selected_coin||'gold'}}
     const wc=Object.entries(WORLDS).map(([id,w])=>{const ok=guestMode()?owned('world',id,p):cloudOwned('world',id),eq=selected.world===id;return card(`<div class="emoji">${w.emoji}</div><div class="rarity">${w.name}</div><h3>${w.desc}</h3><p class="muted">${ok?'Débloqué':'🔒 Verrouillé'}</p><button data-equip-type="world" data-equip-id="${id}" ${ok?'':'disabled'}>${eq?'✓ ÉQUIPÉ':ok?'ÉQUIPER':'🔒'}</button>`) }).join('')
     const cc=Object.entries(CHARS).map(([id,c])=>{const ok=guestMode()?owned('character',id,p):cloudOwned('character',id),eq=selected.character===id;return card(`<div class="emoji">${c.emoji}</div><h3>${c.name}</h3><p class="muted">${ok?'Débloqué':'🔒 Verrouillé'}</p><button data-equip-type="character" data-equip-id="${id}" ${ok?'':'disabled'}>${eq?'✓ ÉQUIPÉ':ok?'ÉQUIPER':'🔒'}</button>`) }).join('')
-    const oc=Object.entries(OBS).map(([id,o])=>{const ok=guestMode()?owned('obstacle',id,p):cloudOwned('obstacle',id),eq=selected.obstacle===id;return card(`<div class="emoji">${o.emoji}</div><h3>${o.name}</h3><p class="muted">${ok?'Débloqué':'🔒 Verrouillé'}</p><button data-equip-type="obstacle" data-equip-id="${id}" ${ok?'':'disabled'}>${eq?'✓ ÉQUIPÉ':ok?'ÉQUIPER':'🔒'}</button>`) }).join('')
-    root.innerHTML=`<div class="custom-section"><h3>🌍 MONDES</h3><p class="muted">Tous les styles de monde disponibles dans les packs.</p><div class="grid">${wc}</div></div><div class="custom-section"><h3>🧑 PERSONNAGES</h3><p class="muted">Tous les personnages disponibles dans les packs.</p><div class="grid">${cc}</div></div><div class="custom-section"><h3>☠️ STYLES D'OBSTACLES</h3><p class="muted">Tous les styles d’obstacles disponibles dans les packs.</p><div class="grid">${oc}</div></div>`
+    const coinCards=Object.entries(COINS).map(([id,o])=>{const ok=guestMode()?owned('coin',id,p):cloudOwned('coin',id),eq=selected.coin===id;return card(`<div class="emoji">${o.emoji}</div><h3>${o.name}</h3><p class="muted">${ok?'Débloqué':'🔒 Verrouillé'}</p><button data-equip-type="coin" data-equip-id="${id}" ${ok?'':'disabled'}>${eq?'✓ ÉQUIPÉ':ok?'ÉQUIPER':'🔒'}</button>`) }).join('')
+    root.innerHTML=`<div class="custom-section"><h3>🌍 MONDES</h3><p class="muted">Tous les styles de monde disponibles dans les packs.</p><div class="grid">${wc}</div></div><div class="custom-section"><h3>🧑 PERSONNAGES</h3><p class="muted">Tous les personnages disponibles dans les packs.</p><div class="grid">${cc}</div></div><div class="custom-section"><h3>🪙 PIÈCES</h3><p class="muted">Tous les styles de pièces disponibles dans le pack pièces.</p><div class="grid">${coinCards}</div></div>`
   }
   function setup(){
     document.querySelector('#tabs button[data-tab="pack"]')?.remove();$('pack')?.remove()
