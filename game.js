@@ -383,7 +383,7 @@
   if (!bonusTimer) {
     bonusTimer = document.createElement("div")
     bonusTimer.id = "irBonusTimer"
-    bonusTimer.style.cssText = "position:fixed;left:16px;top:64px;z-index:2147483646;display:none;padding:7px 14px;border:2px solid rgba(0,229,255,.8);border-radius:12px;background:rgba(2,4,10,.94);color:#fff;font:900 18px Orbitron,Inter,sans-serif;box-shadow:0 0 16px rgba(0,229,255,.35);pointer-events:none;text-align:center"
+    bonusTimer.style.cssText = "position:fixed;left:16px;top:64px;z-index:2147483646;display:none;padding:7px 14px;border:2px solid rgba(0,229,255,.8);border-radius:12px;background:rgba(2,4,10,.94);color:#fff;font:900 18px Orbitron,Inter,sans-serif;box-shadow:0 0 16px rgba(0,229,255,.35);pointer-events:none;text-align:center;line-height:1.35;white-space:pre-line"
     document.body.appendChild(bonusTimer)
   }
 
@@ -396,38 +396,58 @@
       return
     }
 
-    const active = G.shield === true
+    const activeShield = G.shield === true
 
-    if (active && !wasShield) {
+    if (activeShield && !wasShield) {
       shieldUntil = Date.now() + 5000
     }
 
-    if (active && shieldUntil > 0) {
-      const remaining = Math.max(0, (shieldUntil - Date.now()) / 1000)
-      G.shieldT = remaining
-      if (remaining <= 0) {
+    if (activeShield && shieldUntil > 0) {
+      const shieldRemaining = Math.max(0, (shieldUntil - Date.now()) / 1000)
+      G.shieldT = shieldRemaining
+      if (shieldRemaining <= 0) {
         G.shield = false
         G.shieldT = 0
         shieldUntil = 0
       }
-    } else if (!active) {
+    } else if (!activeShield) {
       shieldUntil = 0
       G.shieldT = 0
     }
 
     wasShield = G.shield === true
 
-    if (!wasShield || shieldUntil <= 0) {
+    const timers = []
+    if (wasShield && shieldUntil > 0) {
+      timers.push("🛡️ " + Math.max(0, (shieldUntil - Date.now()) / 1000).toFixed(1) + "s")
+    }
+    if (Number(G.jumpBoostT || 0) > 0) {
+      timers.push("🚀 " + Number(G.jumpBoostT).toFixed(1) + "s")
+    }
+    if (Number(G.coinBoostT || 0) > 0) {
+      timers.push("🪙 " + Number(G.coinBoostT).toFixed(1) + "s")
+    }
+    if (Number(G.jetpackT || 0) > 0) {
+      timers.push("🛩️ " + Number(G.jetpackT).toFixed(1) + "s")
+    }
+    if (Number(G.scoreDoubleT || 0) > 0) {
+      timers.push("🏆 " + Number(G.scoreDoubleT).toFixed(1) + "s")
+    }
+    if (Number(G.magnetT || 0) > 0) {
+      timers.push("🧲 " + Number(G.magnetT).toFixed(1) + "s")
+    }
+
+    if (!timers.length) {
       bonusTimer.style.display = "none"
       return
     }
 
-    const remaining = Math.max(0, (shieldUntil - Date.now()) / 1000)
-    bonusTimer.textContent = "🛡️ " + remaining.toFixed(1) + "s"
+    bonusTimer.textContent = timers.join("\\n")
     bonusTimer.style.display = "block"
   }, 50)
 })()
 `;
+
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
