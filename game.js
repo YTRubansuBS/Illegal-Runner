@@ -15,11 +15,6 @@
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
       code = code.replace('const G = {', 'const G = window.__IR_G = {')
-      code = code.replace('const WORLD_IDS = Object.keys(WORLDS)', `const CUSTOM_WORLD_STYLES = {
-        neon:["#18004a","#05000d","#ff00e5","#07000f","#8a00ff","#00e5ff"],ocean:["#003b5c","#00131f","#00d9ff","#001923","#008cff","#00b8ff"],sky:["#1b5cff","#07142d","#7df9ff","#071b33","#4da6ff","#8fe9ff"],sunset:["#5b164f","#16051d","#ff7b39","#190716","#ff3b8d","#ff9f43"],jungle:["#064d32","#02130c","#54ffc1","#031b11","#0e7a4d","#20c997"],candy:["#5a164e","#16051a","#ff5ad9","#1b0718","#ff9de2","#ff8bd8"],lava:["#651400","#170400","#ff4d00","#210600","#ff7b00","#ffcf4a"],moon:["#10162e","#02030a","#9da8ff","#060812","#28345f","#7788ff"],storm:["#202c49","#060913","#7aa7ff","#080d18","#344e7a","#8faeff"],cyber:["#001b2e","#00060c","#00e5ff","#030b12","#00ff9d","#00b8ff"],crystal:["#30145f","#080316","#d78bff","#0b0415","#743dba","#c77dff"],toxic:["#163b00","#050d00","#b6ff00","#081500","#4e8500","#8dff3d"],void:["#08000f","#000000","#b400ff","#030006","#300044","#8a00ff"],aurora:["#003b3b","#020a13","#54ffc1","#03151a","#145c67","#7dffd9"],matrix:["#003d18","#000a04","#39ff14","#001408","#08752d","#22ff44"],rainbow:["#302060","#090613","#ffffff","#0d0718","#ff4da6","#8fe9ff"],galaxy:["#26104f","#03000c","#c56cff","#09031b","#5a27a0","#a14dff"],temple:["#4a3410","#120c03","#ffd84a","#1b1005","#80652a","#ffe58a"],castle:["#17233d","#040711","#9bbcff","#070b14","#30466f","#b9d0ff"],volcanic:["#4a0b08","#100101","#ff3b20","#160302","#7a1710","#ff7a45"],quantum:["#10204d","#02040d","#00e5ff","#05091a","#284e9a","#8d7dff"],dream:["#4d1d59","#100516","#ff9de2","#16081b","#8f4ca1","#ffd1f0"],glitch:["#111111","#000000","#39ff14","#080808","#ff00e5","#00e5ff"],dragon:["#3a100b","#090101","#ff4d3d","#120202","#7b2117","#ff9d4d"],portal:["#001f3f","#00050d","#7d5cff","#030b16","#173d75","#b08cff"],cosmic:["#31105b","#04000c","#ff66e8","#080215","#6628a0","#b66cff"],secret:["#062c38","#05000f","#00e5ff","#070714","#ff00c8","#ffffff"]
-      };
-      for(const [id,v] of Object.entries(CUSTOM_WORLD_STYLES)) WORLDS[id]={emoji:"🌌",name:id.toUpperCase(),desc:"Monde "+id.toUpperCase(),unlock:1,sky:[v[0],v[1]],accent:v[2],ground:v[3],coin:v[5],far:v[4],mid:v[4]};
-      const WORLD_IDS = Object.keys(WORLDS)`)
       code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
           if (e.detail?.selected_background && typeof G !== 'undefined' && G.world) G.world = WORLDS[e.detail.selected_background] || G.world
@@ -635,44 +630,6 @@
 
   /* ============================================================
      GAME ENGINE`);
-      // Apply the equipped collection items to the actual game renderer.
-      code = code.replace('  function drawPlayer(ctx, w) {', `  function drawPlayer(ctx, w) {
-    const p = G.player
-    if (G.dashT > 0) {
-      for (let i = 1; i <= 5; i++) {
-        ctx.globalAlpha = 0.12 * (6 - i)
-        ctx.fillStyle = w.accent
-        rr(ctx, p.x - i * 16, p.y + 8, p.w, p.h - 12, 12); ctx.fill()
-      }
-      ctx.globalAlpha = 1
-    }
-    ctx.save()
-    ctx.translate(p.x + p.w / 2, p.y + p.h)
-    const sy = clamp(p.sy, 0.6, 1.25)
-    ctx.scale(1 / Math.sqrt(sy), sy)
-    ctx.translate(-(p.w / 2), -p.h)
-    if (p.inv > 0 && Math.floor(p.inv * 12) % 2) ctx.globalAlpha = 0.35
-    if (G.shield) {
-      ctx.strokeStyle = "#54ffc1"; ctx.lineWidth = 3; ctx.shadowBlur = 18; ctx.shadowColor = "#54ffc1"
-      ctx.beginPath(); ctx.arc(p.w / 2, p.h / 2, 44, 0, 7); ctx.stroke(); ctx.shadowBlur = 0
-    }
-    const charId = profile.selected_character || "runner"
-    const icon = ({runner:"🧑",ninja:"🥷",robot:"🤖",ghost:"👻",cyber:"🦾",pilot:"🧑‍✈️",soldier:"🪖",wizard:"🧙",astronaut:"🧑‍🚀",skater:"🛹",samurai:"👺",pirate:"🏴‍☠️",detective:"🕵️",vampire:"🧛",zombie:"🧟",alien:"👽",king:"🤴",queen:"👸",knight:"🛡️",racer:"🏎️",dragon:"🐉",phoenix:"🔥",shadow:"🌑",thunder:"⚡",ice:"❄️",flame:"🔥",cosmic:"🌌",cyborg:"🤖",reaper:"💀",angel:"😇",demon:"😈",time:"⏳",void:"🕳️",secret:"👁️"})[charId] || "🧑"
-    ctx.font = "48px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-    ctx.shadowBlur = 18; ctx.shadowColor = w.accent
-    ctx.fillText(icon, p.w / 2, p.h / 2)
-    ctx.shadowBlur = 0
-    ctx.restore()
-    if (G.level) $("progressBar").style.width = clamp((G.dist / G.goal) * 100, 0, 100) + "%"
-  }`);
-      const coinDraw = `      const coinId = profile.selected_coin || "gold"
-      const coinIcon = ({gold:"🪙",silver:"🥈",bronze:"🥉",blue:"🔵",green:"🟢",red:"🔴",pink:"🩷",orange:"🟠",purple:"🟣",white:"⚪",diamond:"💎",emerald:"💚",ruby:"❤️",sapphire:"🔷",amethyst:"🟪",topaz:"🔶",pearl:"🦪",crystal:"🔮",neon:"💠",star:"⭐",moon:"🌙",sun:"☀️",fire:"🔥",ice:"❄️",thunder:"⚡",rainbow:"🌈",galaxy:"🌌",cosmic:"☄️",void:"🕳️",crown:"👑",dragon:"🐉",secret:"🔐",glitch:"👾",infinite:"♾️"})[coinId] || "🪙"
-      ctx.save(); ctx.font = "28px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.shadowBlur = 14; ctx.shadowColor = w.coin; ctx.fillText(coinIcon, c.x, c.y); ctx.restore()`
-      const coinStart = '      ctx.save(); ctx.shadowBlur = 16; ctx.shadowColor = w.coin; ctx.fillStyle = w.coin'
-      const coinEnd = '      ctx.restore()'
-      const ci = code.indexOf(coinStart)
-      const ce = ci >= 0 ? code.indexOf(coinEnd, ci) : -1
-      if (ci >= 0 && ce >= 0) code = code.slice(0, ci) + coinDraw + "\n" + code.slice(ce + coinEnd.length)
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
