@@ -237,7 +237,20 @@
       code = replaceBetween(code, "  function renderUpgrades() {", "  function renderShop() {", `  function renderUpgrades() {
     const costFor = (v) => [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
     const cards = UPGRADES.map(([id, em, n, max, desc]) => {
-      const v = Number(profile[i      code = replaceBetween(code, "  function buyUpgrade(id) {", "  function freePack() {", `  function buyUpgrade(id) {
+      const v = Number(profile[id + "_level"] || 1)
+      const cost = costFor(v)
+      const maxed = v >= max
+      const duration = id === "bonus" ? (5 + (v - 1) * 2) : 0
+      return '<div class="card"><div class="emoji">' + em + '</div><h3>' + n + '</h3><p class="muted">' + desc + '</p>' +
+        '<p>Niveau ' + v + '/' + max + '</p>' +
+        (id === "bonus" ? '<p>⏱️ Durée : <b>' + duration + 's</b></p>' : '') +
+        '<div class="progress"><i style="width:' + ((v / max) * 100) + '%"></i></div>' +
+        '<button data-up="' + id + '" ' + (maxed ? 'disabled' : '') + '>' + (maxed ? 'MAX' : '⚡ AMÉLIORER · 🪙 ' + cost) + '</button></div>'
+    }).join("")
+    $("upgradeGrid").innerHTML = cards
+  }
+`)
+      code = replaceBetween(code, "  function buyUpgrade(id) {", "  function freePack() {", `  function buyUpgrade(id) {
     const entry = UPGRADES.find((u) => u[0] === id)
     if (!entry) return
     const max = entry[3]
