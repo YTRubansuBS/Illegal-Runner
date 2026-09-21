@@ -149,15 +149,20 @@
   const packLabel=type=>type==='world'?'PACK MONDE':type==='character'?'PACK PERSONNAGE':'PACK PIÈCES'
   const displayCollection=(type)=>{
     const uid=collectionUid(), data=loadCollection(uid,type), cards=rarityCards(type)
+    const current=type==='world'?(localProfile().selected_background||'city'):type==='character'?(localProfile().selected_character||'runner'):type==='coin'?(guestMode()?(localProfile().selected_coin||'gold'):getSelectedCloudCoin(cloudUser?.id||'guest')):''
     return RARITY_ORDER.map(r=>{
       const list=cards.filter(x=>x.rarity===r)
-      return '<div class="custom-section"><h3>'+RARITIES[r].icon+' '+RARITIES[r].name+' <span class="muted">— '+RARITIES[r].chance+'%</span></h3><div class="grid">'+list.map(x=>{
-        const n=Number(data[x.id]||0)
-        const current=type==='world'?(localProfile().selected_background||'city'):type==='character'?(localProfile().selected_character||'runner'):type==='coin'?(guestMode()?(localProfile().selected_coin||'gold'):getSelectedCloudCoin(cloudUser?.id||'guest')):''
-        return '<div class="card" style="'+rarityStyle(r)+'"><div class="emoji">'+x.emoji+'</div><h3>'+x.name+'</h3><p class="muted">'+(n?'x'+n:'🔒 Pas encore obtenu')+'</p>'+(n?'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center"><button type="button" '+(current===x.id?'disabled':'data-equip-type="'+type+'" data-equip-id="'+x.id+'"')+'>'+((current===x.id)?'ÉQUIPÉ':'ÉQUIPER')+'</button><button type="button" data-sell-type="'+type+'" data-sell-id="'+x.id+'">VENDRE +'+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</button></div>':'')+'</div>'
+      return '<div class="custom-section ir-rarity-section" style="margin:18px 0;padding:14px;border-radius:16px;'+rarityStyle(r)+'"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px"><h3 style="margin:0">'+RARITIES[r].icon+' '+RARITIES[r].name+'</h3><span class="muted" style="font-size:12px">'+RARITIES[r].chance+'% · vente '+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</span></div><div class="grid">'+list.map(x=>{
+        const n=Number(data[x.id]||0), equipped=current===x.id
+        const action=equipped
+          ? '<button type="button" disabled style="opacity:1;cursor:default;border:1px solid #19ff88;background:rgba(25,255,136,.12);color:#19ff88;font-weight:900">✓ ÉQUIPÉ</button>'
+          : '<button type="button" data-equip-type="'+type+'" data-equip-id="'+x.id+'" style="font-weight:900">ÉQUIPER</button>'
+        const sell=n?'<button type="button" data-sell-type="'+type+'" data-sell-id="'+x.id+'">VENDRE +'+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</button>':''
+        return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:hidden;min-height:170px"><div style="position:absolute;top:8px;right:8px;font-size:11px;font-weight:900;opacity:.8">'+(n?'x'+n:'🔒')+'</div><div class="emoji" style="font-size:42px;margin-top:8px">'+x.emoji+'</div><h3 style="margin:6px 0">'+x.name+'</h3><p class="muted" style="margin:4px 0 12px">'+(n?RARITIES[r].name:'Pas encore obtenu')+'</p>'+(n?'<div style="display:flex;flex-direction:column;gap:6px">'+action+sell+'</div>':'')+'</div>'
       }).join('')+'</div></div>'
     }).join('')
   }
+
 
   async function buyPack(type){
     if(!['world','character','coin'].includes(type)||buying)return
@@ -212,13 +217,12 @@
     const root=$('customizerRoot');if(!root)return
     await getCloud()
     const p=localProfile()
-    const uid=collectionUid()
     const selected={world:p.selected_background||'city',character:p.selected_character||'runner',coin:guestMode()?(p.selected_coin||'gold'):getSelectedCloudCoin(cloudUser?.id||'guest')}
-    root.innerHTML='<div style="padding:12px 0"><h2>🎨 PERSONNALISER</h2><p class="muted">Les objets des packs sont classés par rareté. Plus le pourcentage est faible, plus l\'objet est rare.</p></div>'+
-      '<div class="custom-section"><h3>📊 RARETÉS</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">'+RARITY_ORDER.map(r=>'<div style="padding:10px;border-radius:10px;'+rarityStyle(r)+'"><b>'+RARITIES[r].icon+' '+RARITIES[r].name+'</b><br><span class="muted">'+RARITIES[r].chance+'% de chance</span><br><span class="muted">Vente : '+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</span></div>').join('')+'</div></div>'+
-      '<div class="custom-section"><h3>🌍 MONDE</h3><p class="muted">Sélection actuelle : '+selected.world+'</p><div class="grid">'+displayCollection('world')+'</div></div>'+
-      '<div class="custom-section"><h3>🧑 PERSONNAGES</h3><p class="muted">Sélection actuelle : '+selected.character+'</p><div class="grid">'+displayCollection('character')+'</div></div>'+
-      '<div class="custom-section"><h3>🪙 PIÈCES</h3><p class="muted">Sélection actuelle : '+selected.coin+'</p><div class="grid">'+displayCollection('coin')+'</div></div>'
+    root.innerHTML='<div style="padding:18px 0 8px"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><h2 style="margin:0">🎨 PERSONNALISATION</h2><p class="muted" style="margin:6px 0">Équipe tes objets débloqués et construis ton style Illegal Runner.</p></div><div style="padding:8px 12px;border:1px solid #00e5ff;border-radius:12px;background:rgba(0,229,255,.08);font-weight:900">⚡ '+[selected.world,selected.character,selected.coin].join(' · ')+'</div></div></div>'+
+      '<div class="custom-section" style="padding:14px;border-radius:16px;border:1px solid rgba(0,229,255,.35);background:linear-gradient(135deg,rgba(0,229,255,.07),rgba(5,8,15,.9))"><h3 style="margin-top:0">📊 RARETÉS</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px">'+RARITY_ORDER.map(r=>'<div style="padding:10px;border-radius:11px;'+rarityStyle(r)+'"><b>'+RARITIES[r].icon+' '+RARITIES[r].name+'</b><br><span class="muted">'+RARITIES[r].chance+'% · '+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</span></div>').join('')+'</div></div>'+
+      '<div class="custom-section"><h3>🌍 MONDES</h3>'+displayCollection('world')+'</div>'+
+      '<div class="custom-section"><h3>🧑 PERSONNAGES</h3>'+displayCollection('character')+'</div>'+
+      '<div class="custom-section"><h3>🪙 PIÈCES</h3>'+displayCollection('coin')+'</div>'
   }
 
 
