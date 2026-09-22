@@ -562,6 +562,8 @@ alter table public.duel_sessions add column if not exists action_until_b timesta
 create index if not exists duel_requests_participants_idx on public.duel_requests(sender_id,receiver_id,status,created_at desc);
 create index if not exists duel_sessions_participants_idx on public.duel_sessions(user_a,user_b,status,updated_at desc);
 
+drop function if exists public.duel_tick(uuid,bigint,integer);
+
 create or replace function public.duel_create_request(p_friend_id uuid)
 returns uuid language plpgsql security definer set search_path=public,auth set row_security=off as $$
 declare rid uuid;
@@ -885,7 +887,7 @@ revoke all on function public.duel_poll_requests() from public,anon;
 revoke all on function public.duel_set_choice(uuid,text) from public,anon;
 revoke all on function public.duel_set_bet(uuid,bigint) from public,anon;
 revoke all on function public.duel_set_final_vote(uuid,text) from public,anon;
-revoke all on function public.duel_tick(uuid,bigint,integer) from public,anon;
+revoke all on function public.duel_tick(uuid,bigint,integer,double precision,text) from public,anon;
 revoke all on function public.duel_leave(uuid) from public,anon;
 
 grant execute on function public.duel_create_request(uuid) to authenticated;
@@ -895,7 +897,7 @@ grant execute on function public.duel_poll_requests() to authenticated;
 grant execute on function public.duel_set_choice(uuid,text) to authenticated;
 grant execute on function public.duel_set_bet(uuid,bigint) to authenticated;
 grant execute on function public.duel_set_final_vote(uuid,text) to authenticated;
-grant execute on function public.duel_tick(uuid,bigint,integer) to authenticated;
+grant execute on function public.duel_tick(uuid,bigint,integer,double precision,text) to authenticated;
 grant execute on function public.duel_leave(uuid) to authenticated;
 
 NOTIFY pgrst, 'reload schema';
