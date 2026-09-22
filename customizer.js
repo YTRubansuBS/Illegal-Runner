@@ -93,9 +93,9 @@
     uncommon:{name:'PEU COMMUN',chance:25,sell:250,icon:'🟢'},
     rare:{name:'RARE',chance:15,sell:500,icon:'🔵'},
     epic:{name:'ÉPIQUE',chance:7,sell:1000,icon:'🟣'},
-    legendary:{name:'LÉGENDAIRE',chance:1.5,sell:5000,icon:'🟠'},
-    mythic:{name:'MYTHIQUE',chance:1,sell:7500,icon:'🔴'},
-    secret:{name:'SECRET',chance:0.5,sell:10000,icon:'🌈'}
+    legendary:{name:'LÉGENDAIRE',chance:2,sell:5000,icon:'🟠'},
+    mythic:{name:'MYTHIQUE',chance:0.9,sell:7500,icon:'🔴'},
+    secret:{name:'SECRET',chance:0.1,sell:10000,icon:'🌈'}
   }
   const RARITY_ORDER=['common','uncommon','rare','epic','legendary','mythic','secret']
   const PACK_CATALOG={
@@ -115,8 +115,44 @@
       ['gold','🪙','GOLD'],['silver','🥈','SILVER'],['bronze','🥉','BRONZE'],['blue','🔵','BLUE'],['green','🟢','GREEN'],['red','🔴','RED'],['pink','🩷','PINK'],['orange','🟠','ORANGE'],['purple','🟣','PURPLE'],['white','⚪','WHITE'],
       ['diamond','💎','DIAMOND'],['emerald','💚','EMERALD'],['ruby','❤️','RUBY'],['sapphire','🔷','SAPPHIRE'],['amethyst','🟪','AMETHYST'],['topaz','🔶','TOPAZ'],['pearl','🦪','PEARL'],['crystal','🔮','CRYSTAL'],['neon','💠','NEON'],['star','⭐','STAR'],
       ['moon','🌙','MOON'],['sun','☀️','SUN'],['fire','🔥','FIRE'],['ice','❄️','ICE'],['thunder','⚡','THUNDER'],['rainbow','🌈','RAINBOW'],['galaxy','🌌','GALAXY'],['cosmic','☄️','COSMIC'],['void','🕳️','VOID'],['crown','👑','CROWN'],
-      ['dragon','🐉','DRAGON'],['secret','🔐','SECRET'],['glitch','👾','GLITCH'],['infinite','♾️','INFINITE']
+      ['dragon','🐉','DRAGON'],['glitch','👾','GLITCH'],['infinite','♾️','INFINITE'],['secret','🔐','SECRET']
     ]
+  }
+  const COIN_DESCRIPTIONS = {
+    gold:'Une pièce dorée classique avec une surface métallique brillante. Un petit reflet lumineux se déplace légèrement dessus.',
+    silver:'Une pièce argentée avec un métal clair et brillant. Elle possède de petits reflets blancs lorsqu’elle tourne.',
+    bronze:'Une pièce en bronze avec une texture métallique légèrement sombre et quelques reflets chauds.',
+    blue:'Une pièce bleue simple avec une surface brillante. Un petit reflet bleu apparaît lorsqu’elle tourne.',
+    green:'Une pièce verte avec une finition légèrement brillante et un petit reflet lumineux sur son contour.',
+    red:'Une pièce rouge métallique avec de légers reflets lumineux sur les bords.',
+    pink:'Une pièce rose brillante avec une petite lumière qui traverse sa surface lorsqu’elle tourne.',
+    orange:'Une pièce orange métallique avec des reflets chauds et une petite brillance sur son contour.',
+    purple:'Une pièce violette brillante avec une légère aura colorée autour d’elle.',
+    white:'Une pièce blanche argentée avec une surface très propre et brillante.',
+    diamond:'Une pièce recouverte de petits motifs de diamant. Elle possède plusieurs reflets lumineux qui changent lorsqu’elle tourne.',
+    emerald:'Une pièce vert émeraude avec une texture ressemblant à une pierre précieuse. De petites lumières vertes apparaissent sur sa surface.',
+    ruby:'Une pièce rouge rubis extrêmement brillante. Des reflets rouges profonds apparaissent à différents endroits de la pièce.',
+    sapphire:'Une pièce bleu saphir avec plusieurs facettes cristallines. Elle réfléchit fortement la lumière.',
+    amethyst:'Une pièce violette composée de cristaux d’améthyste. De petites particules violettes flottent autour d’elle.',
+    topaz:'Une pièce orange dorée avec une apparence de pierre précieuse. Elle possède plusieurs facettes lumineuses.',
+    pearl:'Une pièce blanche nacrée avec des reflets doux qui changent entre plusieurs nuances claires lorsqu’elle tourne.',
+    crystal:'Une pièce faite d’un cristal transparent et coloré. De petits éclats lumineux sont visibles à l’intérieur.',
+    neon:'Une pièce entourée d’un contour néon très lumineux. Sa couleur pulse doucement et laisse une petite traînée lumineuse lorsqu’elle tourne.',
+    star:'Une pièce avec un motif d’étoile lumineuse au centre. De petites étoiles apparaissent brièvement autour d’elle.',
+    moon:'Une pièce argentée et bleutée avec un croissant de lune gravé au centre. Une légère poussière d’étoiles l’entoure.',
+    sun:'Une pièce dorée extrêmement lumineuse avec un symbole de soleil au centre. De petits rayons lumineux apparaissent autour d’elle.',
+    fire:'Une pièce rouge-orange entourée de petites flammes animées. Des braises s’en échappent lorsqu’elle tourne.',
+    ice:'Une pièce bleu glacé recouverte de motifs de glace. Une petite brume froide et quelques cristaux apparaissent autour d’elle.',
+    thunder:'Une pièce métallique parcourue d’électricité. De petits éclairs tournent autour de son contour et apparaissent régulièrement.',
+    rainbow:'Une pièce multicolore dont les couleurs changent progressivement. Un arc-en-ciel lumineux traverse sa surface en permanence.',
+    galaxy:'Une pièce contenant une miniature de galaxie à l’intérieur. Des étoiles et des nébuleuses bougent lentement dans sa surface.',
+    cosmic:'Une pièce cosmique extrêmement brillante avec des étoiles, des comètes et des particules spatiales qui tournent autour d’elle.',
+    void:'Une pièce noire mystérieuse qui semble absorber la lumière. Son contour est légèrement déformé et de petits fragments disparaissent autour d’elle.',
+    crown:'Une pièce royale en or massif avec une couronne brillante au centre. Des particules dorées et de petits rayons lumineux apparaissent autour d’elle.',
+    dragon:'Une pièce légendaire avec un dragon gravé dessus. Les yeux du dragon brillent et une petite aura de feu entoure la pièce.',
+    glitch:'Une pièce complètement corrompue avec des morceaux qui se décalent, des couleurs qui changent et des effets de glitch. Elle peut brièvement disparaître puis réapparaître.',
+    infinite:'La pièce ultime et quasiment impossible à obtenir. Son apparence mélange plusieurs effets des autres pièces : galaxie, néon, étoiles, éclairs, flammes et énergie cosmique. Son symbole ∞ apparaît au centre et tourne lentement. Des particules de toutes les couleurs gravitent autour d’elle et son apparence change constamment. Lorsqu’elle apparaît, elle produit une énorme aura lumineuse et un effet spécial unique.',
+    secret:'Une pièce extrêmement mystérieuse dont l’apparence reste inconnue. Elle possède une énergie étrange, des symboles mystérieux, des glitches, des distorsions et des particules qui changent constamment. Lorsqu’elle apparaît, l’environnement autour d’elle semble légèrement se déformer.'
   }
   const rarityForIndex=i=>i<10?'common':i<18?'uncommon':i<24?'rare':i<28?'epic':i<31?'legendary':i<33?'mythic':'secret'
   const packKey=type=>type==='coin'?'coin':type
@@ -131,7 +167,7 @@
   const saveCollection=(uid,type,obj)=>{try{localStorage.setItem(collectionKey(uid,type),JSON.stringify(obj))}catch{}}
   const collectionUid=()=>guestMode()?'guest':(cloudUser?.id||'guest')
   const weightedRarity=()=>{
-    const r=Math.random()*100, cuts=[[50,'common'],[25,'uncommon'],[15,'rare'],[7,'epic'],[1.5,'legendary'],[1,'mythic'],[0.5,'secret']]
+    const r=Math.random()*100, cuts=[[50,'common'],[25,'uncommon'],[15,'rare'],[7,'epic'],[2,'legendary'],[0.9,'mythic'],[0.1,'secret']]
     let n=0
     for(const [w,id] of cuts){n+=w;if(r<n)return id}
     return 'secret'
@@ -158,7 +194,8 @@
           ? '<button type="button" disabled aria-label="Objet actuellement équipé" style="width:100%;opacity:1;cursor:default;border:2px solid #19ff88;background:linear-gradient(180deg,rgba(25,255,136,.22),rgba(25,255,136,.08));color:#19ff88;font-weight:1000;letter-spacing:.5px;box-shadow:0 0 14px rgba(25,255,136,.22)">✓ ÉQUIPÉ</button>'
           : (n ? '<button type="button" data-equip-type="'+type+'" data-equip-id="'+x.id+'" style="width:100%;font-weight:1000;letter-spacing:.5px">ÉQUIPER</button>' : '<button type="button" disabled style="width:100%;opacity:.38;cursor:not-allowed">🔒 VERROUILLÉ</button>')
         const sell=n?'<button type="button" data-sell-type="'+type+'" data-sell-id="'+x.id+'">VENDRE +'+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</button>':''
-        return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:hidden;min-height:170px"><div style="position:absolute;top:8px;right:8px;font-size:11px;font-weight:900;opacity:.8">'+(n?'x'+n:'🔒')+'</div><div class="emoji" style="font-size:42px;margin-top:8px">'+x.emoji+'</div><h3 style="margin:6px 0">'+x.name+'</h3><p class="muted" style="margin:4px 0 12px">'+(n?RARITIES[r].name:'Pas encore obtenu')+'</p>'+(n?'<div style="display:flex;flex-direction:column;gap:6px">'+action+sell+'</div>':'')+'</div>'
+        const desc=x.rarity && type==='coin' ? (COIN_DESCRIPTIONS[x.id]||'') : '';
+        return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:hidden;min-height:205px"><div style="position:absolute;top:8px;right:8px;font-size:11px;font-weight:900;opacity:.8">'+(n?'x'+n:'🔒')+'</div><div class="emoji" style="font-size:42px;margin-top:8px">'+x.emoji+'</div><h3 style="margin:6px 0">'+x.name+'</h3><p class="muted" style="margin:4px 0 8px">'+(n?RARITIES[r].name:'Pas encore obtenu')+'</p>'+(desc?'<p class="muted" style="font-size:12px;line-height:1.45;margin:0 0 12px">'+desc+'</p>':'')+(n?'<div style="display:flex;flex-direction:column;gap:6px">'+action+sell+'</div>':'')+'</div>'
       }).join('')+'</div></div>'
     }).join('')
   }
@@ -176,7 +213,7 @@
         p.coins-=cost;saveLocal(p);refreshCoins(p.coins);notifyProfile(p)
         const data=loadCollection('guest',type);data[item.id]=Number(data[item.id]||0)+1;saveCollection('guest',type,data)
         const count=data[item.id]
-        showPackResult('<div style="font-size:38px">'+item.emoji+'</div><h3>'+item.name+'</h3><div style="font-weight:900;margin:8px 0">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' — '+RARITIES[rarity].chance+'%</div><p class="muted">'+(count>1?'DOUBLON → x'+count:'NOUVEAU !')+'</p>')
+        showPackResult('<div style="font-size:38px">'+item.emoji+'</div><h3>'+item.name+'</h3><div style="font-weight:900;margin:8px 0">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' — '+RARITIES[rarity].chance+'%</div>'+(type==='coin'?'<p class="muted" style="max-width:520px;margin:8px auto;line-height:1.5">'+(COIN_DESCRIPTIONS[item.id]||'')+'</p>':'')+'<p class="muted">'+(count>1?'DOUBLON → x'+count:'NOUVEAU !')+'</p>')
         toast('🎁 '+RARITIES[rarity].name+' !')
         renderCustomizer();return
       }
@@ -191,7 +228,7 @@
       refreshCoins(coins-cost);notifyProfile({coins:coins-cost})
       const data=loadCollection(user.id,type);data[item.id]=Number(data[item.id]||0)+1;saveCollection(user.id,type,data)
       const count=data[item.id]
-      showPackResult('<div style="font-size:38px">'+item.emoji+'</div><h3>'+item.name+'</h3><div style="font-weight:900;margin:8px 0">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' — '+RARITIES[rarity].chance+'%</div><p class="muted">'+(count>1?'DOUBLON → x'+count:'NOUVEAU !')+'</p>')
+      showPackResult('<div style="font-size:38px">'+item.emoji+'</div><h3>'+item.name+'</h3><div style="font-weight:900;margin:8px 0">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' — '+RARITIES[rarity].chance+'%</div>'+(type==='coin'?'<p class="muted" style="max-width:520px;margin:8px auto;line-height:1.5">'+(COIN_DESCRIPTIONS[item.id]||'')+'</p>':'')+'<p class="muted">'+(count>1?'DOUBLON → x'+count:'NOUVEAU !')+'</p>')
       toast('🎁 '+RARITIES[rarity].name+' !')
       renderCustomizer()
     }finally{buying=false}
