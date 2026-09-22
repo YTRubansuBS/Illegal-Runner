@@ -525,10 +525,34 @@ grant execute on function public.trade_send_message(uuid,text) to authenticated;
 grant execute on function public.trade_finalize(uuid) to authenticated;
 
 
--- ============================================================
--- AMIS — recherche / demandes sécurisées malgré la RLS
--- ============================================================
 
+-- Réparation des policies RLS de la table friends.
+alter table public.friends enable row level security;
+
+drop policy if exists friends_select on public.friends;
+drop policy if exists friends_insert on public.friends;
+drop policy if exists friends_update on public.friends;
+drop policy if exists friends_delete on public.friends;
+
+create policy friends_select on public.friends
+for select
+using (auth.uid() = user_id or auth.uid() = friend_id);
+
+create policy friends_insert on public.friends
+for insert
+with check (auth.uid() = user_id);
+
+create policy friends_update on public.friends
+for update
+using (auth.uid() = user_id or auth.uid() = friend_id)
+with check (auth.uid() = user_id or auth.uid() = friend_id);
+
+create policy friends_delete on public.friends
+for delete
+using (auth.uid() = user_id or auth.uid() = friend_id);
+
+
+-- Recherche robuste par pseudo, y compris si un profil manque encore.
 create or replace function public.friend_send_request(p_username text)
 returns jsonb
 language plpgsql
@@ -536,18 +560,40 @@ security definer
 set search_path=public
 as $$
 declare
+  wanted text := lower(btrim(coalesce(p_username,'')));
   target_id uuid;
+  target_username text;
   existing_row public.friends%rowtype;
   new_id bigint;
+  au jsonb;
 begin
   if auth.uid() is null then
     raise exception 'Not authenticated';
   end if;
 
-  select p.id into target_id
+  select p.id, p.username
+  into target_id, target_username
   from public.profiles p
-  where lower(trim(p.username)) = lower(trim(coalesce(p_username,'')))
+  where lower(btrim(p.username)) = wanted
   limit 1;
+
+  if target_id is null then
+    select u.id,
+           coalesce(u.raw_user_meta_data->>'username', split_part(u.email,'@',1))
+    into target_id, target_username
+    from auth.users u
+    where lower(btrim(coalesce(
+      u.raw_user_meta_data->>'username',
+      split_part(coalesce(u.email,''),'@',1)
+    ))) = wanted
+    limit 1;
+
+    if target_id is not null then
+      insert into public.profiles(id, username)
+      values(target_id, coalesce(target_username, wanted))
+      on conflict (id) do nothing;
+    end if;
+  end if;
 
   if target_id is null then raise exception 'PLAYER_NOT_FOUND'; end if;
   if target_id = auth.uid() then raise exception 'SELF_FRIEND'; end if;
@@ -606,7 +652,6 @@ set search_path=public
 as $$
 begin
   if auth.uid() is null then raise exception 'Not authenticated'; end if;
-
   if p_accept then
     update public.friends set status='accepted'
     where id=p_request_id and friend_id=auth.uid() and status='pending';
@@ -614,7 +659,6 @@ begin
     delete from public.friends
     where id=p_request_id and friend_id=auth.uid() and status='pending';
   end if;
-
   if not found then raise exception 'Friend request not found'; end if;
   return true;
 end;
@@ -643,3 +687,4 @@ grant execute on function public.friend_send_request(text) to authenticated;
 grant execute on function public.get_my_friends() to authenticated;
 grant execute on function public.friend_respond(bigint,boolean) to authenticated;
 grant execute on function public.friend_remove(bigint) to authenticated;
+
