@@ -581,7 +581,7 @@ language plpgsql
 security definer
 set search_path=public,auth
 set row_security=off
-AS $duelrespond$
+AS $
 declare
   r public.duel_requests%rowtype;
   sid uuid;
@@ -654,7 +654,7 @@ begin
 
   return sid;
 end;
-$duelrespond$;
+$;
 
 create or replace function public.duel_poll_requests()
 returns table(id uuid,sender_id uuid,receiver_id uuid,status text,created_at timestamptz,expires_at timestamptz,sender_username text,receiver_username text,session_id uuid)
