@@ -90,14 +90,27 @@ async function cancelRequest(silent){
   S.requestId=null;hide()
 }
 async function respondRequest(ok){
+  const requestId=S.requestId
+  const acceptBtn=document.getElementById('da')
+  const rejectBtn=document.getElementById('dr')
+  const closeBtn=document.getElementById('dx')
+  if(acceptBtn)acceptBtn.disabled=true
+  if(rejectBtn)rejectBtn.disabled=true
+  if(closeBtn)closeBtn.disabled=true
   try{
-    const sid=await rpc('duel_respond_request',{p_request_id:S.requestId,p_accept:ok})
+    const sid=await rpc('duel_respond_request',{p_request_id:requestId,p_accept:ok})
     if(!ok){S.requestId=null;hide();return}
+    if(!sid)throw new Error('La session 1V1 n’a pas pu être créée.')
     S.sessionId=sid
     const data=await getSession()
     S.requestId=null
     sessionGui(data)
-  }catch(e){alert('❌ '+(e.message||'Demande impossible'))}
+  }catch(e){
+    if(acceptBtn)acceptBtn.disabled=false
+    if(rejectBtn)rejectBtn.disabled=false
+    if(closeBtn)closeBtn.disabled=false
+    alert('❌ '+(e.message||'Demande impossible'))
+  }
 }
 function sessionGui(s){
   if(!s)return
