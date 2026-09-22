@@ -14,6 +14,21 @@ const css=document.createElement('style');css.textContent='#irTradeLayer{positio
 function close(){layer.style.display='none';S.requestId=null;S.sessionId=null;S.sig='';if(S.timer){clearInterval(S.timer);S.timer=null}}
 function show(x){layer.innerHTML=x;layer.style.display='flex'}
 async function rpc(n,a){const r=await sb.rpc(n,a);if(r.error)throw r.error;return r.data}
+async function getTradeRequests(){
+  if(!sb||!S.user)return[]
+  try{
+    const data=await rpc('trade_poll_requests')
+    if(Array.isArray(data))return data
+  }catch(_){}
+  const q=await sb.from('trade_requests')
+    .select('id,sender_id,receiver_id,status,created_at')
+    .or('sender_id.eq.'+S.user.id+',receiver_id.eq.'+S.user.id)
+    .order('created_at',{ascending:false})
+    .limit(50)
+  if(q.error)throw q.error
+  return q.data||[]
+}
+
 async function refreshUser(){if(!sb)return;const q=await sb.auth.getSession();const u=q.data?.session?.user||null;if(u?.id!==S.user?.id){S.user=u;if(u){for(const t of ['world','character','coin']){const d=read(u.id,t),rows=Object.entries(d).filter(([,v])=>Number(v)>0).map(([id,v])=>({user_id:u.id,item_type:map[t],item_id:id,quantity:Number(v)}));if(rows.length)await sb.from('inventory').upsert(rows,{onConflict:'user_id,item_type,item_id'})}}}}
 window.addEventListener('ir:collectionChanged',e=>{const d=e.detail;if(!S.user||d?.uid!==S.user.id||!map[d.type])return;const rows=Object.entries(d.data||{}).filter(([,v])=>Number(v)>0).map(([id,v])=>({user_id:S.user.id,item_type:map[d.type],item_id:id,quantity:Number(v)}));if(rows.length)sb.from('inventory').upsert(rows,{onConflict:'user_id,item_type,item_id'});for(const [id,v] of Object.entries(d.data||{}))if(Number(v)<=0)sb.from('inventory').delete().eq('user_id',S.user.id).eq('item_type',map[d.type]).eq('item_id',id)})
 function decorateFriends(){document.querySelectorAll('#friendList .friend[data-trade-friend-id]').forEach(el=>{const id=el.dataset.tradeFriendId;const sp=el.querySelector('span');const nm=(sp?.innerText||'').split('\n')[0].replace(/^👤\s*/,'').trim();if(nm)S.names[id]=nm;if(!el.querySelector('[data-trade-open]')){const b=document.createElement('button');b.type='button';b.dataset.tradeOpen=id;b.textContent='🔄 ÉCHANGE';el.appendChild(b)}})}
@@ -39,27 +54,24 @@ const otherCash=meA?s.offer_b_coins:s.offer_a_coins;const canConfirm=myOk&&other
 async function poll(){
   if(!S.user)return
   let rows=[]
-  try{
-    const data=await rpc('trade_poll_requests')
-    rows=Array.isArray(data)?data:[]
-  }catch(e){return}
+  try{ rows=await getTradeRequests() }catch(e){ return }
   const incoming=rows.find(x=>x.status==='pending'&&x.receiver_id===S.user.id)
   if(incoming&&!layer.matches(':visible')) requestView(incoming)
   if(S.requestId&&!S.sessionId){
     const current=rows.find(x=>x.id===S.requestId)
-    if(current?.status==='accepted'&&current.session_id){
-      S.sessionId=current.session_id
-      S.sig=''
-      await render()
+    if(current?.status==='accepted'){
+      let sid=current.session_id
+      if(!sid){
+        const z=await sb.from('trade_sessions').select('id').eq('request_id',S.requestId).maybeSingle()
+        sid=z.data?.id||null
+      }
+      if(sid){S.sessionId=sid;S.sig='';await render()}
     }else if(current&&['declined','cancelled'].includes(current.status)){
       alert(current.status==='declined'?'❌ La demande d’échange a été refusée.':'❌ La demande a été annulée.')
       close()
     }
   }
-  if(S.sessionId){
-    await render()
-    loadChat()
-  }
+  if(S.sessionId){await render();loadChat()}
 }
 
 document.addEventListener('click',e=>{
@@ -71,9 +83,9 @@ document.addEventListener('click',e=>{
     try{
       const id=await rpc('trade_create_request',{p_friend_id:b.dataset.tradeOpen})
       S.requestId=id
-      const rows=await rpc('trade_poll_requests')
+      const rows=await getTradeRequests()
       const req=(Array.isArray(rows)?rows:[]).find(x=>x.id===id)
-      if(req) requestView(req)
+      requestView(req||{id,sender_id:S.user.id,receiver_id:b.dataset.tradeOpen,status:'pending'})
     }catch(x){
       alert('❌ '+(x.message||'Demande impossible'))
     }
