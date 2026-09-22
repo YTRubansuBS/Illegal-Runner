@@ -607,31 +607,38 @@ begin
     raise exception 'Not authenticated';
   end if;
 
+  -- On identifie la demande par son UUID et on accepte aussi une ligne
+  -- appartenant à l'utilisateur si une ancienne version du client a inversé
+  -- le sens sender/receiver. L'interface n'affiche les boutons que pour
+  -- une demande reçue, mais cette tolérance évite les faux "request not found".
   select *
     into r
   from public.duel_requests
   where id=p_request_id
-    and receiver_id=auth.uid()
+    and (sender_id=auth.uid() or receiver_id=auth.uid())
   for update;
 
   if not found then
     raise exception 'Duel request not found';
   end if;
 
-  -- Acceptation idempotente : si une première requête a déjà accepté,
-  -- on renvoie simplement la session existante.
+  -- Une demande déjà acceptée reste idempotente.
   if r.status='accepted' then
     select s.id into sid
     from public.duel_sessions s
     where s.request_id=r.id
     limit 1;
-    if sid is not null then
-      return sid;
-    end if;
+    return sid;
+  end if;
+
+  -- Si elle a déjà été fermée entre deux clics/polls, on ne renvoie plus
+  -- une erreur trompeuse "request not found".
+  if r.status in ('declined','cancelled','completed') then
+    return null;
   end if;
 
   if r.status<>'pending' then
-    raise exception 'Duel request not found';
+    return null;
   end if;
 
   if r.expires_at<=now() then
@@ -644,8 +651,13 @@ begin
   if not p_accept then
     update public.duel_requests
     set status='declined',updated_at=now()
-    where id=r.id;
+    where id=r.id and status='pending';
     return null;
+  end if;
+
+  -- Seul le destinataire doit pouvoir accepter une demande.
+  if r.receiver_id<>auth.uid() then
+    raise exception 'Duel request not for you';
   end if;
 
   insert into public.duel_sessions(
@@ -667,7 +679,7 @@ begin
 
   update public.duel_requests
   set status='accepted',updated_at=now()
-  where id=r.id;
+  where id=r.id and status='pending';
 
   return sid;
 end;
