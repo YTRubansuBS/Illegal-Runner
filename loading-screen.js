@@ -30,6 +30,7 @@
 `
     document.head.appendChild(style);document.body.appendChild(overlay)
     list=overlay.querySelector('#irLoadSteps');bar=overlay.querySelector('#irLoadBar');title=overlay.querySelector('#irLoadTitle');status=overlay.querySelector('#irLoadStatus');render()
+    overlay.style.display='none';overlay.style.opacity='0';overlay.style.pointerEvents='none'
     if(engineReady&&!sessionLoading){overlay.style.display='none';overlay.style.opacity='0';overlay.style.pointerEvents='none'}
   }
   function render(){if(!list)return;list.innerHTML=steps.map(s=>{const st=s.state||'waiting';const t=st==='done'?'✓ CHARGÉ':st==='loading'?'… CHARGEMENT':st==='error'?'✕ ERREUR':'EN ATTENTE';return '<div class="ir-load-step" data-state="'+st+'"><span class="ico">'+s.icon+'</span><span class="name">'+s.label+'</span><span class="state">'+t+'</span></div>'}).join('');const n=steps.filter(s=>s.state==='done').length;if(bar)bar.style.width=Math.round(n/steps.length*100)+'%'}
