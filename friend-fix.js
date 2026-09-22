@@ -1,4 +1,4 @@
-/* ILLEGAL RUNNER — friends / RLS / exchange bridge */
+/* ILLEGAL RUNNER — friends / RLS fix */
 (() => {
   const $=id=>document.getElementById(id)
   const clean=v=>String(v||'').trim().replace(/[^a-zA-Z0-9_ -]/g,'').slice(0,20)
@@ -10,7 +10,8 @@
     const {data,error}=await sb.rpc('get_my_friends')
     if(error){box.innerHTML='<div class="card">⚠️ Exécute <b>friend-fix.sql</b> dans Supabase pour activer les amis.</div>';return}
     if(!data?.length){box.innerHTML='<div class="card">👥 Aucun ami pour le moment.</div>';return}
-    box.innerHTML=data.map(f=>`<div class="friend" data-trade-friend-id="${f.friend_id}" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap"><span style="flex:1;min-width:160px">👤 ${esc(f.username)}</span><b>🏆 ${Number(f.best_distance||0)}m</b><span class="muted">${esc(f.status)}</span><button type="button" data-ir-trade="${f.friend_id}" data-ir-name="${esc(f.username)}">🔄 ÉCHANGE</button></div>`).join('')
+    box.innerHTML=data.map(f=>`<div class="friend" data-trade-friend-id="${f.friend_id}" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap"><span style="flex:1;min-width:160px">👤 ${esc(f.username)}</span><b>🏆 ${Number(f.best_distance||0)}m</b><span class="muted">${esc(f.status)}</span></div>`).join('')
+    window.dispatchEvent(new Event('ir:friendsRendered'))
   }
   function install(){
     const btn=$('btnAddFriend'),input=$('friendName')
@@ -26,8 +27,6 @@
         finally{fresh.disabled=false;fresh.textContent='AJOUTER'}
       })
     }
-    document.addEventListener('click',e=>{const b=e.target.closest('[data-ir-trade]');if(!b)return;window.dispatchEvent(new CustomEvent('ir:friendTradeClick',{detail:{friendId:b.dataset.irTrade,name:b.dataset.irName}}))})
-    window.addEventListener('ir:friendsRefresh',renderFriends)
     renderFriends()
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install()
