@@ -13,6 +13,7 @@
     try{const {error}=await sb.rpc('duel_clear_incoming_requests');if(error)console.warn('[IR] duel login cleanup:',error)}catch(e){console.warn('[IR] duel login cleanup:',e)}
   }
   sb.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_OUT'){cleaned=false;return}
     if((event==='SIGNED_IN'||event==='INITIAL_SESSION')&&session?.user)setTimeout(clearOnce,0)
   })
   setTimeout(clearOnce,250)
