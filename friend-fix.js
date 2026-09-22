@@ -1,4 +1,4 @@
-/* ILLEGAL RUNNER — FRIEND / 1V1 UI FIX v3 */
+/* ILLEGAL RUNNER — FRIEND / 1V1 UI FIX v4 */
 (() => {
   'use strict'
   const cfg=window.IR_CONFIG||{}
@@ -42,9 +42,6 @@
     const old=button.textContent
     button.textContent='⏳ 1V1...'
     try{
-      // Si l'autre joueur a déjà cliqué sur 1V1, sa demande est maintenant
-      // entrante chez nous. Notre deuxième clic accepte directement cette
-      // demande : le lobby passe alors à 2/2 sans écran intermédiaire.
       const rows=await rpc('duel_poll_requests')
       const list=Array.isArray(rows)?rows:[]
       const incoming=list.find(r=>
@@ -52,19 +49,26 @@
         String(r.receiver_id)===String(window.__IR_AUTH_USER_ID) &&
         String(r.sender_id)===String(friendId)
       )
-      if(incoming && typeof window.IR_DUEL_ACCEPT_REQUEST==='function'){
-        await window.IR_DUEL_ACCEPT_REQUEST(String(incoming.id))
+
+      // Les deux joueurs ont cliqué sur 1V1 : la deuxième personne accepte
+      // automatiquement la demande déjà envoyée. Le système de duel voit
+      // ensuite la session acceptée dans son polling et passe au lobby 2/2.
+      if(incoming){
+        await rpc('duel_respond_request',{p_request_id:String(incoming.id),p_accept:true})
+        if(typeof window.IR_DUEL_CHALLENGE==='function'){
+          // Le polling du moteur démarre la session ; on ne crée surtout pas
+          // une deuxième demande.
+          setTimeout(()=>window.dispatchEvent(new CustomEvent('ir:duelAccepted')),50)
+        }
         return
       }
 
-      // Si une demande sortante existe déjà, ne crée pas de doublon.
       const outgoing=list.find(r=>
         r.status==='pending' &&
         String(r.sender_id)===String(window.__IR_AUTH_USER_ID) &&
         String(r.receiver_id)===String(friendId)
       )
       if(outgoing){
-        if(typeof window.IR_DUEL_SHOW_REQUEST==='function')window.IR_DUEL_SHOW_REQUEST(outgoing)
         return
       }
 
@@ -88,7 +92,6 @@
       if(row.dataset.irDuelButton==='1'||row.querySelector('[data-ir-duel-button="1"]'))continue
       const friendId=acceptedFriendId(row)
       if(!friendId)continue
-
       const b=document.createElement('button')
       b.type='button'
       b.textContent='⚔️ 1V1'
