@@ -345,69 +345,8 @@
       code = code.replace('const ext = document.createElement(\'script\'); ext.src = \'customizer.js?v=8\'; document.body.appendChild(ext)', `const oldLegacy = document.getElementById('legacyPackBox')
       if (oldLegacy) oldLegacy.style.display = 'none'
       const ext = document.createElement('script'); ext.src = 'customizer.js?v=9'; document.body.appendChild(ext)`)
-      code = code.replace(/  async function loadFriends\(\) \{[\s\S]*?\n  \}\n  async function addFriend\(\) \{[\s\S]*?\n  \}\n(?=  async function adminSearch)/, `  async function loadFriends() {
-    const box = $("friendList")
-    if (isGuest || !sb) { box.innerHTML = '<div class="card">☁️ Les amis sont disponibles en MODE COMPTE.</div>'; return }
-    const q = await sb.rpc("get_my_friends")
-    if (q.error) {
-      console.error("[IR] get_my_friends:", q.error)
-      box.innerHTML = '<div class="card">❌ Impossible de charger les amis. <small class="muted">Vérifie que la migration friends.sql a été exécutée dans Supabase.</small></div>'
-      return
-    }
-    const rows = Array.isArray(q.data) ? q.data : []
-    if (!rows.length) { box.innerHTML = '<div class="card">Aucun ami ou demande pour le moment.</div>'; return }
-    box.innerHTML = rows.map(r => {
-      const other = r.user_id === user.id ? r.friend_id : r.user_id
-      const name = escapeHtml(r.friend_username || "Joueur")
-      const dist = Number(r.friend_best_distance || 0)
-      if (r.status === "pending" && r.friend_id === user.id) return '<div class="friend"><span style="flex:1">👤 ' + name + '<br><small class="muted">veut être ton ami</small></span><button data-friend-action="accept" data-friend-id="' + r.id + '">✅ ACCEPTER</button><button data-friend-action="decline" data-friend-id="' + r.id + '">❌ REFUSER</button></div>'
-      if (r.status === "pending") return '<div class="friend"><span style="flex:1">👤 ' + name + '<br><small class="muted">demande envoyée</small></span><button data-friend-action="delete" data-friend-id="' + r.id + '">↩️ ANNULER</button></div>'
-      return '<div class="friend" data-trade-friend-id="' + other + '"><span style="flex:1">👤 ' + name + '<br><small class="muted">🏆 ' + dist + 'm · ami</small></span><button data-friend-action="delete" data-friend-id="' + r.id + '">🗑️ SUPPRIMER</button></div>'
-    }).join("")
-  }
-  async function addFriend() {
-    if (isGuest || !sb) return toast("Connecte-toi pour ajouter des amis.")
-    const n = cleanName($("friendName").value)
-    if (!n) return toast("Entre un pseudo.")
-    const q = await sb.rpc("friend_send_request", { p_username: n })
-    if (q.error) {
-      console.error("[IR] friend_send_request:", q.error)
-      const msg = String(q.error.message || "")
-      if (msg.includes("PLAYER_NOT_FOUND")) return toast("Joueur introuvable.")
-      if (msg.includes("SELF_FRIEND")) return toast("Impossible de t'ajouter toi-même.")
-      if (msg.includes("ALREADY_FRIENDS")) return toast("Vous êtes déjà amis.")
-      if (msg.includes("REQUEST_ALREADY_SENT")) return toast("Demande déjà envoyée.")
-      if (msg.includes("REQUEST_ALREADY_RECEIVED")) return toast("Cette personne t'a déjà envoyé une demande : accepte-la dans Amis.")
-      if (msg.includes("BLOCKED")) return toast("Cette demande ne peut pas être envoyée.")
-      if (msg.includes("Not authenticated")) return toast("Reconnecte-toi pour ajouter cet ami.")
-      return toast("❌ " + msg)
-    }
-    $("friendName").value = ""
-    toast("📨 Demande d'ami envoyée !")
-    await loadFriends()
-  }
-  async function friendAction(action, rowId) {
-    if (isGuest || !sb) return toast("Connecte-toi pour gérer tes amis.")
-    let r
-    if (action === "accept") {
-      r = await sb.rpc("friend_respond", { p_request_id: Number(rowId), p_accept: true })
-    } else if (action === "decline") {
-      r = await sb.rpc("friend_respond", { p_request_id: Number(rowId), p_accept: false })
-    } else {
-      r = await sb.rpc("friend_remove", { p_request_id: Number(rowId) })
-    }
-    if (r.error) { console.error("[IR] friend action:", r.error); return toast("❌ " + (r.error.message || "Action impossible.")) }
-    toast(action === "accept" ? "✅ Demande acceptée !" : action === "delete" ? "🗑️ Ami supprimé." : "↩️ Demande annulée.")
-    await loadFriends()
-  }
-  document.addEventListener("click", e => {
-    const b = e.target.closest("[data-friend-action]")
-    if (!b) return
-    e.preventDefault()
-    e.stopPropagation()
-    friendAction(b.dataset.friendAction, b.dataset.friendId)
-  })
-  async function adminSearch() {', `  document.addEventListener("click", e => {
+      code = code.replace(/  async function loadFriends\\(\\) \\{[\\s\\S]*?\\n  \\}\\n  async function addFriend\\(\\) \\{[\\s\\S]*?\\n  \\}\\n(?=  async function adminSearch)/, `  async function loadFriends() {\n    const box = $("friendList")\n    if (isGuest || !sb) { box.innerHTML = '<div class="card">☁️ Les amis sont disponibles en MODE COMPTE.</div>'; return }\n    const q = await sb.rpc("get_my_friends")\n    if (q.error) {\n      console.error("[IR] get_my_friends:", q.error)\n      box.innerHTML = '<div class="card">❌ Impossible de charger les amis. <small class="muted">Vérifie que la migration friends.sql a été exécutée dans Supabase.</small></div>'\n      return\n    }\n    const rows = Array.isArray(q.data) ? q.data : []\n    if (!rows.length) { box.innerHTML = '<div class="card">Aucun ami ou demande pour le moment.</div>'; return }\n    box.innerHTML = rows.map(r => {\n      const other = r.user_id === user.id ? r.friend_id : r.user_id\n      const name = escapeHtml(r.friend_username || "Joueur")\n      const dist = Number(r.friend_best_distance || 0)\n      if (r.status === "pending" && r.friend_id === user.id) return '<div class="friend"><span style="flex:1">👤 ' + name + '<br><small class="muted">veut être ton ami</small></span><button data-friend-action="accept" data-friend-id="' + r.id + '">✅ ACCEPTER</button><button data-friend-action="decline" data-friend-id="' + r.id + '">❌ REFUSER</button></div>'\n      if (r.status === "pending") return '<div class="friend"><span style="flex:1">👤 ' + name + '<br><small class="muted">demande envoyée</small></span><button data-friend-action="delete" data-friend-id="' + r.id + '">↩️ ANNULER</button></div>'\n      return '<div class="friend" data-trade-friend-id="' + other + '"><span style="flex:1">👤 ' + name + '<br><small class="muted">🏆 ' + dist + 'm · ami</small></span><button data-friend-action="delete" data-friend-id="' + r.id + '">🗑️ SUPPRIMER</button></div>'\n    }).join("")\n  }\n  async function addFriend() {\n    if (isGuest || !sb) return toast("Connecte-toi pour ajouter des amis.")\n    const n = cleanName($("friendName").value)\n    if (!n) return toast("Entre un pseudo.")\n    const q = await sb.rpc("friend_send_request", { p_username: n })\n    if (q.error) {\n      console.error("[IR] friend_send_request:", q.error)\n      const msg = String(q.error.message || "")\n      if (msg.includes("PLAYER_NOT_FOUND")) return toast("Joueur introuvable.")\n      if (msg.includes("SELF_FRIEND")) return toast("Impossible de t'ajouter toi-même.")\n      if (msg.includes("ALREADY_FRIENDS")) return toast("Vous êtes déjà amis.")\n      if (msg.includes("REQUEST_ALREADY_SENT")) return toast("Demande déjà envoyée.")\n      if (msg.includes("REQUEST_ALREADY_RECEIVED")) return toast("Cette personne t'a déjà envoyé une demande : accepte-la dans Amis.")\n      if (msg.includes("BLOCKED")) return toast("Cette demande ne peut pas être envoyée.")\n      if (msg.includes("Not authenticated")) return toast("Reconnecte-toi pour ajouter cet ami.")\n      return toast("❌ " + msg)\n    }\n    $("friendName").value = ""\n    toast("📨 Demande d'ami envoyée !")\n    await loadFriends()\n  }\n  async function friendAction(action, rowId) {\n    if (isGuest || !sb) return toast("Connecte-toi pour gérer tes amis.")\n    let r\n    if (action === "accept") {\n      r = await sb.rpc("friend_respond", { p_request_id: Number(rowId), p_accept: true })\n    } else if (action === "decline") {\n      r = await sb.rpc("friend_respond", { p_request_id: Number(rowId), p_accept: false })\n    } else {\n      r = await sb.rpc("friend_remove", { p_request_id: Number(rowId) })\n    }\n    if (r.error) { console.error("[IR] friend action:", r.error); return toast("❌ " + (r.error.message || "Action impossible.")) }\n    toast(action === "accept" ? "✅ Demande acceptée !" : action === "delete" ? "🗑️ Ami supprimé." : "↩️ Demande annulée.")\n    await loadFriends()\n  }\n`)
+      code = code.replace('  async function adminSearch() {', `  document.addEventListener("click", e => {
     const b = e.target.closest("[data-friend-action]")
     if (!b) return
     e.preventDefault()
