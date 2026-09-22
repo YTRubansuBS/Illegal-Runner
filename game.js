@@ -1,6 +1,16 @@
 /* ILLEGAL RUNNER loader: original engine + live customization + persistent Supabase progression. */
 (() => {
   const ORIGINAL = 'https://raw.githubusercontent.com/YTRubansuBS/Illegal-Runner/de2f0579d3e51b2b898a9cc3c8c87a1c8e190a26/game.js'
+  let __duelRngState = 1
+  window.IR_DUEL_SET_WORLD_RNG = (seed) => {
+    let s = (Number(seed) >>> 0) || 1
+    __duelRngState = s
+    window.__IR_DUEL_WORLD_RNG = () => {
+      s = (Math.imul(1664525, s) + 1013904223) >>> 0
+      return s / 4294967296
+    }
+    __duelRngState = s
+  }
   function replaceBetween(source, startMarker, endMarker, replacement) {
     const a = source.indexOf(startMarker)
     const b = source.indexOf(endMarker, a)
@@ -15,6 +25,7 @@
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
       code = code.replace('const G = {', 'const G = window.__IR_G = {')
+      code = code.replace('  const CFG = window.IR_CONFIG || {}', '  const IR_WORLD_RANDOM = () => (window.IR_DUEL_ACTIVE && window.__IR_DUEL_WORLD_RNG ? window.__IR_DUEL_WORLD_RNG() : globalThis.Math.random())\n  const IR_WORLD_RANGE = (a,b) => a + IR_WORLD_RANDOM() * (b-a)\n  const IR_WORLD_PICK = arr => arr[(IR_WORLD_RANDOM() * arr.length) | 0]\n  const CFG = window.IR_CONFIG || {}')
 
       code = code.replace('    G.lives = G.maxLives', '    G.lives = G.maxLives\n    if (window.IR_DUEL_ACTIVE && window.IR_DUEL_CONFIG && Number.isFinite(Number(window.IR_DUEL_CONFIG.lives)) && Number(window.IR_DUEL_CONFIG.lives) > 0) { G.maxLives = Math.max(1, Math.floor(Number(window.IR_DUEL_CONFIG.lives))); G.lives = G.maxLives }')
       code = code.replace('        G.running = true\n        G.startTime = performance.now()', '        G.running = true\n        G.startTime = performance.now()\n        window.dispatchEvent(new CustomEvent("ir:duelStarted"))')
