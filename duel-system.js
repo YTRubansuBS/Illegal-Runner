@@ -33,7 +33,12 @@ async function refreshUser(){
 async function getRequests(){
   try{
     const data=await rpc('duel_poll_requests')
-    return Array.isArray(data)?data:[]
+    const rows=Array.isArray(data)?data:[]
+    rows.forEach(function(r){
+      if(r.sender_id&&r.sender_username)S.nameMap[r.sender_id]=r.sender_username
+      if(r.receiver_id&&r.receiver_username)S.nameMap[r.receiver_id]=r.receiver_username
+    })
+    return rows
   }catch(_){
     if(!S.user) return []
     const q=await sb.from('duel_requests').select('id,sender_id,receiver_id,status,created_at,expires_at').or('sender_id.eq.'+S.user.id+',receiver_id.eq.'+S.user.id).order('created_at',{ascending:false}).limit(20)
@@ -160,7 +165,9 @@ function sessionGui(s){
   if(s.status==='completed'){
     stopGame();hud.style.display='none'
     const win=s.winner_id===S.user.id
-    show('<div class="dm"><div class="dh"><h2>⚔️ FIN DU 1V1</h2></div><div class="db"><div class="duelResult">'+(win?'🏆 '+esc('TU AS GAGNÉ !'):'❌ '+esc('TU AS PERDU') )+'</div><p style="text-align:center;font-size:20px"><b>'+((s.payout||0)>0?Number(s.payout).toLocaleString('fr-FR')+' 🪙 gagnées':'Aucune mise')+'</b></p><p class="duelInfo" style="text-align:center">'+(s.result_reason==='forfeit'?'L’adversaire a quitté le 1V1.':s.result_reason==='disconnect'?'L’adversaire a quitté la partie.':'La partie est terminée.')+'</p><div class="actions"><button class="primary" id="done">RETOUR AU MENU</button></div></div></div>')
+    const winnerName=esc(s.winner_id===S.user.id?(S.nameMap[S.user.id]||S.user.user_metadata?.username||'Moi'):(S.nameMap[s.winner_id]||'Ton adversaire'))
+    const prize=((s.payout||0)>0?Number(s.payout).toLocaleString('fr-FR')+' 🪙 gagnées':'Aucune mise')
+    show('<div class="dm"><div class="dh"><h2>⚔️ FIN DU 1V1</h2></div><div class="db"><div class="duelResult">🏆 '+winnerName+' a gagné !</div><p style="text-align:center;font-size:20px"><b>'+prize+'</b></p><p class="duelInfo" style="text-align:center">'+(s.result_reason==='forfeit'?'L’adversaire a quitté le 1V1 et a donné une récompense ×2.':s.result_reason==='disconnect'?'L’adversaire a quitté la partie et a donné une récompense ×2.':'La partie est terminée.')+'</p><div class="actions"><button class="primary" id="done">RETOUR AU MENU</button></div></div></div>')
     document.getElementById('done').onclick=function(){S.sessionId=null;S.session=null;layer.style.display='none';window.IR_DUEL_ACTIVE=false;window.IR_DUEL_CONFIG=null;goMenu()}
     return
   }
@@ -188,14 +195,19 @@ async function leaveDuel(){try{if(S.sessionId)await rpc('duel_leave',{p_session_
 async function startRequest(friendId){try{const id=await rpc('duel_create_request',{p_friend_id:friendId});S.requestId=id;const rows=await getRequests();const r=rows.find(function(x){return x.id===id});requestGui(r||{id:id,sender_id:S.user.id,receiver_id:friendId,status:'pending',expires_at:new Date(Date.now()+30000).toISOString()})}catch(e){alert('❌ '+(e.message||'Demande 1V1 impossible'))}}
 async function pollSession(force){
   if(!S.sessionId)return null
-  const previous=S.session?.status
+  const previous=S.session
   const s=await getSession()
   if(s){
     if(s.status==='bet_amount'){
       const q=await sb.from('profiles').select('coins').eq('id',S.user.id).maybeSingle()
       window.__IR_PROFILE_COINS=Number(q.data?.coins||0)
     }
-    if(previous==='randomizing'&&s.status!=='randomizing'){
+    if(previous&&s.status==='lobby'){
+      const otherReadyBefore=meA(previous)?previous.choice_b:previous.choice_a
+      const otherReadyNow=meA(s)?s.choice_b:s.choice_a
+      if(otherReadyBefore!=='ready'&&otherReadyNow==='ready')toast('✅ '+otherName(s)+' est prêt !')
+    }
+    if(previous&&previous.status==='randomizing'&&s.status!=='randomizing'){
       if(s.status==='bet_amount') toast('🎲 Vote : PARIER')
       else if(s.status==='countdown'&&s.bet_mode) toast('🎲 Vote : PARIER')
       else if(s.status==='countdown'&&!s.bet_mode) toast('🎲 Vote : SANS PARIER')
