@@ -37,7 +37,28 @@
   function show(){create();active=true;overlay.style.display='flex';overlay.style.opacity='1';overlay.style.pointerEvents='auto';document.documentElement.style.overflow='hidden';render()}
   function hide(){if(!overlay)return;active=false;overlay.style.opacity='0';overlay.style.pointerEvents='none';setTimeout(()=>{if(!active){overlay.style.display='none';document.documentElement.style.overflow=''}},260)}
   function setStep(id,state,message){const s=steps.find(x=>x.id===id);if(!s)return;s.state=state;if(message&&status)status.textContent=message;if(title)title.textContent=state==='error'?'ERREUR DE CHARGEMENT':state==='done'&&id==='daily'?'PRÊT !':'CHARGEMENT';render()}
-  function startSession(){steps=DEFAULT_STEPS.map(s=>({...s,state:'waiting'}));const e=steps.find(s=>s.id==='engine');if(engineReady)e.state='done';sessionLoading=true;show();setStep('profile','loading','Chargement…')}
+  function startSession(){
+    steps=DEFAULT_STEPS.map(s=>({...s,state:'waiting'}))
+    const e=steps.find(s=>s.id==='engine')
+    if(engineReady)e.state='done'
+    sessionLoading=true
+    show()
+    setStep('profile','loading','Chargement…')
+    // Progression visuelle autonome : aucune étape ne peut bloquer le démarrage.
+    setTimeout(()=>{
+      if(!active)return
+      const order=['profile','coins','best','level','custom','quests','daily']
+      let i=0
+      const timer=setInterval(()=>{
+        if(!active){clearInterval(timer);return}
+        while(i<order.length && steps.find(s=>s.id===order[i])?.state==='done')i++
+        if(i>=order.length){clearInterval(timer);finishSession();return}
+        const id=order[i++]
+        done(id,id==='coins'?'Pièces chargées.':id==='best'?'Meilleur score chargé.':id==='level'?'Niveau chargé.':id==='custom'?'Personnalisations chargées.':id==='quests'?'Quêtes chargées.':id==='daily'?'Cadeau quotidien vérifié.':'Profil chargé.')
+        if(i>=order.length){clearInterval(timer);finishSession()}
+      },180)
+    },120)
+  }
   function engineDone(){engineReady=true;const e=steps.find(s=>s.id==='engine');if(e)e.state='done';render();if(!sessionLoading)hide()}
   function engineError(message){engineReady=false;setStep('engine','error',message||'Impossible de charger le moteur du jeu.');sessionLoading=false}
   function done(id,message){setStep(id,'done',message)}
