@@ -14,7 +14,7 @@
   function create(){
     if(overlay&&document.body.contains(overlay))return
     overlay=document.createElement('section');overlay.id='irLoadingScreen';overlay.setAttribute('aria-live','polite')
-    overlay.innerHTML='<div class="ir-load-grid"></div><div class="ir-load-card"><div class="ir-load-logo">ILLEGAL<br><span>RUNNER</span></div><div class="ir-load-kicker">// INITIALISATION</div><h1 id="irLoadTitle">CHARGEMENT</h1><p id="irLoadStatus">Préparation du jeu…</p><div class="ir-load-progress"><i id="irLoadBar"></i></div><div id="irLoadSteps" class="ir-load-steps"></div></div>'
+    overlay.innerHTML='<div class="ir-load-grid"></div><div class="ir-load-card"><div class="ir-load-logo">ILLEGAL<br><span>RUNNER</span></div><div class="ir-load-kicker">// INITIALISATION</div><h1 id="irLoadTitle">CHARGEMENT</h1><p id="irLoadStatus">Préparation du jeu…</p><div class="ir-load-progress"><i id="irLoadBar"></i></div><div id="irLoadSteps" class="ir-load-steps"></div><button id="irLoadSkip" type="button">PASSER ⏭</button></div>'
     const style=document.createElement('style')
     style.textContent=`
 #irLoadingScreen{position:fixed;inset:0;z-index:2147483646;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,#10182b 0,#050810 45%,#02040a 100%);color:#f4f7ff;font-family:Inter,system-ui,sans-serif;overflow:auto;padding:22px;box-sizing:border-box;transition:opacity .25s ease}
@@ -25,11 +25,11 @@
 #irLoadingScreen h1{margin:7px 0 4px;font-size:28px;letter-spacing:1px}#irLoadingScreen #irLoadStatus{margin:0 0 16px;color:#9aa8c2;font-size:14px;min-height:20px}
 #irLoadingScreen .ir-load-progress{height:9px;border-radius:999px;background:#131b2c;overflow:hidden;border:1px solid rgba(255,255,255,.07)}#irLoadingScreen .ir-load-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#00e5ff,#ff37c7);box-shadow:0 0 18px rgba(0,229,255,.55);transition:width .28s ease}
 #irLoadingScreen .ir-load-steps{display:grid;gap:7px;margin-top:18px}#irLoadingScreen .ir-load-step{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.055);font-size:13px}#irLoadingScreen .ir-load-step .ico{width:25px;text-align:center}#irLoadingScreen .ir-load-step .name{flex:1}#irLoadingScreen .ir-load-step .state{font-weight:900;color:#71809a;font-size:12px}
-#irLoadingScreen .ir-load-step[data-state="loading"]{border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.055)}#irLoadingScreen .ir-load-step[data-state="loading"] .state{color:#00e5ff}#irLoadingScreen .ir-load-step[data-state="done"] .state{color:#72ffb2}#irLoadingScreen .ir-load-step[data-state="error"] .state{color:#ff668f}
+#irLoadingScreen .ir-load-step[data-state="loading"]{border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.055)}#irLoadingScreen .ir-load-step[data-state="loading"] .state{color:#00e5ff}#irLoadingScreen .ir-load-step[data-state="done"] .state{color:#72ffb2}#irLoadingScreen #irLoadSkip{margin-top:16px;width:100%;min-height:46px;border:1px solid rgba(0,229,255,.5);border-radius:12px;background:rgba(0,229,255,.09);color:#fff;font-weight:900;font-size:14px;cursor:pointer}#irLoadingScreen #irLoadSkip:hover{background:rgba(0,229,255,.18)}#irLoadingScreen .ir-load-step[data-state="error"] .state{color:#ff668f}
 @media(max-width:520px){#irLoadingScreen{padding:14px}#irLoadingScreen .ir-load-card{padding:22px 18px}#irLoadingScreen h1{font-size:23px}}
 `
     document.head.appendChild(style);document.body.appendChild(overlay)
-    list=overlay.querySelector('#irLoadSteps');bar=overlay.querySelector('#irLoadBar');title=overlay.querySelector('#irLoadTitle');status=overlay.querySelector('#irLoadStatus');render()
+    list=overlay.querySelector('#irLoadSteps');bar=overlay.querySelector('#irLoadBar');title=overlay.querySelector('#irLoadTitle');status=overlay.querySelector('#irLoadStatus');const skip=overlay.querySelector('#irLoadSkip');if(skip)skip.onclick=hide;render()
     overlay.style.display='none';overlay.style.opacity='0';overlay.style.pointerEvents='none'
     if(engineReady&&!sessionLoading){overlay.style.display='none';overlay.style.opacity='0';overlay.style.pointerEvents='none'}
   }
@@ -37,7 +37,7 @@
   function show(){create();active=true;overlay.style.display='flex';overlay.style.opacity='1';overlay.style.pointerEvents='auto';document.documentElement.style.overflow='hidden';render()}
   function hide(){if(!overlay)return;active=false;overlay.style.opacity='0';overlay.style.pointerEvents='none';setTimeout(()=>{if(!active){overlay.style.display='none';document.documentElement.style.overflow=''}},260)}
   function setStep(id,state,message){const s=steps.find(x=>x.id===id);if(!s)return;s.state=state;if(message&&status)status.textContent=message;if(title)title.textContent=state==='error'?'ERREUR DE CHARGEMENT':state==='done'&&id==='daily'?'PRÊT !':'CHARGEMENT';render()}
-  function startSession(){steps=DEFAULT_STEPS.map(s=>({...s,state:'waiting'}));const e=steps.find(s=>s.id==='engine');if(engineReady)e.state='done';sessionLoading=true;show();setStep('profile','loading','Lecture de la sauvegarde du joueur…')}
+  function startSession(){steps=DEFAULT_STEPS.map(s=>({...s,state:'waiting'}));const e=steps.find(s=>s.id==='engine');if(engineReady)e.state='done';sessionLoading=true;show();setStep('profile','loading','Chargement…')}
   function engineDone(){engineReady=true;const e=steps.find(s=>s.id==='engine');if(e)e.state='done';render();if(!sessionLoading)hide()}
   function engineError(message){engineReady=false;setStep('engine','error',message||'Impossible de charger le moteur du jeu.');sessionLoading=false}
   function done(id,message){setStep(id,'done',message)}
