@@ -4,7 +4,8 @@ const cfg=window.IR_CONFIG||{}
 const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
 const S={
   user:null,requestId:null,sessionId:null,requestExpires:0,session:null,
-  timer:null,pollTimer:null,syncTimer:null,nameMap:{},closed:false
+  timer:null,pollTimer:null,syncTimer:null,nameMap:{},closed:false,
+  opponentId:null,opponentCharacter:'runner',ghostFrom:0,ghostTo:0,ghostStart:0,ghostDuration:450,ghostInitialized:false
 }
 const layer=document.createElement('div');layer.id='irDuelLayer';document.body.appendChild(layer)
 const style=document.createElement('style')
@@ -20,7 +21,11 @@ function toast(t){if(typeof window.toast==='function')window.toast(t);else alert
 async function rpc(name,args){const r=await sb.rpc(name,args||{});if(r.error)throw r.error;return r.data}
 function meA(s){return s&&s.user_a===S.user.id}
 function myField(s,a,b){return meA(s)?s[a]:s[b]}
-function otherName(s){return esc((S.nameMap[meA(s)?s.user_b:s.user_a]||'ton adversaire'))}
+function otherId(s){return s?(meA(s)?s.user_b:s.user_a):null}
+function otherName(s){return esc((S.nameMap[otherId(s)]||'ton adversaire'))}
+function otherCharacter(s){return (meA(s)?s.character_b:s.character_a)||S.opponentCharacter||'runner'}
+function ghostNow(){if(!S.ghostInitialized)return 0;const p=Math.max(0,Math.min(1,(performance.now()-S.ghostStart)/S.ghostDuration));return S.ghostFrom+(S.ghostTo-S.ghostFrom)*p}
+function syncGhost(s){const target=Number(meA(s)?s.distance_b:s.distance_a);if(!Number.isFinite(target))return;const now=performance.now();if(!S.ghostInitialized){S.ghostFrom=target;S.ghostTo=target;S.ghostStart=now;S.ghostDuration=0;S.ghostInitialized=true;return}const cur=ghostNow();if(Math.abs(target-S.ghostTo)>=1){S.ghostFrom=cur;S.ghostTo=target;S.ghostStart=now;S.ghostDuration=450}}
 function remaining(until){if(!until)return 0;return Math.max(0,(new Date(until).getTime()-Date.now())/1000)}
 function goMenu(){hud.style.display='none';window.dispatchEvent(new CustomEvent('ir:duelExitToMenu'))}
 function stopGame(){const G=window.__IR_G;if(G){G.running=false;cancelAnimationFrame(G.raf)}}
@@ -133,7 +138,7 @@ function sessionGui(s){
   if(s.status==='bet_amount'){
     const current=meA(s)?s.bet_a:s.bet_b
     const balance=Number(window.__IR_PROFILE_COINS||0)
-    const vals=[0,1,5,10,25,50,100,250,500,1000,2500,5000].filter(function(v){return v<=balance})
+    const vals=[1,5,10,25,50,100,250,500,1000,2500,5000].filter(function(v){return v<=balance})
     if(balance>0&&!vals.includes(balance))vals.push(balance)
     show('<div class="dm"><div class="dh"><h2>💰 Choisis ta mise</h2><button id="qx">✕</button></div><div class="db"><div class="duelTimer" id="rt"></div><p class="duelInfo">Les deux joueurs doivent mettre <b>exactement la même somme</b>.</p><div class="duelBetGrid">'+vals.map(function(v){return '<button class="duelBetBtn '+(Number(current||0)===v?'selected':'')+'" data-bet="'+v+'">'+v.toLocaleString('fr-FR')+' 🪙</button>'}).join('')+'</div><div class="duelCard" style="margin-top:12px"><b>Ta mise : '+Number(current||0).toLocaleString('fr-FR')+' 🪙</b><br><span class="duelInfo">Mise adverse : '+Number(meA(s)?s.bet_b:s.bet_a).toLocaleString('fr-FR')+' 🪙</span></div><div class="actions"><button class="danger" id="leave">❌ SORTIR</button></div></div></div>')
     document.querySelectorAll('[data-bet]').forEach(function(b){b.onclick=function(){setBet(Number(b.dataset.bet))}})
@@ -198,19 +203,24 @@ function updateHud(s){
   if(!s)return
   const a=meA(s);const myLives=a?s.lives_a:s.lives_b;const opLives=a?s.lives_b:s.lives_a
   const who=otherName(s)
-  hud.innerHTML='⚔️ '+who+' · ❤️ '+myLives+' / '+opLives+(s.bet_mode?' · 💰 '+Number(s.bet_a+s.bet_b).toLocaleString('fr-FR'):'')+' <button id="dq">✕ QUITTER</button>'
+  const myDist=Math.max(0,Math.floor(Number(a?s.distance_a:s.distance_b)||0)); const opDist=Math.max(0,Math.floor(Number(a?s.distance_b:s.distance_a)||0))
+  hud.innerHTML='<div>⚔️ '+who+' · ❤️ '+myLives+' / '+opLives+'<div class="muted" style="margin-top:3px;font-size:11px">'+myDist+' m · adversaire '+opDist+' m</div></div>'+(s.bet_mode?' · 💰 '+Number(s.bet_a+s.bet_b).toLocaleString('fr-FR'):'')+' <button id="dq">✕ QUITTER</button>'
   document.getElementById('dq').onclick=function(){leaveDuel()}
 }
-async function setChoice(c){try{await rpc('duel_set_choice',{p_session_id:S.sessionId,p_choice:c});await pollSession(true)}catch(e){alert('❌ '+(e.message||'Impossible'))}}
-async function setBet(v){try{await rpc('duel_set_bet',{p_session_id:S.sessionId,p_amount:v});await pollSession(true)}catch(e){alert('❌ '+(e.message||'Mise impossible'))}}
+async function setChoice(c){try{if(c==='bet'){const q=await sb.from('profiles').select('coins').eq('id',S.user.id).maybeSingle();const balance=Number(q.data?.coins||0);window.__IR_PROFILE_COINS=balance;if(balance<1)throw new Error('Il te faut au moins 1 🪙 pour choisir le pari.')}await rpc('duel_set_choice',{p_session_id:S.sessionId,p_choice:c});await pollSession(true)}catch(e){alert('❌ '+(e.message||'Impossible'))}}
+async function setBet(v){try{if(!Number.isFinite(v)||v<1)throw new Error('La mise minimale est de 1 🪙.');await rpc('duel_set_bet',{p_session_id:S.sessionId,p_amount:v});await pollSession(true)}catch(e){alert('❌ '+(e.message||'Mise impossible'))}}
 async function setFinalVote(v){try{await rpc('duel_set_final_vote',{p_session_id:S.sessionId,p_vote:v});await pollSession(true)}catch(e){alert('❌ '+(e.message||'Vote impossible'))}}
-async function leaveDuel(){try{if(S.sessionId)await rpc('duel_leave',{p_session_id:S.sessionId})}catch(_){}stopGame();window.IR_DUEL_ACTIVE=false;window.IR_DUEL_CONFIG=null;hud.style.display='none';S.sessionId=null;S.session=null;hide();goMenu()}
+async function leaveDuel(){try{if(S.sessionId)await rpc('duel_leave',{p_session_id:S.sessionId})}catch(_){}stopGame();window.IR_DUEL_ACTIVE=false;window.IR_DUEL_CONFIG=null;hud.style.display='none';S.sessionId=null;S.session=null;S.opponentId=null;S.opponentCharacter='runner';S.ghostInitialized=false;window.__IR_DUEL_GHOST=null;hide();goMenu()}
 async function startRequest(friendId){try{const id=await rpc('duel_create_request',{p_friend_id:friendId});S.requestId=id;const rows=await getRequests();const r=rows.find(function(x){return x.id===id});requestGui(r||{id:id,sender_id:S.user.id,receiver_id:friendId,status:'pending',expires_at:new Date(Date.now()+30000).toISOString()})}catch(e){alert('❌ '+(e.message||'Demande 1V1 impossible'))}}
 async function pollSession(force){
   if(!S.sessionId)return null
   const previous=S.session
   const s=await getSession()
   if(s){
+    const oid=otherId(s)
+    if(oid&&S.opponentId!==oid){S.opponentId=oid}
+    S.opponentCharacter=otherCharacter(s)
+    if(s.status==='playing'||s.status==='completed')syncGhost(s)
     if(s.status==='bet_amount'){
       const q=await sb.from('profiles').select('coins').eq('id',S.user.id).maybeSingle()
       window.__IR_PROFILE_COINS=Number(q.data?.coins||0)
@@ -258,18 +268,38 @@ function decorateFriends(){
   })
 }
 window.IR_DUEL_GHOST_DRAW=function(ctx,W,H,w,G){
-  if(!window.IR_DUEL_ACTIVE||!window.__IR_DUEL_GHOST||!G)return
+  if(!window.IR_DUEL_ACTIVE||!window.__IR_DUEL_GHOST||!G||!G.player)return
   const s=window.__IR_DUEL_GHOST
-  const mine=s.user_a===S.user.id?s.distance_a:s.distance_b
-  const opp=s.user_a===S.user.id?s.distance_b:s.distance_a
-  const x=Math.max(70,Math.min(W-70,G.player.x+120+(opp-mine)*0.35))
+  const mine=Number(meA(s)?s.distance_a:s.distance_b)||0
+  const opp=ghostNow()
+  const rel=opp-mine
+  const x=Math.max(45,Math.min(W-95,G.player.x+118+rel*.36))
   const y=G.groundY-62
-  ctx.save();ctx.globalAlpha=.32;ctx.shadowBlur=18;ctx.shadowColor='#ff37c7';ctx.fillStyle='#dbeafe';ctx.strokeStyle='#00e5ff';ctx.lineWidth=2
-  ctx.beginPath();ctx.arc(x+21,y+15,15,0,Math.PI*2);ctx.fill();ctx.stroke()
-  ctx.fillStyle='#dbeafe';ctx.fillRect(x+7,y+30,28,30);ctx.strokeRect(x+7,y+30,28,30)
-  ctx.fillStyle='#00e5ff';ctx.fillRect(x+12,y+11,18,4)
-  ctx.strokeStyle='#00e5ff';ctx.beginPath();ctx.moveTo(x+14,y+58);ctx.lineTo(x+8,y+70);ctx.moveTo(x+28,y+58);ctx.lineTo(x+34,y+70);ctx.stroke()
-  ctx.globalAlpha=.95;ctx.fillStyle='#fff';ctx.font='900 12px Inter,sans-serif';ctx.textAlign='center';ctx.fillText(S.nameMap[s.user_a===S.user.id?s.user_b:s.user_a]||'ADVERSAIRE',x+21,y-10)
+  const skin=S.opponentCharacter||otherCharacter(s)||'runner'
+  const fake={x:x-21,y,w:42,h:62,run:performance.now()/100,ground:true,sy:1,inv:0}
+  ctx.save()
+  ctx.globalAlpha=.92
+  ctx.shadowBlur=18
+  ctx.shadowColor='#ff37c7'
+  try{
+    if(window.IR_CHARACTER_DRAW_SKIN){
+      window.IR_CHARACTER_DRAW_SKIN(ctx,42,fake,{dashT:0,shield:false,level:G.level||1,dist:opp,goal:G.goal||1},skin)
+    }else{
+      ctx.fillStyle='#dbeafe';ctx.fillRect(x-14,y+30,28,30)
+      ctx.beginPath();ctx.arc(x,y+15,15,0,Math.PI*2);ctx.fill()
+    }
+  }catch(_){
+    ctx.fillStyle='#dbeafe';ctx.fillRect(x-14,y+30,28,30)
+  }
+  ctx.globalAlpha=.98
+  ctx.fillStyle='#fff'
+  ctx.font='900 12px Inter,sans-serif'
+  ctx.textAlign='center'
+  ctx.shadowBlur=8
+  ctx.fillText(S.nameMap[otherId(s)]||'ADVERSAIRE',x,y-12)
+  ctx.font='800 10px Inter,sans-serif'
+  ctx.fillStyle='#8fe9ff'
+  ctx.fillText(Math.max(0,Math.floor(opp))+' m',x,y-1)
   ctx.restore()
 }
 document.addEventListener('click',function(e){
@@ -277,6 +307,6 @@ document.addEventListener('click',function(e){
   e.preventDefault();e.stopPropagation();startRequest(b.dataset.duelOpen)
 },true)
 const obs=new MutationObserver(decorateFriends)
-async function init(){const box=document.getElementById('friendList');if(box)obs.observe(box,{childList:true,subtree:true});decorateFriends();await refreshUser();if(S.pollTimer)clearInterval(S.pollTimer);S.pollTimer=setInterval(mainPoll,500)}
+async function init(){const box=document.getElementById('friendList');if(box)obs.observe(box,{childList:true,subtree:true});decorateFriends();await refreshUser();if(S.pollTimer)clearInterval(S.pollTimer);S.pollTimer=setInterval(mainPoll,300)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init()
 })();
