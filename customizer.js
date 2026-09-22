@@ -119,6 +119,7 @@
     ]
   }
   const rarityForIndex=i=>i<10?'common':i<18?'uncommon':i<24?'rare':i<28?'epic':i<31?'legendary':i<33?'mythic':'secret'
+  window.IR_PACK_CATALOG=PACK_CATALOG
   const packKey=type=>type==='coin'?'coin':type
   const collectionKey=(uid,type)=>'irRarityCollection_'+uid+'_'+type
   const loadCollection=(uid,type)=>{
