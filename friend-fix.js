@@ -1,4 +1,4 @@
-/* ILLEGAL RUNNER — FRIEND / 1V1 UI FIX v4 */
+/* ILLEGAL RUNNER — FRIEND / 1V1 UI FIX v5 */
 (() => {
   'use strict'
   const cfg=window.IR_CONFIG||{}
@@ -6,6 +6,7 @@
   const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY)
   let cache=[]
   let observer=null
+  let joinWatcher=null
 
   const rpc=async(name,args={})=>{
     const r=await sb.rpc(name,args)
@@ -37,6 +38,30 @@
     return f.user_id===window.__IR_AUTH_USER_ID?f.friend_id:f.user_id
   }
 
+  async function waitForAccepted(requestId){
+    if(joinWatcher)clearInterval(joinWatcher)
+    let tries=0
+    joinWatcher=setInterval(async()=>{
+      tries++
+      try{
+        const rows=await rpc('duel_poll_requests')
+        const accepted=(Array.isArray(rows)?rows:[]).find(r=>
+          String(r.id)===String(requestId) &&
+          r.status==='accepted' &&
+          r.session_id
+        )
+        if(accepted){
+          clearInterval(joinWatcher);joinWatcher=null
+          // Le moteur du duel a arrêté son polling lorsqu'il a affiché 1/2.
+          // Un reload propre lui permet de retrouver la session acceptée et
+          // d'ouvrir directement le lobby 2/2, sans créer une nouvelle demande.
+          window.location.reload()
+        }
+      }catch(e){console.warn('[IR] duel join watcher:',e)}
+      if(tries>=90){clearInterval(joinWatcher);joinWatcher=null}
+    },700)
+  }
+
   async function duelClick(friendId,button){
     button.disabled=true
     const old=button.textContent
@@ -50,15 +75,12 @@
         String(r.sender_id)===String(friendId)
       )
 
-      // Les deux joueurs ont cliqué sur 1V1 : la deuxième personne accepte
-      // automatiquement la demande déjà envoyée. Le système de duel voit
-      // ensuite la session acceptée dans son polling et passe au lobby 2/2.
+      // Les deux joueurs ont cliqué : le deuxième rejoint la demande déjà créée.
       if(incoming){
-        await rpc('duel_respond_request',{p_request_id:String(incoming.id),p_accept:true})
+        const sid=await rpc('duel_respond_request',{p_request_id:String(incoming.id),p_accept:true})
+        if(!sid)throw new Error('La session 1V1 n’a pas été créée.')
         if(typeof window.IR_DUEL_CHALLENGE==='function'){
-          // Le polling du moteur démarre la session ; on ne crée surtout pas
-          // une deuxième demande.
-          setTimeout(()=>window.dispatchEvent(new CustomEvent('ir:duelAccepted')),50)
+          window.dispatchEvent(new CustomEvent('ir:duelAccepted',{detail:{sessionId:String(sid)}}))
         }
         return
       }
@@ -69,12 +91,26 @@
         String(r.receiver_id)===String(friendId)
       )
       if(outgoing){
+        waitForAccepted(outgoing.id)
         return
       }
 
       const challenge=window.IR_DUEL_CHALLENGE
-      if(typeof challenge==='function')await challenge(String(friendId))
-      else throw new Error('Le système 1V1 est encore en chargement.')
+      if(typeof challenge!=='function')throw new Error('Le système 1V1 est encore en chargement.')
+      await challenge(String(friendId))
+      // Le premier joueur est maintenant sur 1/2. On continue à surveiller
+      // cette demande même si le vieux GUI a stoppé son polling.
+      setTimeout(async()=>{
+        try{
+          const after=await rpc('duel_poll_requests')
+          const created=(Array.isArray(after)?after:[]).find(r=>
+            r.status==='pending' &&
+            String(r.sender_id)===String(window.__IR_AUTH_USER_ID) &&
+            String(r.receiver_id)===String(friendId)
+          )
+          if(created)waitForAccepted(created.id)
+        }catch(e){console.warn('[IR] duel outgoing watcher:',e)}
+      },250)
     }catch(e){
       console.error('[IR] duel friend click:',e)
       alert('❌ '+(e.message||'Impossible de lancer le 1V1'))
