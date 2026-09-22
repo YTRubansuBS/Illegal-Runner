@@ -4,7 +4,7 @@ const cfg=window.IR_CONFIG||{}
 const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
 const S={
   user:null,requestId:null,sessionId:null,requestExpires:0,session:null,
-  timer:null,pollTimer:null,syncTimer:null,nameMap:{},closed:false,
+  timer:null,pollTimer:null,syncTimer:null,nameMap:{},closed:false,renderedStatus:null,
   opponentId:null,opponentCharacter:'runner',ghostFrom:0,ghostTo:0,ghostStart:0,ghostDuration:450,ghostInitialized:false
 }
 const layer=document.createElement('div');layer.id='irDuelLayer';document.body.appendChild(layer)
@@ -59,7 +59,8 @@ async function getSession(){
     const player=G?.player
     const action=G?.dashT>0?'dash':(player&&!player.ground?'jump':'run')
     const y=Number(player?.y)
-    const data=await rpc('duel_tick',{p_session_id:S.sessionId,p_distance:distance,p_lives:lives,p_y:Number.isFinite(y)?y:null,p_action:action})
+    const jumpHeight=Number.isFinite(y)&&Number.isFinite(G?.groundY)&&Number.isFinite(G?.H)?Math.max(0,Math.min(1,(G.groundY-y)/G.H)):0
+    const data=await rpc('duel_tick',{p_session_id:S.sessionId,p_distance:distance,p_lives:lives,p_y:jumpHeight,p_action:action})
     S.session=data||null
     return S.session
   }catch(e){
@@ -125,8 +126,31 @@ async function respondRequest(ok){
     alert('❌ '+(e.message||'Demande impossible'))
   }
 }
+function refreshSameStatus(s){
+  if(!s)return
+  if(s.status==='lobby'){
+    const mine=meA(s)?s.choice_a:s.choice_b, other=meA(s)?s.choice_b:s.choice_a
+    const a=document.getElementById('duelMineChoice'),b=document.getElementById('duelOtherChoice')
+    if(a)a.textContent=mine==='ready'?'✅ PRÊT':mine==='bet'?'💰 PARIER':'⏳ Pas encore choisi'
+    if(b)b.textContent=other==='ready'?'✅ PRÊT':other==='bet'?'💰 PARIER':'⏳ Pas encore choisi'
+  }else if(s.status==='bet_amount'){
+    const me=Number(meA(s)?s.bet_a:s.bet_b), op=Number(meA(s)?s.bet_b:s.bet_a)
+    const a=document.getElementById('duelMyBet'),b=document.getElementById('duelOtherBet')
+    if(a)a.textContent=me.toLocaleString('fr-FR')+' 🪙'
+    if(b)b.textContent=op.toLocaleString('fr-FR')+' 🪙'
+  }else if(s.status==='final_vote'){
+    const me=meA(s)?s.final_vote_a:s.final_vote_b,op=meA(s)?s.final_vote_b:s.final_vote_a
+    const a=document.getElementById('duelMyVote'),b=document.getElementById('duelOtherVote')
+    if(a)a.textContent=me?String(me):'⏳'
+    if(b)b.textContent=op?String(op):'⏳'
+  }else if(s.status==='playing'){
+    updateHud(s)
+  }
+}
 function sessionGui(s){
   if(!s)return
+  if(S.renderedStatus===s.status && layer.style.display!=='none'){ refreshSameStatus(s); if(s.status==='playing')updateHud(s); return }
+  S.renderedStatus=s.status
   const who=otherName(s), count=(s.user_a&&s.user_b)?2:1, mineA=meA(s)
   if(s.status==='cancelled'){
     show('<div class="dm"><div class="dh"><h2>⚔️ 1V1 terminé</h2></div><div class="db"><div class="duelResult">❌ Le 1V1 est fermé.</div><p class="duelInfo" style="text-align:center">'+esc(s.result_reason||'')+'</p><div class="actions"><button class="primary" id="back">RETOUR</button></div></div></div>')
@@ -135,7 +159,7 @@ function sessionGui(s){
   }
   if(s.status==='lobby'){
     const my=meA(s)?s.choice_a:s.choice_b, other=meA(s)?s.choice_b:s.choice_a
-    show('<div class="dm"><div class="dh"><h2>⚔️ 1V1 contre '+who+'</h2><button id="qx">✕</button></div><div class="db"><div class="duelCount">2 / 2</div><div class="duelTimer" id="rt"></div><div class="duelGrid"><div class="duelCard"><h3>👤 '+esc('Moi')+'</h3><p class="duelInfo">'+(my==='ready'?'✅ PRÊT':my==='bet'?'💰 PARIER':'⏳ Pas encore choisi')+'</p></div><div class="duelCard"><h3>👤 '+who+'</h3><p class="duelInfo">'+(other==='ready'?'✅ PRÊT':other==='bet'?'💰 PARIER':'⏳ Pas encore choisi')+'</p></div></div><div class="actions"><button class="primary" id="ready">✅ PRÊT</button><button id="bet">💰 PARIER</button><button class="danger" id="leave">❌ SORTIR</button></div></div></div>')
+    show('<div class="dm"><div class="dh"><h2>⚔️ 1V1 contre '+who+'</h2><button id="qx">✕</button></div><div class="db"><div class="duelCount">2 / 2</div><div class="duelTimer" id="rt"></div><div class="duelGrid"><div class="duelCard"><h3>👤 '+esc('Moi')+'</h3><p class="duelInfo" id="duelMineChoice">'+(my==='ready'?'✅ PRÊT':my==='bet'?'💰 PARIER':'⏳ Pas encore choisi')+'</p></div><div class="duelCard"><h3>👤 '+who+'</h3><p class="duelInfo" id="duelOtherChoice">'+(other==='ready'?'✅ PRÊT':other==='bet'?'💰 PARIER':'⏳ Pas encore choisi')+'</p></div></div><div class="actions"><button class="primary" id="ready">✅ PRÊT</button><button id="bet">💰 PARIER</button><button class="danger" id="leave">❌ SORTIR</button></div></div></div>')
     document.getElementById('ready').onclick=function(){setChoice('ready')}
     document.getElementById('bet').onclick=function(){setChoice('bet')}
     document.getElementById('leave').onclick=function(){leaveDuel()}
@@ -148,7 +172,7 @@ function sessionGui(s){
     const balance=Math.max(0,Number(window.__IR_PROFILE_COINS||document.getElementById('coins')?.textContent?.replace(/\D/g,'')||0))
     const vals=[1,5,10,25,50,100,250,500,1000,2500,5000].filter(function(v){return v<=balance})
     if(balance>0&&!vals.includes(balance))vals.push(balance)
-    show('<div class="dm"><div class="dh"><h2>💰 Choisis ta mise</h2><button id="qx">✕</button></div><div class="db"><div class="duelTimer" id="rt"></div><p class="duelInfo">Les deux joueurs doivent mettre <b>exactement la même somme</b>.</p><div class="duelBetGrid">'+vals.map(function(v){return '<button class="duelBetBtn '+(Number(current||0)===v?'selected':'')+'" data-bet="'+v+'">'+v.toLocaleString('fr-FR')+' 🪙</button>'}).join('')+'</div><div class="duelCard" style="margin-top:12px"><b>Ta mise : '+Number(current||0).toLocaleString('fr-FR')+' 🪙</b><br><span class="duelInfo">Mise adverse : '+Number(meA(s)?s.bet_b:s.bet_a).toLocaleString('fr-FR')+' 🪙</span></div><div class="actions"><button class="danger" id="leave">❌ SORTIR</button></div></div></div>')
+    show('<div class="dm"><div class="dh"><h2>💰 Choisis ta mise</h2><button id="qx">✕</button></div><div class="db"><div class="duelTimer" id="rt"></div><p class="duelInfo">Les deux joueurs doivent mettre <b>exactement la même somme</b>.</p><div class="duelBetGrid">'+vals.map(function(v){return '<button class="duelBetBtn '+(Number(current||0)===v?'selected':'')+'" data-bet="'+v+'">'+v.toLocaleString('fr-FR')+' 🪙</button>'}).join('')+'</div><div class="duelCard" style="margin-top:12px"><b>Ta mise : <span id="duelMyBet">'+Number(current||0).toLocaleString('fr-FR')+' 🪙</span></b><br><span class="duelInfo">Mise adverse : <span id="duelOtherBet">'+Number(meA(s)?s.bet_b:s.bet_a).toLocaleString('fr-FR')+' 🪙</span></span></div><div class="actions"><button class="danger" id="leave">❌ SORTIR</button></div></div></div>')
     document.querySelectorAll('[data-bet]').forEach(function(b){b.onclick=function(){setBet(Number(b.dataset.bet))}})
     document.getElementById('leave').onclick=function(){leaveDuel()}
     document.getElementById('qx').onclick=function(){leaveDuel()}
@@ -158,7 +182,7 @@ function sessionGui(s){
   if(s.status==='final_vote'){
     const mine=meA(s)?s.final_vote_a:s.final_vote_b, other=meA(s)?s.final_vote_b:s.final_vote_a
     const amount=Number(s.bet_a||0)
-    show('<div class="dm"><div class="dh"><h2>⚔️ Décision finale</h2><button id="qx">✕</button></div><div class="db"><div class="duelTimer" id="rt"></div><div class="duelCount">'+amount.toLocaleString('fr-FR')+' 🪙 / joueur</div><p class="duelInfo" style="text-align:center">Le choix final doit être le même chez les deux.</p><div class="duelVote"><button class="primary" id="vbet">💰 PARIER</button><button id="vnobet">▶ SANS PARIER</button><button class="danger" id="vexit">❌ SORTIR</button></div><div class="duelGrid" style="margin-top:12px"><div class="duelCard"><b>Toi</b><div class="duelInfo">'+(mine?esc(mine):'⏳')+'</div></div><div class="duelCard"><b>'+who+'</b><div class="duelInfo">'+(other?esc(other):'⏳')+'</div></div></div></div></div>')
+    show('<div class="dm"><div class="dh"><h2>⚔️ Décision finale</h2><button id="qx">✕</button></div><div class="db"><div class="duelTimer" id="rt"></div><div class="duelCount">'+amount.toLocaleString('fr-FR')+' 🪙 / joueur</div><p class="duelInfo" style="text-align:center">Le choix final doit être le même chez les deux.</p><div class="duelVote"><button class="primary" id="vbet">💰 PARIER</button><button id="vnobet">▶ SANS PARIER</button><button class="danger" id="vexit">❌ SORTIR</button></div><div class="duelGrid" style="margin-top:12px"><div class="duelCard"><b>Toi</b><div class="duelInfo" id="duelMyVote">'+(mine?esc(mine):'⏳')+'</div></div><div class="duelCard"><b>'+who+'</b><div class="duelInfo" id="duelOtherVote">'+(other?esc(other):'⏳')+'</div></div></div></div></div>')
     document.getElementById('vbet').onclick=function(){setFinalVote('bet')}
     document.getElementById('vnobet').onclick=function(){setFinalVote('nobet')}
     document.getElementById('vexit').onclick=function(){setFinalVote('exit')}
@@ -182,7 +206,7 @@ function sessionGui(s){
     updateHud(s)
     if(!window.IR_DUEL_ACTIVE){
       window.IR_DUEL_ACTIVE=true
-      window.IR_DUEL_CONFIG={active:true,lives:Math.max(1,Number(meA(s)?s.lives_a:s.lives_b)||1)}
+      window.IR_DUEL_CONFIG={active:true,lives:Math.max(2,Number(meA(s)?s.lives_a:s.lives_b)||2)}
       document.getElementById('btnPause').style.display='none'
       window.dispatchEvent(new CustomEvent('ir:duelStartGame'))
     }
@@ -218,13 +242,14 @@ function updateHud(s){
 async function setChoice(c){try{if(c==='bet'){const q=await sb.from('profiles').select('coins').eq('id',S.user.id).maybeSingle();const balance=Number(q.data?.coins||0);window.__IR_PROFILE_COINS=balance;if(balance<1)throw new Error('Il te faut au moins 1 🪙 pour choisir le pari.')}await rpc('duel_set_choice',{p_session_id:S.sessionId,p_choice:c});await pollSession(true)}catch(e){alert('❌ '+(e.message||'Impossible'))}}
 async function setBet(v){try{if(!Number.isFinite(v)||v<1)throw new Error('La mise minimale est de 1 🪙.');await rpc('duel_set_bet',{p_session_id:S.sessionId,p_amount:v});await pollSession(true)}catch(e){alert('❌ '+(e.message||'Mise impossible'))}}
 async function setFinalVote(v){try{await rpc('duel_set_final_vote',{p_session_id:S.sessionId,p_vote:v});await pollSession(true)}catch(e){alert('❌ '+(e.message||'Vote impossible'))}}
-async function leaveDuel(){try{if(S.sessionId)await rpc('duel_leave',{p_session_id:S.sessionId})}catch(_){}stopGame();window.IR_DUEL_ACTIVE=false;window.IR_DUEL_CONFIG=null;hud.style.display='none';S.sessionId=null;S.session=null;S.opponentId=null;S.opponentCharacter='runner';S.ghostInitialized=false;window.__IR_DUEL_GHOST=null;hide();goMenu()}
+async function leaveDuel(){try{if(S.sessionId)await rpc('duel_leave',{p_session_id:S.sessionId})}catch(_){}stopGame();window.IR_DUEL_ACTIVE=false;window.IR_DUEL_CONFIG=null;hud.style.display='none';S.sessionId=null;S.session=null;S.renderedStatus=null;S.opponentId=null;S.opponentCharacter='runner';S.ghostInitialized=false;window.__IR_DUEL_GHOST=null;window.__IR_DUEL_SEED=null;window.__IR_DUEL_WORLD_RNG=null;hide();goMenu()}
 async function startRequest(friendId){try{const id=await rpc('duel_create_request',{p_friend_id:friendId});S.requestId=id;const rows=await getRequests();const r=rows.find(function(x){return x.id===id});requestGui(r||{id:id,sender_id:S.user.id,receiver_id:friendId,status:'pending',expires_at:new Date(Date.now()+30000).toISOString()})}catch(e){alert('❌ '+(e.message||'Demande 1V1 impossible'))}}
 async function pollSession(force){
   if(!S.sessionId)return null
   const previous=S.session
   const s=await getSession()
   if(s){
+    if(s.random_seed!=null)window.__IR_DUEL_SEED=Number(s.random_seed)||1
     const oid=otherId(s)
     if(oid&&S.opponentId!==oid){S.opponentId=oid}
     S.opponentCharacter=otherCharacter(s)
@@ -253,7 +278,7 @@ async function mainPoll(){
   await refreshUser();if(!S.user)return
   const rows=await getRequests().catch(function(){return[]})
   const incoming=rows.find(function(r){return r.status==='pending'&&r.receiver_id===S.user.id})
-  if(incoming&&!S.sessionId&&!layer.matches(':visible'))requestGui(incoming)
+  if(incoming&&!S.sessionId&&layer.style.display!=='flex')requestGui(incoming)
   if(S.requestId&&!S.sessionId){
     const r=rows.find(function(x){return x.id===S.requestId})
     if(r&&r.status==='accepted'){
@@ -284,11 +309,11 @@ window.IR_DUEL_GHOST_DRAW=function(ctx,W,H,w,G){
   const x=Math.max(45,Math.min(W-95,G.player.x+118+rel*.36))
   const y=G.groundY-62
   const skin=S.opponentCharacter||otherCharacter(s)||'runner'
-  const opAction=meA(s)?s.action_b:s.action_a
+  const rawUntil=meA(s)?s.action_until_b:s.action_until_a
+  const opAction=((rawUntil&&new Date(rawUntil).getTime()>Date.now())?'dash':(meA(s)?s.action_b:s.action_a))
   const rawY=Number(meA(s)?s.y_b:s.y_a)
   const localBase=G.groundY-62
-  const remoteDelta=Number.isFinite(rawY)?(rawY-localBase):0
-  const remoteY=localBase+remoteDelta
+  const remoteY=localBase-(Number.isFinite(rawY)?rawY*G.H:0)
   const fake={x:x-21,y:remoteY,w:42,h:62,run:performance.now()/100,ground:opAction!=='jump',sy:1,inv:0}
   const ghostG={dashT:opAction==='dash'?.55:0,shield:false,level:G.level||1,dist:opp,goal:G.goal||1}
   ctx.save()
@@ -305,6 +330,7 @@ window.IR_DUEL_GHOST_DRAW=function(ctx,W,H,w,G){
   }catch(_){
     ctx.fillStyle='#dbeafe';ctx.fillRect(x-14,y+30,28,30)
   }
+  if(opAction==='dash'){ctx.save();ctx.globalAlpha=.35;ctx.strokeStyle='#ffd166';ctx.lineWidth=5;for(let i=1;i<=4;i++){ctx.beginPath();ctx.moveTo(x-25-i*10,remoteY+24);ctx.lineTo(x-5-i*10,remoteY+24);ctx.stroke()}ctx.restore()} else if(opAction==='jump'){ctx.save();ctx.globalAlpha=.5;ctx.strokeStyle='#7affd7';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,remoteY+62,22,0,Math.PI*2);ctx.stroke();ctx.restore()}
   ctx.globalAlpha=.98
   ctx.fillStyle='#fff'
   ctx.font='900 12px Inter,sans-serif'
