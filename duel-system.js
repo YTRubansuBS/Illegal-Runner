@@ -141,8 +141,8 @@ function sessionGui(s){
     return
   }
   if(s.status==='countdown'){
-    show('<div class="dm"><div class="dh"><h2>⚔️ 1V1</h2></div><div class="db"><div class="duelCount">3</div><div class="duelResult">'+(s.bet_mode?'💰 Partie avec pari':'▶ Partie sans pari')+'</div></div></div>')
-    startPhaseTimer(s.phase_deadline,null,function(){})
+    show('<div class="dm"><div class="dh"><h2>⚔️ 1V1</h2></div><div class="db"><div class="duelTimer" id="rt"></div><div class="duelResult">'+(s.bet_mode?'💰 Partie avec pari':'▶ Partie sans pari')+'</div></div></div>')
+    startPhaseTimer(s.phase_deadline,'rt',function(){})
     return
   }
   if(s.status==='playing'){
@@ -188,10 +188,24 @@ async function leaveDuel(){try{if(S.sessionId)await rpc('duel_leave',{p_session_
 async function startRequest(friendId){try{const id=await rpc('duel_create_request',{p_friend_id:friendId});S.requestId=id;const rows=await getRequests();const r=rows.find(function(x){return x.id===id});requestGui(r||{id:id,sender_id:S.user.id,receiver_id:friendId,status:'pending',expires_at:new Date(Date.now()+30000).toISOString()})}catch(e){alert('❌ '+(e.message||'Demande 1V1 impossible'))}}
 async function pollSession(force){
   if(!S.sessionId)return null
+  const previous=S.session?.status
   const s=await getSession()
-  if(s){render(s);if(s.status==='playing'||s.status==='completed')window.__IR_DUEL_GHOST=s}
+  if(s){
+    if(s.status==='bet_amount'){
+      const q=await sb.from('profiles').select('coins').eq('id',S.user.id).maybeSingle()
+      window.__IR_PROFILE_COINS=Number(q.data?.coins||0)
+    }
+    if(previous==='randomizing'&&s.status!=='randomizing'){
+      if(s.status==='bet_amount') toast('🎲 Vote : PARIER')
+      else if(s.status==='countdown'&&s.bet_mode) toast('🎲 Vote : PARIER')
+      else if(s.status==='countdown'&&!s.bet_mode) toast('🎲 Vote : SANS PARIER')
+    }
+    render(s)
+    if(s.status==='playing'||s.status==='completed')window.__IR_DUEL_GHOST=s
+  }
   return s
 }
+
 async function mainPoll(){
   await refreshUser();if(!S.user)return
   const rows=await getRequests().catch(function(){return[]})
@@ -199,11 +213,18 @@ async function mainPoll(){
   if(incoming&&!S.sessionId&&!layer.matches(':visible'))requestGui(incoming)
   if(S.requestId&&!S.sessionId){
     const r=rows.find(function(x){return x.id===S.requestId})
-    if(r?.status==='accepted'&&r.session_id){S.sessionId=r.session_id;S.requestId=null;await pollSession(true)}
-    else if(r&&['declined','cancelled'].includes(r.status)){S.requestId=null;hide()}
+    if(r&&r.status==='accepted'){
+      let sid=r.session_id
+      if(!sid){
+        const q=await sb.from('duel_sessions').select('id').eq('request_id',S.requestId).maybeSingle()
+        sid=q.data&&q.data.id?q.data.id:null
+      }
+      if(sid){S.sessionId=sid;S.requestId=null;await pollSession(true)}
+    }else if(r&&['declined','cancelled'].includes(r.status)){S.requestId=null;hide()}
   }
   if(S.sessionId)await pollSession(false)
 }
+
 function decorateFriends(){
   document.querySelectorAll('#friendList .friend[data-trade-friend-id]').forEach(function(el){
     const id=el.dataset.tradeFriendId;if(!id)return
