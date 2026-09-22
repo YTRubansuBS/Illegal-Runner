@@ -95,13 +95,18 @@ function startRequestTimer(){
     if(left<=0){clearTimers();await cancelRequest(true)}
   },200)
 }
-async function cancelRequest(silent){
-  try{if(S.requestId)await rpc('duel_cancel_request',{p_request_id:S.requestId})}catch(_){}
+async function cancelRequest(requestIdOrSilent,silentMaybe){
+  const silent=typeof requestIdOrSilent==='boolean'?requestIdOrSilent:!!silentMaybe
+  const requestId=typeof requestIdOrSilent==='string'?requestIdOrSilent:(S.requestId?String(S.requestId):'')
+  try{if(requestId)await rpc('duel_cancel_request',{p_request_id:requestId})}catch(_){}
   if(!silent)toast('❌ Demande 1V1 annulée.')
-  S.requestId=null;hide()
+  if(!requestId||String(S.requestId)===requestId)S.requestId=null
+  hide()
 }
-async function respondRequest(ok){
-  const requestId=S.requestId
+async function respondRequest(requestIdOrOk,okMaybe){
+  const ok=typeof requestIdOrOk==='boolean'?requestIdOrOk:!!okMaybe
+  const requestId=typeof requestIdOrOk==='string'?requestIdOrOk:(S.requestId?String(S.requestId):'')
+  if(!requestId){alert('❌ Demande 1V1 introuvable.');return}
   const acceptBtn=document.getElementById('da')
   const rejectBtn=document.getElementById('dr')
   const closeBtn=document.getElementById('dx')
