@@ -154,7 +154,7 @@ function sessionGui(s){
   const who=otherName(s), count=(s.user_a&&s.user_b)?2:1, mineA=meA(s)
   if(s.status==='cancelled'){
     show('<div class="dm"><div class="dh"><h2>⚔️ 1V1 terminé</h2></div><div class="db"><div class="duelResult">❌ Le 1V1 est fermé.</div><p class="duelInfo" style="text-align:center">'+esc(s.result_reason||'')+'</p><div class="actions"><button class="primary" id="back">RETOUR</button></div></div></div>')
-    document.getElementById('back').onclick=function(){S.sessionId=null;hide();goMenu()}
+    document.getElementById('back').onclick=function(){S.sessionId=null;S.session=null;S.renderedStatus=null;window.__IR_DUEL_SEED=null;window.__IR_DUEL_WORLD_RNG=null;hide();goMenu()}
     return
   }
   if(s.status==='lobby'){
@@ -217,8 +217,11 @@ function sessionGui(s){
     const win=s.winner_id===S.user.id
     const winnerName=esc(s.winner_id===S.user.id?(S.nameMap[S.user.id]||S.user.user_metadata?.username||'Moi'):(S.nameMap[s.winner_id]||'Ton adversaire'))
     const prize=((s.payout||0)>0?Number(s.payout).toLocaleString('fr-FR')+' 🪙 gagnées':'Aucune mise')
-    show('<div class="dm"><div class="dh"><h2>⚔️ FIN DU 1V1</h2></div><div class="db"><div class="duelResult">🏆 '+winnerName+' a gagné !</div><p style="text-align:center;font-size:20px"><b>'+prize+'</b></p><p class="duelInfo" style="text-align:center">'+(s.result_reason==='forfeit'?'L’adversaire a quitté le 1V1 et a donné une récompense ×2.':s.result_reason==='disconnect'?'L’adversaire a quitté la partie et a donné une récompense ×2.':'La partie est terminée.')+'</p><div class="actions"><button class="primary" id="done">RETOUR AU MENU</button></div></div></div>')
-    document.getElementById('done').onclick=function(){S.sessionId=null;S.session=null;layer.style.display='none';window.IR_DUEL_ACTIVE=false;window.IR_DUEL_CONFIG=null;goMenu()}
+    const myLives=meA(s)?s.lives_a:s.lives_b, opLives=meA(s)?s.lives_b:s.lives_a
+    const myDist=Math.max(0,Math.floor(Number(meA(s)?s.distance_a:s.distance_b)||0)), opDist=Math.max(0,Math.floor(Number(meA(s)?s.distance_b:s.distance_a)||0))
+    const reason=s.result_reason==='forfeit'||s.result_reason==='disconnect'?'☠️ Adversaire éliminé / déconnecté.': '🏁 Résultat selon les vies restantes et la distance.'
+    show('<div class="dm"><div class="dh"><h2>⚔️ FIN DU 1V1</h2></div><div class="db"><div class="duelResult">🏆 '+winnerName+' a gagné !</div><div class="duelGrid"><div class="duelCard"><b>Toi</b><div>❤️ '+myLives+' vies</div><div>📏 '+myDist+' m</div></div><div class="duelCard"><b>'+otherName(s)+'</b><div>❤️ '+opLives+' vies</div><div>📏 '+opDist+' m</div></div></div><p style="text-align:center;font-size:20px;margin-top:14px"><b>'+prize+'</b></p><p class="duelInfo" style="text-align:center">'+reason+'</p><div class="actions"><button class="primary" id="done">RETOUR AU MENU</button></div></div></div>')
+    document.getElementById('done').onclick=function(){S.sessionId=null;S.session=null;S.renderedStatus=null;layer.style.display='none';window.IR_DUEL_ACTIVE=false;window.IR_DUEL_CONFIG=null;window.__IR_DUEL_SEED=null;window.__IR_DUEL_WORLD_RNG=null;goMenu()}
     return
   }
 }
