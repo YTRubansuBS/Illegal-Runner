@@ -773,15 +773,17 @@ begin
  end if;
  select * into s from public.duel_sessions where id=s.id for update;
 
- if s.status='lobby' and s.phase_deadline<=now_ts then
-   if s.choice_a is null or s.choice_b is null then
-     update public.duel_sessions set status='cancelled',result_reason='lobby_timeout',ended_at=now(),updated_at=now() where id=s.id;
-   elsif s.choice_a=s.choice_b and s.choice_a='ready' then
+ if s.status='lobby' then
+   if s.choice_a is not null and s.choice_b is not null and s.choice_a=s.choice_b and s.choice_a='ready' then
      update public.duel_sessions set status='countdown',bet_mode=false,phase_deadline=now_ts+interval '3 seconds',updated_at=now() where id=s.id;
-   elsif s.choice_a=s.choice_b and s.choice_a='bet' then
+   elsif s.choice_a is not null and s.choice_b is not null and s.choice_a=s.choice_b and s.choice_a='bet' then
      update public.duel_sessions set status='bet_amount',phase_deadline=now_ts+interval '30 seconds',updated_at=now() where id=s.id;
-   else
-     update public.duel_sessions set status='randomizing',random_source='lobby',phase_deadline=now_ts+interval '5 seconds',updated_at=now() where id=s.id;
+   elsif s.phase_deadline<=now_ts then
+     if s.choice_a is null or s.choice_b is null then
+       update public.duel_sessions set status='cancelled',result_reason='lobby_timeout',ended_at=now(),updated_at=now() where id=s.id;
+     else
+       update public.duel_sessions set status='randomizing',random_source='lobby',phase_deadline=now_ts+interval '5 seconds',updated_at=now() where id=s.id;
+     end if;
    end if;
  end if;
 
@@ -836,7 +838,7 @@ begin
      else
        update public.profiles set coins=coins-s.bet_a where id=s.user_a;
        update public.profiles set coins=coins-s.bet_b where id=s.user_b;
-       update public.duel_sessions set stakes_locked=true,status='playing',started_at=now(),phase_deadline=null,lives_a=greatest(1,(select lives_level+1 from public.profiles where id=s.user_a)),lives_b=greatest(1,(select lives_level+1 from public.profiles where id=s.user_b)),heartbeat_a=now(),heartbeat_b=now(),updated_at=now() where id=s.id;
+       update public.duel_sessions set stakes_locked=true,status='playing',started_at=now(),phase_deadline=null,random_seed=coalesce(random_seed,(floor(random()*2147483647))::bigint),lives_a=greatest(2,(select lives_level+1 from public.profiles where id=s.user_a)),lives_b=greatest(2,(select lives_level+1 from public.profiles where id=s.user_b)),heartbeat_a=now(),heartbeat_b=now(),updated_at=now() where id=s.id;
      end if;
    elsif not s.bet_mode then
      update public.duel_sessions set status='playing',started_at=now(),phase_deadline=null,lives_a=greatest(1,(select lives_level+1 from public.profiles where id=s.user_a)),lives_b=greatest(1,(select lives_level+1 from public.profiles where id=s.user_b)),heartbeat_a=now(),heartbeat_b=now(),updated_at=now() where id=s.id;
@@ -844,7 +846,7 @@ begin
  end if;
 
  select * into s from public.duel_sessions where id=s.id for update;
- if s.status='playing' then
+ if s.status='playing' and (s.started_at is null or s.started_at<=now_ts-interval '1.5 seconds') then
    if s.lives_a<=0 and s.lives_b<=0 then winner:=case when s.distance_a>=s.distance_b then s.user_a else s.user_b end;
    elsif s.lives_a<=0 then winner:=s.user_b;
    elsif s.lives_b<=0 then winner:=s.user_a;
