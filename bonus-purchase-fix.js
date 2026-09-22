@@ -23,7 +23,6 @@
     const coins = Math.max(0, Math.floor(Number(coinsEl.textContent || 0)))
     if (!Number.isFinite(coins)) return
 
-    // Mode local : le moteur principal sauvegarde déjà irGuest.
     if (badge?.textContent?.includes('local')) return
     if (!sb) return
 
@@ -31,7 +30,6 @@
       const { data: { user }, error: userError } = await sb.auth.getUser()
       if (userError || !user) return
 
-      // On ne touche qu'à coins : aucune autre donnée de profil n'est modifiée.
       const { error } = await sb
         .from('profiles')
         .update({ coins })
@@ -55,10 +53,13 @@
     if (!button) return
     const id = button.getAttribute('data-up')
     if (!BONUS_IDS.has(id)) return
-
-    // Le moteur retire d'abord le prix et termine son rendu.
-    // On attend ensuite et on sauvegarde uniquement le nouveau solde.
     setTimeout(syncCoins, 250)
     setTimeout(syncCoins, 900)
   }, true)
+
+  // Charge le nettoyage visuel après le moteur, sans toucher à la connexion ni au gameplay.
+  const s = document.createElement('script')
+  s.src = '/world-clean-background.js?v=1'
+  s.async = false
+  document.head.appendChild(s)
 })()
