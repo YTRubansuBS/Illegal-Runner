@@ -239,11 +239,101 @@
       txt(ctx,'YOU FOUND IT',W*.5,110,18,'#fff',.45)
     }
 
+    // Atmosphère de rareté : plus le monde est rare, plus l'écran devient spectaculaire.
+    if(d.rarity>=1){
+      const amount = [0,18,28,40,55,75,95][d.rarity]
+      for(let i=0;i<amount;i++){
+        const x=(i*137+frame*(0.08+d.rarity*.025))%W
+        const y=34+(i*53)%(Math.max(gy-55,1))
+        const r=1.2+(i%4)*.8+d.rarity*.25
+        circle(ctx,x,y,r,d.accent,.18+d.rarity*.025)
+      }
+    }
     if(d.rarity>=2){
-      ctx.globalAlpha=.10+d.rarity*.02
-      ctx.fillStyle=d.accent
+      const glowA=.055+d.rarity*.018
+      const grd=ctx.createRadialGradient(W*.5,gy*.34,20,W*.5,gy*.34,W*.82)
+      grd.addColorStop(0,d.accent)
+      grd.addColorStop(1,'transparent')
+      ctx.globalAlpha=glowA
+      ctx.fillStyle=grd
       ctx.fillRect(0,0,W,gy)
       ctx.globalAlpha=1
+      if(d.rarity>=3){
+        for(let i=0;i<4+d.rarity;i++){
+          const x=(i*190+frame*(0.16+d.rarity*.03))%W
+          const y=gy-70-(i%4)*48
+          ctx.save()
+          ctx.translate(x,y)
+          ctx.rotate(frame*.002*(i%2?1:-1))
+          ctx.strokeStyle=d.accent
+          ctx.lineWidth=1.5+d.rarity*.35
+          ctx.globalAlpha=.16+d.rarity*.025
+          ctx.strokeRect(-18-d.rarity*2,-18-d.rarity*2,36+d.rarity*4,36+d.rarity*4)
+          ctx.restore()
+        }
+      }
+    }
+    if(d.rarity>=4){
+      ctx.save()
+      ctx.globalAlpha=.10+d.rarity*.02
+      ctx.strokeStyle=d.accent
+      ctx.lineWidth=2+d.rarity*.5
+      for(let i=0;i<5;i++){
+        const y=55+i*55+Math.sin(performance.now()*.001+i)*10
+        ctx.beginPath()
+        ctx.moveTo(0,y)
+        ctx.bezierCurveTo(W*.25,y-25,W*.7,y+25,W,y-4)
+        ctx.stroke()
+      }
+      ctx.restore()
+    }
+    if(d.rarity===5){
+      // Mythique : portail cosmique permanent, sans toucher au gameplay.
+      const px=W*.5, py=gy*.36
+      ctx.save()
+      ctx.globalAlpha=.24
+      for(let i=0;i<4;i++){
+        ctx.strokeStyle=i%2? '#ff4bd8':'#00f5ff'
+        ctx.lineWidth=3+i
+        ctx.beginPath()
+        ctx.ellipse(px,py,95+i*22,48+i*12,Math.sin(performance.now()*.00035)*.3,0,Math.PI*2)
+        ctx.stroke()
+      }
+      ctx.restore()
+    }
+    if(d.rarity===6){
+      // SECRET : mélange vivant de dimensions + pulsation multicolore.
+      const pulse=.5+.5*Math.sin(performance.now()*.0022)
+      const colors=['#00f5ff','#ff4bd8','#7affd7','#ffd166','#a78bfa']
+      const sg=ctx.createRadialGradient(W*.5,gy*.38,15,W*.5,gy*.38,W*.9)
+      sg.addColorStop(0,'#ffffff')
+      sg.addColorStop(.18,colors[(frame>>3)%colors.length])
+      sg.addColorStop(.55,'#16051e')
+      sg.addColorStop(1,'#000')
+      ctx.save()
+      ctx.globalAlpha=.10+.10*pulse
+      ctx.fillStyle=sg
+      ctx.fillRect(0,0,W,gy)
+      ctx.globalAlpha=1
+      for(let i=0;i<12;i++){
+        const a=frame*.003*(i%2?1:-1)+i*.5
+        const rr=45+i*18+Math.sin(frame*.01+i)*8
+        const x=W*.5+Math.cos(a)*rr
+        const y=gy*.38+Math.sin(a)*rr*.42
+        ctx.strokeStyle=colors[i%colors.length]
+        ctx.lineWidth=2+pulse*2
+        ctx.globalAlpha=.35+.2*pulse
+        ctx.beginPath()
+        ctx.arc(x,y,8+(i%4)*4,0,Math.PI*2)
+        ctx.stroke()
+      }
+      ctx.globalAlpha=.75
+      ctx.strokeStyle=colors[frame%colors.length]
+      ctx.lineWidth=2+pulse*2
+      ctx.beginPath()
+      ctx.arc(W*.5,gy*.38,62+pulse*14,0,Math.PI*2)
+      ctx.stroke()
+      ctx.restore()
     }
     ctx.restore()
   }
