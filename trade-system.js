@@ -36,8 +36,50 @@ async function render(){if(!S.sessionId)return;const q=await sb.from('trade_sess
 const prof=await sb.from('profiles').select('coins').eq('id',S.user.id).maybeSingle();window.__IR_PROFILE_COINS=Number(prof.data?.coins||0)
 const meA=s.user_a===S.user.id,other=meA?s.user_b:s.user_a,myOk=meA?s.accepted_a:s.accepted_b,otherOk=meA?s.accepted_b:s.accepted_a,myConf=meA?s.confirmed_a:s.confirmed_b,nm=esc(S.names[other]||'ton ami'),sig=JSON.stringify([s.status,s.offer_a_coins,s.offer_b_coins,s.accepted_a,s.accepted_b,s.confirmed_a,s.confirmed_b]);const it=await sb.from('trade_items').select('owner_id,item_type,item_id,quantity').eq('session_id',S.sessionId).order('id');const items=it.data||[];if(sig===S.sig&&s.status!=='countdown'){loadChat();return}S.sig=sig;S.cash=meA?s.offer_a_coins:s.offer_b_coins;const their=items.filter(x=>x.owner_id===other);let countdown='';if(s.status==='countdown'){const start=new Date(s.countdown_started_at).getTime();if(S.timer)clearInterval(S.timer);S.timer=setInterval(()=>{const b=document.getElementById('cd');const left=Math.max(0,5-(Date.now()-start)/1000);if(b)b.textContent=left.toFixed(1)+' s';if(left<=0){clearInterval(S.timer);S.timer=null;rpc('trade_finalize',{p_session_id:S.sessionId}).catch(()=>{});render()}},100);countdown='<div class="count">⏳ <span id="cd">5.0</span></div>'}
 const otherCash=meA?s.offer_b_coins:s.offer_a_coins;const canConfirm=myOk&&otherOk&&!myConf;show('<div class="tm"><div class="th"><h2>🔄 Échange avec '+nm+'</h2><button id="xc">✕</button></div><div class="tb"><p class="sub">'+(s.status==='countdown'?'Les deux ont confirmé. Annulation possible pendant le compte à rebours.':myOk&&otherOk?'Les deux ont accepté : confirme pour lancer le transfert.':'Tu peux modifier ton offre puis accepter.')+'</p>'+countdown+'<div class="grid"><div class="card"><h3>👤 Moi</h3>'+editor()+'<div class="actions"><button class="primary" id="save">💾 METTRE À JOUR</button><button id="acc">'+(myOk?'↩️ ANNULER ACCEPTATION':'✅ ACCEPTER')+'</button>'+(canConfirm?'<button class="primary" id="conf">🔒 CONFIRMER</button>':'')+'</div></div><div class="card"><h3>👤 '+nm+'</h3><p>🪙 '+Number(otherCash||0).toLocaleString('fr-FR')+' pièces</p><div class="items">'+(their.length?their.map(x=>{const m=catalog(rev[x.item_type]||x.item_type,x.item_id);return '<div class="item"><span>'+m.emoji+'</span><span class="grow">'+esc(m.name)+'</span><b>x'+x.quantity+'</b></div>'}).join(''):'<div class="sub">Aucun objet offert.</div>')+'</div><p class="sub">'+(otherOk?'✅ A accepté':'⏳ N’a pas encore accepté')+'</p></div></div><div class="chat"><h3>💬 Chat</h3><div id="chatLog" class="log"></div><div class="actions"><input id="chatInput" maxlength="500" placeholder="Écrire un message…"><button id="send">ENVOYER</button></div></div><div class="actions"><button class="danger" id="cancel">❌ ANNULER L’ÉCHANGE</button></div></div></div>');document.getElementById('xc').onclick=cancel;document.getElementById('cancel').onclick=cancel;document.getElementById('save').onclick=saveOffer;document.getElementById('acc').onclick=()=>actAccept(!myOk);document.getElementById('send').onclick=sendChat;document.getElementById('chatInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sendChat()}};const cf=document.getElementById('conf');if(cf)cf.onclick=confirm;loadChat()}
-async function poll(){if(!S.user)return;const q=await sb.from('trade_requests').select('id,sender_id,receiver_id,status').or('sender_id.eq.'+S.user.id+',receiver_id.eq.'+S.user.id).order('created_at',{ascending:false}).limit(20);if(q.error)return;const p=q.data?.find(x=>x.status==='pending');if(p&&!layer.matches(':visible'))requestView(p);if(S.requestId&&!S.sessionId){const a=q.data?.find(x=>x.id===S.requestId&&x.status==='accepted');if(a){const z=await sb.from('trade_sessions').select('id').eq('request_id',S.requestId).maybeSingle();if(z.data?.id){S.sessionId=z.data.id;S.sig='';render()}}const d=q.data?.find(x=>x.id===S.requestId&&['declined','cancelled'].includes(x.status));if(d){alert(d.status==='declined'?'❌ La demande d’échange a été refusée.':'❌ La demande a été annulée.');close()}}if(S.sessionId){await render();loadChat()}}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-trade-open]');if(!b)return;e.preventDefault();e.stopPropagation();(async()=>{try{const id=await rpc('trade_create_request',{p_friend_id:b.dataset.tradeOpen});S.requestId=id;const q=await sb.from('trade_requests').select('id,sender_id,receiver_id,status').eq('id',id).maybeSingle();if(q.data)requestView(q.data)}catch(x){alert('❌ '+(x.message||'Demande impossible'))}})()},true)
+async function poll(){
+  if(!S.user)return
+  let rows=[]
+  try{
+    const data=await rpc('trade_poll_requests')
+    rows=Array.isArray(data)?data:[]
+  }catch(e){return}
+  const incoming=rows.find(x=>x.status==='pending'&&x.receiver_id===S.user.id)
+  if(incoming&&!layer.matches(':visible')) requestView(incoming)
+  if(S.requestId&&!S.sessionId){
+    const current=rows.find(x=>x.id===S.requestId)
+    if(current?.status==='accepted'&&current.session_id){
+      S.sessionId=current.session_id
+      S.sig=''
+      await render()
+    }else if(current&&['declined','cancelled'].includes(current.status)){
+      alert(current.status==='declined'?'❌ La demande d’échange a été refusée.':'❌ La demande a été annulée.')
+      close()
+    }
+  }
+  if(S.sessionId){
+    await render()
+    loadChat()
+  }
+}
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-trade-open]')
+  if(!b)return
+  e.preventDefault()
+  e.stopPropagation()
+  ;(async()=>{
+    try{
+      const id=await rpc('trade_create_request',{p_friend_id:b.dataset.tradeOpen})
+      S.requestId=id
+      const rows=await rpc('trade_poll_requests')
+      const req=(Array.isArray(rows)?rows:[]).find(x=>x.id===id)
+      if(req) requestView(req)
+    }catch(x){
+      alert('❌ '+(x.message||'Demande impossible'))
+    }
+  })()
+},true)
+
 const ob=new MutationObserver(decorateFriends);function decorateFriends(){document.querySelectorAll('#friendList .friend[data-trade-friend-id]').forEach(el=>{const id=el.dataset.tradeFriendId;if(!id)return;const sp=el.querySelector('span');const nm=(sp?.innerText||'').split('\n')[0].replace(/^👤\s*/,'').trim();if(nm)S.names[id]=nm;if(!el.querySelector('[data-trade-open]')){const b=document.createElement('button');b.type='button';b.dataset.tradeOpen=id;b.textContent='🔄 ÉCHANGE';el.appendChild(b)}})}
 async function init(){const box=document.getElementById('friendList');if(box)ob.observe(box,{childList:true,subtree:true});decorateFriends();await refreshUser();setInterval(async()=>{await refreshUser();decorateFriends();await poll()},900)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init()
