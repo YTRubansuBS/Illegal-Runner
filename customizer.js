@@ -128,7 +128,7 @@
       return obj&&typeof obj==='object'?obj:{}
     }catch{return {}}
   }
-  const saveCollection=(uid,type,obj)=>{try{localStorage.setItem(collectionKey(uid,type),JSON.stringify(obj))}catch{}}
+  const saveCollection=(uid,type,obj)=>{try{localStorage.setItem(collectionKey(uid,type),JSON.stringify(obj));window.dispatchEvent(new CustomEvent('ir:collectionChanged',{detail:{uid,type,data:obj}}))}catch{}}
   const collectionUid=()=>guestMode()?'guest':(cloudUser?.id||'guest')
   const weightedRarity=()=>{
     const r=Math.random()*100, cuts=[[50,'common'],[25,'uncommon'],[15,'rare'],[7,'epic'],[2,'legendary'],[0.9,'mythic'],[0.1,'secret']]
