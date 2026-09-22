@@ -694,7 +694,7 @@ create or replace function public.duel_set_bet(p_session_id uuid,p_amount bigint
 returns boolean language plpgsql security definer set search_path=public,auth set row_security=off as $$
 declare s public.duel_sessions%rowtype; bal bigint;
 begin
- if p_amount is null or p_amount<0 then raise exception 'Invalid bet'; end if;
+ if p_amount is null or p_amount<=0 then raise exception 'Invalid bet'; end if;
  select * into s from public.duel_sessions where id=p_session_id and status='bet_amount' for update;
  if not found or (s.user_a<>auth.uid() and s.user_b<>auth.uid()) then raise exception 'Duel not available'; end if;
  select coins into bal from public.profiles where id=auth.uid();
@@ -856,7 +856,9 @@ begin
    'final_vote_a',s.final_vote_a,'final_vote_b',s.final_vote_b,'bet_mode',s.bet_mode,
    'stakes_locked',s.stakes_locked,'phase_deadline',s.phase_deadline,'started_at',s.started_at,
    'winner_id',s.winner_id,'result_reason',s.result_reason,'payout',s.payout,
-   'lives_a',s.lives_a,'lives_b',s.lives_b,'distance_a',s.distance_a,'distance_b',s.distance_b
+   'lives_a',s.lives_a,'lives_b',s.lives_b,'distance_a',s.distance_a,'distance_b',s.distance_b,
+   'character_a',(select coalesce(nullif(btrim(selected_character),''),'runner') from public.profiles where id=s.user_a),
+   'character_b',(select coalesce(nullif(btrim(selected_character),''),'runner') from public.profiles where id=s.user_b)
  );
 end;
 $$;
