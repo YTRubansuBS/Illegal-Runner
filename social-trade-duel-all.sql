@@ -532,6 +532,12 @@ create table if not exists public.duel_sessions (
   distance_b bigint not null default 0,
   heartbeat_a timestamptz,
   heartbeat_b timestamptz,
+  action_a text not null default 'run',
+  action_b text not null default 'run',
+  y_a double precision,
+  y_b double precision,
+  action_until_a timestamptz,
+  action_until_b timestamptz,
   updated_at timestamptz not null default now(),
   check(user_a<>user_b)
 );
@@ -545,6 +551,13 @@ create policy duel_requests_select on public.duel_requests for select using(auth
 create policy duel_sessions_select on public.duel_sessions for select using(auth.uid()=user_a or auth.uid()=user_b);
 
 alter table public.duel_sessions add column if not exists updated_at timestamptz not null default now();
+alter table public.duel_sessions add column if not exists action_a text not null default 'run';
+alter table public.duel_sessions add column if not exists action_b text not null default 'run';
+alter table public.duel_sessions add column if not exists y_a double precision;
+alter table public.duel_sessions add column if not exists y_b double precision;
+alter table public.duel_sessions add column if not exists action_until_a timestamptz;
+alter table public.duel_sessions add column if not exists action_until_b timestamptz;
+
 
 create index if not exists duel_requests_participants_idx on public.duel_requests(sender_id,receiver_id,status,created_at desc);
 create index if not exists duel_sessions_participants_idx on public.duel_sessions(user_a,user_b,status,updated_at desc);
@@ -741,18 +754,18 @@ begin
 end;
 $$;
 
-create or replace function public.duel_tick(p_session_id uuid,p_distance bigint,p_lives integer)
+create or replace function public.duel_tick(p_session_id uuid,p_distance bigint,p_lives integer,p_y double precision default null,p_action text default 'run')
 returns jsonb language plpgsql security definer set search_path=public,auth set row_security=off as $$
 declare
- s public.duel_sessions%rowtype; now_ts timestamptz:=now(); winner uuid; prize bigint:=0; bal_a bigint; bal_b bigint;
+ s public.duel_sessions%rowtype; now_ts timestamptz:=now(); winner uuid; prize bigint:=0; bal_a bigint; bal_b bigint; clean_action text:=case when p_action in ('run','jump','dash') then p_action else 'run' end;
 begin
  select * into s from public.duel_sessions where id=p_session_id for update;
  if not found or (s.user_a<>auth.uid() and s.user_b<>auth.uid()) then raise exception 'Duel not found'; end if;
 
  if s.user_a=auth.uid() then
-   update public.duel_sessions set distance_a=greatest(0,coalesce(p_distance,0)),lives_a=greatest(0,coalesce(p_lives,0)),heartbeat_a=now_ts,updated_at=now_ts where id=s.id;
+   update public.duel_sessions set distance_a=greatest(0,coalesce(p_distance,0)),lives_a=greatest(0,coalesce(p_lives,0)),heartbeat_a=now_ts,y_a=p_y,action_a=clean_action,action_until_a=case when clean_action='dash' then now_ts+interval '0.65 seconds' else null end,updated_at=now_ts where id=s.id;
  else
-   update public.duel_sessions set distance_b=greatest(0,coalesce(p_distance,0)),lives_b=greatest(0,coalesce(p_lives,0)),heartbeat_b=now_ts,updated_at=now_ts where id=s.id;
+   update public.duel_sessions set distance_b=greatest(0,coalesce(p_distance,0)),lives_b=greatest(0,coalesce(p_lives,0)),heartbeat_b=now_ts,y_b=p_y,action_b=clean_action,action_until_b=case when clean_action='dash' then now_ts+interval '0.65 seconds' else null end,updated_at=now_ts where id=s.id;
  end if;
  select * into s from public.duel_sessions where id=s.id for update;
 
@@ -858,7 +871,9 @@ begin
    'winner_id',s.winner_id,'result_reason',s.result_reason,'payout',s.payout,
    'lives_a',s.lives_a,'lives_b',s.lives_b,'distance_a',s.distance_a,'distance_b',s.distance_b,
    'character_a',(select coalesce(nullif(btrim(selected_character),''),'runner') from public.profiles where id=s.user_a),
-   'character_b',(select coalesce(nullif(btrim(selected_character),''),'runner') from public.profiles where id=s.user_b)
+   'character_b',(select coalesce(nullif(btrim(selected_character),''),'runner') from public.profiles where id=s.user_b),
+   'action_a',s.action_a,'action_b',s.action_b,'y_a',s.y_a,'y_b',s.y_b,
+   'action_until_a',s.action_until_a,'action_until_b',s.action_until_b
  );
 end;
 $$;
