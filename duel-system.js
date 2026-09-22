@@ -56,7 +56,10 @@ async function getSession(){
     const G=window.__IR_G
     const distance=Math.max(0,Math.floor(Number(G?.dist||0)))
     const lives=Math.max(0,Math.floor(Number(G?.lives||0)))
-    const data=await rpc('duel_tick',{p_session_id:S.sessionId,p_distance:distance,p_lives:lives})
+    const player=G?.player
+    const action=G?.dashT>0?'dash':(player&&!player.ground?'jump':'run')
+    const y=Number(player?.y)
+    const data=await rpc('duel_tick',{p_session_id:S.sessionId,p_distance:distance,p_lives:lives,p_y:Number.isFinite(y)?y:null,p_action:action})
     S.session=data||null
     return S.session
   }catch(e){
@@ -276,14 +279,20 @@ window.IR_DUEL_GHOST_DRAW=function(ctx,W,H,w,G){
   const x=Math.max(45,Math.min(W-95,G.player.x+118+rel*.36))
   const y=G.groundY-62
   const skin=S.opponentCharacter||otherCharacter(s)||'runner'
-  const fake={x:x-21,y,w:42,h:62,run:performance.now()/100,ground:true,sy:1,inv:0}
+  const opAction=meA(s)?s.action_b:s.action_a
+  const rawY=Number(meA(s)?s.y_b:s.y_a)
+  const localBase=G.groundY-62
+  const remoteDelta=Number.isFinite(rawY)?(rawY-localBase):0
+  const remoteY=localBase+remoteDelta
+  const fake={x:x-21,y:remoteY,w:42,h:62,run:performance.now()/100,ground:opAction!=='jump',sy:1,inv:0}
+  const ghostG={dashT:opAction==='dash'?.55:0,shield:false,level:G.level||1,dist:opp,goal:G.goal||1}
   ctx.save()
   ctx.globalAlpha=.92
   ctx.shadowBlur=18
   ctx.shadowColor='#ff37c7'
   try{
     if(window.IR_CHARACTER_DRAW_SKIN){
-      window.IR_CHARACTER_DRAW_SKIN(ctx,42,fake,{dashT:0,shield:false,level:G.level||1,dist:opp,goal:G.goal||1},skin)
+      window.IR_CHARACTER_DRAW_SKIN(ctx,42,fake,ghostG,skin)
     }else{
       ctx.fillStyle='#dbeafe';ctx.fillRect(x-14,y+30,28,30)
       ctx.beginPath();ctx.arc(x,y+15,15,0,Math.PI*2);ctx.fill()
@@ -298,8 +307,8 @@ window.IR_DUEL_GHOST_DRAW=function(ctx,W,H,w,G){
   ctx.shadowBlur=8
   ctx.fillText(S.nameMap[otherId(s)]||'ADVERSAIRE',x,y-12)
   ctx.font='800 10px Inter,sans-serif'
-  ctx.fillStyle='#8fe9ff'
-  ctx.fillText(Math.max(0,Math.floor(opp))+' m',x,y-1)
+  ctx.fillStyle=opAction==='dash'?'#ffd166':opAction==='jump'?'#7affd7':'#8fe9ff'
+  ctx.fillText((opAction==='dash'?'⚡ DASH':opAction==='jump'?'⬆️ SAUT':'🏃 RUN')+' · '+Math.max(0,Math.floor(opp))+' m',x,y-1)
   ctx.restore()
 }
 document.addEventListener('click',function(e){
