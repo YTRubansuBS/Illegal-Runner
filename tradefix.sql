@@ -51,3 +51,6 @@ $$;
 revoke all on function public.trade_poll_requests() from public,anon;
 grant execute on function public.trade_poll_requests() to authenticated;
 
+
+-- Demande à PostgREST de recharger immédiatement le cache du schéma.
+NOTIFY pgrst, 'reload schema';
