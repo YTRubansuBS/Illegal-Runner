@@ -538,6 +538,7 @@ create table if not exists public.duel_sessions (
   y_b double precision,
   action_until_a timestamptz,
   action_until_b timestamptz,
+  random_seed bigint,
   updated_at timestamptz not null default now(),
   check(user_a<>user_b)
 );
@@ -557,6 +558,7 @@ alter table public.duel_sessions add column if not exists y_a double precision;
 alter table public.duel_sessions add column if not exists y_b double precision;
 alter table public.duel_sessions add column if not exists action_until_a timestamptz;
 alter table public.duel_sessions add column if not exists action_until_b timestamptz;
+alter table public.duel_sessions add column if not exists random_seed bigint;
 
 
 create index if not exists duel_requests_participants_idx on public.duel_requests(sender_id,receiver_id,status,created_at desc);
@@ -874,6 +876,7 @@ begin
    'lives_a',s.lives_a,'lives_b',s.lives_b,'distance_a',s.distance_a,'distance_b',s.distance_b,
    'character_a',(select coalesce(nullif(btrim(selected_character),''),'runner') from public.profiles where id=s.user_a),
    'character_b',(select coalesce(nullif(btrim(selected_character),''),'runner') from public.profiles where id=s.user_b),
+   'random_seed',s.random_seed,
    'action_a',s.action_a,'action_b',s.action_b,'y_a',s.y_a,'y_b',s.y_b,
    'action_until_a',s.action_until_a,'action_until_b',s.action_until_b
  );
