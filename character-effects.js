@@ -123,7 +123,7 @@
     }
   }
 
-  function render(ctx,W,H,w,p,G){
+  function render(ctx,w,p,G){
     const id=selected||'runner', m=COLORS[id]||COLORS.runner, rarity=RARITY[id]||0, t=performance.now()/50
     ctx.save()
     if(G.dashT>0)for(let i=1;i<=5;i++){ctx.globalAlpha=.12*(6-i);ctx.fillStyle=m[1];ctx.fillRect(p.x-i*16,p.y+8,p.w,p.h-12)}
