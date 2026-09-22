@@ -96,7 +96,7 @@ async function respondRequest(ok){
     S.sessionId=sid
     const data=await getSession()
     S.requestId=null
-    render(data)
+    sessionGui(data)
   }catch(e){alert('❌ '+(e.message||'Demande impossible'))}
 }
 function sessionGui(s){
@@ -212,7 +212,7 @@ async function pollSession(force){
       else if(s.status==='countdown'&&s.bet_mode) toast('🎲 Vote : PARIER')
       else if(s.status==='countdown'&&!s.bet_mode) toast('🎲 Vote : SANS PARIER')
     }
-    render(s)
+    sessionGui(s)
     if(s.status==='playing'||s.status==='completed')window.__IR_DUEL_GHOST=s
   }
   return s
