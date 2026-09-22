@@ -1004,7 +1004,11 @@ begin
    end if;
    if winner is not null then
      if s.stakes_locked and s.bet_mode then
-       prize:=s.bet_a+s.bet_b;
+       if (s.heartbeat_a is not null and s.heartbeat_a<now_ts-interval '10 seconds') or (s.heartbeat_b is not null and s.heartbeat_b<now_ts-interval '10 seconds') then
+         prize:=case when winner=s.user_a then s.bet_a+(s.bet_b*2) else s.bet_b+(s.bet_a*2) end;
+       else
+         prize:=s.bet_a+s.bet_b;
+       end if;
        update public.profiles set coins=coins+prize,updated_at=now() where id=winner;
      end if;
      update public.duel_sessions set status='completed',winner_id=winner,result_reason=case when s.heartbeat_a<now_ts-interval '10 seconds' or s.heartbeat_b<now_ts-interval '10 seconds' then 'disconnect' else 'defeat' end,payout=prize,ended_at=now(),updated_at=now() where id=s.id;
