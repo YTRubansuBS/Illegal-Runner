@@ -15,8 +15,9 @@
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
       code = code.replace('const G = {', 'const G = window.__IR_G = {')
+      code = code.replace('  function drawPlayer(ctx, w) {\\n    const p = G.player', '  function drawPlayer(ctx, w) {\\n    const p = G.player\\n    if (window.IR_CHARACTER_DRAW && window.IR_CHARACTER_DRAW(ctx, w, p, G)) return')
       code = code.replace('    // moon/sun glow', `    if (window.IR_WORLD_BG_DRAW) { try { window.IR_WORLD_BG_DRAW(ctx, W, H, w) } catch (e) { console.warn("[IR] World visual error:", e) } }\n\n    // moon/sun glow`)
-      code = code.replace('    renderAll()\n    switchTab("home")', '    renderAll()\n    window.dispatchEvent(new CustomEvent("ir:profileLoaded", { detail: { selected_background: profile.selected_background || "city" } }))\n    switchTab("home")')
+      code = code.replace('    renderAll()\n    switchTab("home")', '    renderAll()\n    window.dispatchEvent(new CustomEvent("ir:profileLoaded", { detail: { selected_background: profile.selected_background || "city", selected_character: profile.selected_character || "runner" } }))\n    switchTab("home")')
       code = code.replace('const STEP = 1 / 120 // fixed physics step', `window.addEventListener('ir:customizationChanged', e => {
           if (e.detail && typeof profile === 'object' && profile) Object.assign(profile, e.detail)
           if (e.detail?.selected_background && typeof G !== 'undefined' && G.world) G.world = WORLDS[e.detail.selected_background] || G.world
