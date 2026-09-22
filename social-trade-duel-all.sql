@@ -165,7 +165,7 @@ grant execute on function public.friend_remove(bigint) to authenticated;
 
 alter table public.inventory drop constraint if exists inventory_item_type_check;
 alter table public.inventory add column if not exists quantity integer not null default 1;
-do $ begin
+DO $ BEGIN
   if not exists (
     select 1 from pg_constraint
     where conrelid='public.inventory'::regclass and conname='inventory_item_type_check'
@@ -173,7 +173,7 @@ do $ begin
     alter table public.inventory add constraint inventory_item_type_check
       check (item_type in ('background','character','obstacle','coin'));
   end if;
-end $;
+END $;
 update public.inventory set quantity=1 where quantity is null or quantity < 1;
 
 create table if not exists public.trade_requests (
