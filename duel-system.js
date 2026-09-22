@@ -108,8 +108,13 @@ async function respondRequest(ok){
   try{
     const sid=await rpc('duel_respond_request',{p_request_id:requestId,p_accept:ok})
     if(!ok){S.requestId=null;hide();return}
-    if(!sid)throw new Error('La session 1V1 n’a pas pu être créée.')
-    S.sessionId=sid
+    let resolvedSid=sid
+    if(!resolvedSid){
+      const q=await sb.from('duel_sessions').select('id').eq('request_id',requestId).maybeSingle()
+      resolvedSid=q.data?.id||null
+    }
+    if(!resolvedSid)throw new Error('La session 1V1 n’a pas pu être créée. Réessaie.')
+    S.sessionId=resolvedSid
     const data=await getSession()
     S.requestId=null
     sessionGui(data)
@@ -140,7 +145,7 @@ function sessionGui(s){
   }
   if(s.status==='bet_amount'){
     const current=meA(s)?s.bet_a:s.bet_b
-    const balance=Number(window.__IR_PROFILE_COINS||0)
+    const balance=Math.max(0,Number(window.__IR_PROFILE_COINS||document.getElementById('coins')?.textContent?.replace(/\D/g,'')||0))
     const vals=[1,5,10,25,50,100,250,500,1000,2500,5000].filter(function(v){return v<=balance})
     if(balance>0&&!vals.includes(balance))vals.push(balance)
     show('<div class="dm"><div class="dh"><h2>💰 Choisis ta mise</h2><button id="qx">✕</button></div><div class="db"><div class="duelTimer" id="rt"></div><p class="duelInfo">Les deux joueurs doivent mettre <b>exactement la même somme</b>.</p><div class="duelBetGrid">'+vals.map(function(v){return '<button class="duelBetBtn '+(Number(current||0)===v?'selected':'')+'" data-bet="'+v+'">'+v.toLocaleString('fr-FR')+' 🪙</button>'}).join('')+'</div><div class="duelCard" style="margin-top:12px"><b>Ta mise : '+Number(current||0).toLocaleString('fr-FR')+' 🪙</b><br><span class="duelInfo">Mise adverse : '+Number(meA(s)?s.bet_b:s.bet_a).toLocaleString('fr-FR')+' 🪙</span></div><div class="actions"><button class="danger" id="leave">❌ SORTIR</button></div></div></div>')
@@ -316,6 +321,6 @@ document.addEventListener('click',function(e){
   e.preventDefault();e.stopPropagation();startRequest(b.dataset.duelOpen)
 },true)
 const obs=new MutationObserver(decorateFriends)
-async function init(){const box=document.getElementById('friendList');if(box)obs.observe(box,{childList:true,subtree:true});decorateFriends();await refreshUser();if(S.pollTimer)clearInterval(S.pollTimer);S.pollTimer=setInterval(mainPoll,300)}
+async function init(){const box=document.getElementById('friendList');if(box)obs.observe(box,{childList:true,subtree:true});decorateFriends();await refreshUser();if(S.pollTimer)clearInterval(S.pollTimer);S.pollTimer=setInterval(mainPoll,200)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init()
 })();
