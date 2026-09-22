@@ -576,19 +576,85 @@ end;
 $$;
 
 create or replace function public.duel_respond_request(p_request_id uuid,p_accept boolean)
-returns uuid language plpgsql security definer set search_path=public,auth set row_security=off as $$
-declare r public.duel_requests%rowtype; sid uuid;
+returns uuid
+language plpgsql
+security definer
+set search_path=public,auth
+set row_security=off
+as $
+declare
+  r public.duel_requests%rowtype;
+  sid uuid;
 begin
- if auth.uid() is null then raise exception 'Not authenticated'; end if;
- select * into r from public.duel_requests where id=p_request_id and receiver_id=auth.uid() and status='pending' and expires_at>now() for update;
- if not found then raise exception 'Duel request not found'; end if;
- if not p_accept then update public.duel_requests set status='declined',updated_at=now() where id=r.id; return null; end if;
- insert into public.duel_sessions(request_id,user_a,user_b,status,phase_deadline,heartbeat_a,heartbeat_b)
- values(r.id,r.sender_id,r.receiver_id,'lobby',now()+interval '30 seconds',now(),now()) returning id into sid;
- update public.duel_requests set status='accepted',updated_at=now() where id=r.id;
- return sid;
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select *
+    into r
+  from public.duel_requests
+  where id=p_request_id
+    and receiver_id=auth.uid()
+  for update;
+
+  if not found then
+    raise exception 'Duel request not found';
+  end if;
+
+  -- Acceptation idempotente : si une première requête a déjà accepté,
+  -- on renvoie simplement la session existante.
+  if r.status='accepted' then
+    select s.id into sid
+    from public.duel_sessions s
+    where s.request_id=r.id
+    limit 1;
+    if sid is not null then
+      return sid;
+    end if;
+  end if;
+
+  if r.status<>'pending' then
+    raise exception 'Duel request not found';
+  end if;
+
+  if r.expires_at<=now() then
+    update public.duel_requests
+    set status='cancelled',updated_at=now()
+    where id=r.id and status='pending';
+    raise exception 'Duel request expired';
+  end if;
+
+  if not p_accept then
+    update public.duel_requests
+    set status='declined',updated_at=now()
+    where id=r.id;
+    return null;
+  end if;
+
+  insert into public.duel_sessions(
+    request_id,user_a,user_b,status,phase_deadline,heartbeat_a,heartbeat_b
+  )
+  values(
+    r.id,r.sender_id,r.receiver_id,'lobby',
+    now()+interval '30 seconds',now(),now()
+  )
+  on conflict (request_id) do nothing
+  returning id into sid;
+
+  if sid is null then
+    select s.id into sid
+    from public.duel_sessions s
+    where s.request_id=r.id
+    limit 1;
+  end if;
+
+  update public.duel_requests
+  set status='accepted',updated_at=now()
+  where id=r.id;
+
+  return sid;
 end;
-$$;
+$;
 
 create or replace function public.duel_poll_requests()
 returns table(id uuid,sender_id uuid,receiver_id uuid,status text,created_at timestamptz,expires_at timestamptz,sender_username text,receiver_username text,session_id uuid)
