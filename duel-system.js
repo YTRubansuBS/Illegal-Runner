@@ -116,6 +116,7 @@ async function respondRequest(ok){
     }
     if(!resolvedSid)throw new Error('La session 1V1 n’a pas pu être créée. Réessaie.')
     S.sessionId=resolvedSid
+    S.renderedStatus=null
     const data=await getSession()
     S.requestId=null
     sessionGui(data)
@@ -246,7 +247,7 @@ async function setChoice(c){try{if(c==='bet'){const q=await sb.from('profiles').
 async function setBet(v){try{if(!Number.isFinite(v)||v<1)throw new Error('La mise minimale est de 1 🪙.');await rpc('duel_set_bet',{p_session_id:S.sessionId,p_amount:v});await pollSession(true)}catch(e){alert('❌ '+(e.message||'Mise impossible'))}}
 async function setFinalVote(v){try{await rpc('duel_set_final_vote',{p_session_id:S.sessionId,p_vote:v});await pollSession(true)}catch(e){alert('❌ '+(e.message||'Vote impossible'))}}
 async function leaveDuel(){try{if(S.sessionId)await rpc('duel_leave',{p_session_id:S.sessionId})}catch(_){}stopGame();window.IR_DUEL_ACTIVE=false;window.IR_DUEL_CONFIG=null;hud.style.display='none';S.sessionId=null;S.session=null;S.renderedStatus=null;S.opponentId=null;S.opponentCharacter='runner';S.ghostInitialized=false;window.__IR_DUEL_GHOST=null;window.__IR_DUEL_SEED=null;window.__IR_DUEL_WORLD_RNG=null;hide();goMenu()}
-async function startRequest(friendId){try{const id=await rpc('duel_create_request',{p_friend_id:friendId});S.requestId=id;const rows=await getRequests();const r=rows.find(function(x){return x.id===id});requestGui(r||{id:id,sender_id:S.user.id,receiver_id:friendId,status:'pending',expires_at:new Date(Date.now()+30000).toISOString()})}catch(e){alert('❌ '+(e.message||'Demande 1V1 impossible'))}}
+async function startRequest(friendId){try{S.renderedStatus=null;S.session=null;S.sessionId=null;const id=await rpc('duel_create_request',{p_friend_id:friendId});S.requestId=id;const rows=await getRequests();const r=rows.find(function(x){return x.id===id});requestGui(r||{id:id,sender_id:S.user.id,receiver_id:friendId,status:'pending',expires_at:new Date(Date.now()+30000).toISOString()})}catch(e){alert('❌ '+(e.message||'Demande 1V1 impossible'))}}
 async function pollSession(force){
   if(!S.sessionId)return null
   const previous=S.session
