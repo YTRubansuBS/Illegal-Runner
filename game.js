@@ -14,18 +14,13 @@
   function replaceBetween(source, startMarker, endMarker, replacement) {
     const a = source.indexOf(startMarker)
     const b = source.indexOf(endMarker, a)
-    if (a < 0 || b < 0) {
-      console.error('[IR] replacement marker not found:', startMarker)
-      return source
-    }
+    if (a < 0 || b < 0) { console.error('[IR] replacement marker not found:', startMarker); return source }
     return source.slice(0, a) + replacement + '\n' + source.slice(b)
   }
   fetch(ORIGINAL, { cache: 'no-store' })
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
       code = code.replace('const G = {', 'const G = window.__IR_G = {')
-      code = code.replace('$("worldGrid").innerHTML =', 'if ($("worldGrid")) $("worldGrid").innerHTML =')
-      code = code.replace('    $("btnQuit").onclick = quit', '    $("btnQuit") && ($("btnQuit").onclick = quit)')
       code = code.replace('      const r = Math.random()','      const r = IR_WORLD_RANDOM()')
       code = code.replace('const r = Math.random()','const r = IR_WORLD_RANDOM()')
       code = code.replace('      const h = rand(46, Math.min(120, 60 + d * 0.02))','      const h = IR_WORLD_RANGE(46, Math.min(120, 60 + d * 0.02))')
