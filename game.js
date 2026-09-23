@@ -159,13 +159,29 @@
             pauseStart = 0
             quit()
           }
+          function applyDuelPause(){
+            if (!G.running) return
+            G.running = false
+            cancelAnimationFrame(G.raf)
+            G.last = performance.now()
+            G.acc = 0
+          }
+          function releaseDuelPause(){
+            if (G.running || !window.IR_DUEL_PAUSED) return
+            G.running = true
+            G.last = performance.now()
+            G.acc = 0
+            G.raf = requestAnimationFrame(loop)
+          }
+          window.addEventListener("ir:duelPauseApply", applyDuelPause)
+          window.addEventListener("ir:duelPauseRelease", releaseDuelPause)
           window.addEventListener("ir:pause", pauseGame)
           window.addEventListener("ir:resume", resumeGame)
           window.addEventListener("ir:pauseRestart", restartFromPause)
           window.addEventListener("ir:pauseQuit", quitFromPause)
         })()
         const STEP = 1 / 120 // fixed physics step`)
-      code = code.replace('    $("btnQuit").onclick = quit', '    $("btnPause").onclick = () => window.dispatchEvent(new CustomEvent("ir:pause"))')
+      code = code.replace('    $("btnQuit").onclick = quit', '    $("btnPause").onclick = () => window.IR_DUEL_ACTIVE ? window.dispatchEvent(new CustomEvent("ir:duelPauseRequest")) : window.dispatchEvent(new CustomEvent("ir:pause"))')
       code = code.replace('    $("btnOverMenu").onclick = quit', '    $("btnOverMenu").onclick = quit\n    $("btnResume").onclick = () => window.dispatchEvent(new CustomEvent("ir:resume"))\n    $("btnPauseRestart").onclick = () => window.dispatchEvent(new CustomEvent("ir:pauseRestart"))\n    $("btnPauseQuit").onclick = () => window.dispatchEvent(new CustomEvent("ir:pauseQuit"))')
       code = code.replace('  async function persist() {', `  async function persist() {
     try {
