@@ -373,18 +373,57 @@
     if (!entry) return
     const max = entry[3]
     const key = id + "_level"
-    const v = Number(profile[key] || 1)
+    let v = Math.max(1, Number(profile[key] || 1))
     if (v >= max) return toast("Niveau maximum !")
     const cost = [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
-    if ((profile.coins || 0) < cost) return toast("Pas assez de pièces.")
-    profile.coins -= cost
-    profile[key] = v + 1
+
+    if (isGuest || !sb || !user) {
+      const coins = Math.max(0, Math.floor(Number(profile.coins || 0)))
+      if (coins < cost) return toast("Pas assez de pièces.")
+      profile.coins = coins - cost
+      profile[key] = v + 1
+      saveLocal()
+    } else {
+      try {
+        const fresh = await sb.from("profiles").select("coins," + key).eq("id", user.id).single()
+        if (fresh.error) throw fresh.error
+        const freshCoins = Math.max(0, Math.floor(Number(fresh.data?.coins || 0)))
+        const freshLevel = Math.max(1, Number(fresh.data?.[key] || v))
+        v = freshLevel
+        if (v >= max) {
+          profile[key] = v
+          profile.coins = freshCoins
+          refreshTop()
+          renderAll()
+          return toast("Niveau maximum !")
+        }
+        if (freshCoins < cost) {
+          profile.coins = freshCoins
+          profile[key] = v
+          refreshTop()
+          renderAll()
+          return toast("Pas assez de pièces.")
+        }
+        const nextCoins = freshCoins - cost
+        const nextLevel = v + 1
+        const saved = await sb.from("profiles").update({ coins: nextCoins, [key]: nextLevel }).eq("id", user.id)
+        if (saved.error) throw saved.error
+        profile.coins = nextCoins
+        profile[key] = nextLevel
+      } catch (e) {
+        console.error("[IR] upgrade save:", e)
+        return toast("❌ Impossible d'enregistrer l'amélioration.")
+      }
+    }
+
     SFX.bonus()
-    await persist()
+    refreshTop()
     renderAll()
-    toast("⚡ " + entry[2] + " amélioré ! Niveau " + (v + 1) + "/" + max)
+    window.dispatchEvent(new CustomEvent("ir:profileChanged", { detail: { coins: profile.coins, [key]: profile[key] } }))
+    toast("⚡ " + entry[2] + " amélioré ! Niveau " + profile[key] + "/" + max)
   }
 `)
+
       code = code.replace('const v = profile[id + "_level"] || 1\n      const cost = 100 * v', 'const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[id + "_level"] || 1)\n      const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
       code = code.replace('} else if (G.canDouble) {', '} else if ((profile.jump_level || 1) >= 2 && G.canDouble) {')
       code = code.replace('    const v = profile[key] || 1\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = 100 * v', '    const v = id === "jump" ? Number(profile.jump_level || 1) : (profile[key] || 1)\n    if (v >= max) return toast("Niveau maximum !")\n    const cost = id === "jump" ? 5000 : 100 * Math.max(1, v)')
