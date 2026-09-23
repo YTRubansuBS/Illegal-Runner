@@ -45,10 +45,30 @@
   window.IR_DUEL_CANCEL=()=>{if(S.requestId)cancel(S.requestId)}
 
   async function startSession(id){
-    clearTimers();S.sessionId=id;S.session=null;S.shown=null;S.ghost=0;S.ghostTarget=0;S.opponentAction='run';
-    await sync();showLobby();
+    const sessionId=String(id||'');
+    if(!sessionId)return;
+    if(S.sessionId===sessionId && S.sync)return;
+    clearTimers();
+    S.sessionId=sessionId;
+    S.session=null;
+    S.shown=null;
+    S.ghost=0;
+    S.ghostTarget=0;
+    S.opponentAction='run';
+    try{await sync()}catch(_){}
+    if(!S.session || S.session.status==='lobby')showLobby();
     S.sync=setInterval(sync,350)
   }
+  async function joinSession(id){
+    const sessionId=String(id||'');
+    if(!sessionId)return;
+    await startSession(sessionId);
+  }
+  window.IR_DUEL_JOIN_SESSION=joinSession;
+  window.addEventListener('ir:duelAccepted',e=>{
+    const sid=e?.detail?.sessionId;
+    if(sid)joinSession(sid);
+  });
   async function sync(){
     if(!S.sessionId)return
     try{const G=window.__IR_G;const d=Math.max(0,Math.floor(Number(G?.dist||0)));const l=Math.max(0,Math.floor(Number(G?.lives||0)));const p=G?.player;const y=Number.isFinite(Number(p?.y))&&Number.isFinite(Number(G?.groundY))&&Number.isFinite(Number(G?.H))?Math.max(0,Math.min(1,(G.groundY-p.y)/G.H)):0;const action=G?.dashT>0?'dash':(p&&!p.ground?'jump':'run');const s=await rpc('duel_tick',{p_session_id:S.sessionId,p_distance:d,p_lives:l,p_y:y,p_action:action});if(s)renderSession(s)}catch(e){console.warn('[IR] duel sync',e)}}
