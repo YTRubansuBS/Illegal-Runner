@@ -68,7 +68,6 @@
       S.opponentY=S.ghostTargetY;
       if(Number.isFinite(Number(p.lives)))S.opponentLives=Math.max(0,Math.floor(Number(p.lives)));
       if(p.action==='jump'||p.action==='dash'||p.action==='run')S.opponentAction=p.action;
-      if(p.character)S.opponentCharacter=String(p.character);
     });
     try{await channel.subscribe()}catch(_){}
     S.channel=channel;
@@ -83,7 +82,7 @@
     try{
       await S.channel.send({type:'broadcast',event:'duel_state',payload:{
         sessionId:S.sessionId,userId:S.user.id,distance:Math.max(0,Number(G.dist||0)),lives:Math.max(0,Number(G.lives||0)),
-        y,action:G.dashT>0?'dash':(p.ground?'run':'jump'),character:window.IR_DUEL_CONFIG?.character||'runner',speed:420
+        y,action:G.dashT>0?'dash':(p.ground?'run':'jump'),speed:420
       }});
     }catch(_){}
   }
