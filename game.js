@@ -24,6 +24,7 @@
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
       code = code.replace('const G = {', 'const G = window.__IR_G = {')
+      code = code.replace('["jump", "⬆️", "Saut", 6, "Hauteur et double-saut renforcés."]','["jump", "⬆️", "Saut", 2, "Amélioration unique : saut renforcé."]')
       code = code.replace('      const r = Math.random()','      const r = IR_WORLD_RANDOM()')
       code = code.replace('const r = Math.random()','const r = IR_WORLD_RANDOM()')
       code = code.replace('      const h = rand(46, Math.min(120, 60 + d * 0.02))','      const h = IR_WORLD_RANGE(46, Math.min(120, 60 + d * 0.02))')
@@ -50,9 +51,9 @@
       code = code.replace('  async function end() {\n    if (!G.running) return', '  async function end() {\n    if (window.IR_DUEL_ACTIVE) { G.running = false; cancelAnimationFrame(G.raf); window.dispatchEvent(new CustomEvent("ir:duelPlayerLost", { detail: { distance: G.dist, lives: G.lives } })); return }\n    if (!G.running) return')
       code = code.replace('    drawPlayer(ctx, w)\n\n    ctx.restore()', '    drawPlayer(ctx, w)\n    if (window.IR_DUEL_GHOST_DRAW) { try { window.IR_DUEL_GHOST_DRAW(ctx, W, H, w, G) } catch (e) {} }\n\n    ctx.restore()')
       code = code.replace('  function quit() {', '  window.addEventListener("ir:duelStartGame", () => { if (window.IR_DUEL_ACTIVE) start(0) })\n  window.addEventListener("ir:duelExitToMenu", () => { try { window.IR_DUEL_ACTIVE = false; window.IR_DUEL_CONFIG = null; window.__IR_DUEL_SEED = null; window.__IR_DUEL_WORLD_RNG = null; $("btnPause").style.display = ""; quit() } catch (e) {} })\n  function quit() {')
-      code = code.replace('const cost = 100 * v','const cost = [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]')
-      code = code.replace('${maxed ? "MAX" : "🪙 " + 100 * v}','${maxed ? "MAX" : "🪙 Acheter " + [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]}')
-      code = code.replace('${maxed ? "MAX" : "🪙 " + 100 * v}</button></div>','${maxed ? "MAX" : "🪙 Acheter " + [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]}</button></div>')
+      code = code.replace('const cost = 100 * v','const cost = id === "jump" ? 5000 : [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]')
+      code = code.replace('${maxed ? "MAX" : "🪙 " + 100 * v}','${maxed ? "MAX" : "🪙 Acheter " + (id === "jump" ? 5000 : [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)])}')
+      code = code.replace('${maxed ? "MAX" : "🪙 " + 100 * v}</button></div>','${maxed ? "MAX" : "🪙 Acheter " + (id === "jump" ? 5000 : [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)])}</button></div>')
       code = replaceBetween(code, '  async function buyUpgrade(id) {', '  function freePack() {', `  async function buyUpgrade(id) {
     const entry = UPGRADES.find((u) => u[0] === id)
     if (!entry) return
@@ -60,7 +61,7 @@
     const key = id + "_level"
     let v = Math.max(1, Number(profile[key] || 1))
     if (v >= max) return toast("Niveau maximum !")
-    const cost = [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
+    const cost = id === "jump" ? 5000 : [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
     if (isGuest || !sb || !user) {
       const coins = Math.max(0, Math.floor(Number(profile.coins || 0)))
       if (coins < cost) return toast("Pas assez de pièces.")
