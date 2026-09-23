@@ -22,7 +22,7 @@
   const getSelectedCloudCoin=uid=>{try{return localStorage.getItem(coinStorageKey(uid))||'gold'}catch{return 'gold'}}
   const setSelectedCloudCoin=(uid,id)=>{try{localStorage.setItem(coinStorageKey(uid),id)}catch{}}
   const notifyCustomization=(type,id)=>window.dispatchEvent(new CustomEvent('ir:customizationChanged',{detail:type==='world'?{selected_background:id}:type==='character'?{selected_character:id}:type==='coin'?{selected_coin:id}:{selected_obstacle_set:id}}))
-  async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;cloudProfile=null;return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];cloudProfile=null;return false}const [{data:inv},{data:prof}]=await Promise.all([sb.from('inventory').select('item_type,item_id').eq('user_id',user.id),sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',user.id).maybeSingle()]);cloudInventory=inv||[];cloudProfile=prof||null;return true}
+  async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;cloudProfile=null;return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];cloudProfile=null;return false}const [{data:inv},{data:prof}]=await Promise.all([sb.from('inventory').select('item_type,item_id').eq('user_id',user.id),sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',user.id).maybeSingle()]);cloudInventory=inv||[];cloudProfile=prof||{};return true}
   const owned=(type,id,p)=>type==='world'?(p.owned_worlds||['city']).includes(id):type==='character'?(p.owned_characters||['runner']).includes(id):type==='coin'?(p.owned_coins||['gold']).includes(id):(p.owned_obstacles||['classic']).includes(id)
   const cloudOwned=(type,id)=>{if(type==='coin'&&id==='gold')return true;const map={world:'background',character:'character',coin:'obstacle',obstacle:'obstacle'};return !!cloudInventory?.some(x=>x.item_type===map[type]&&x.item_id===id)}
   async function isOwned(type,id){
@@ -47,6 +47,8 @@
       else {const field={world:'selected_background',character:'selected_character',obstacle:'selected_obstacle_set'}[type]
       const {error}=await sb.from('profiles').update({[field]:id}).eq('id',cloudUser.id)
       if(error)return toast('❌ Impossible d’équiper.')
+      if(!cloudProfile)cloudProfile={}
+      cloudProfile[field]=id
       notifyCustomization(type,id)}
     }
     toast('✅ '+(type==='world'?'Monde':type==='character'?'Personnage':'Pièce')+' équipé !')
@@ -66,9 +68,15 @@
     }
     if(cloudUser){
       if(type==='coin'){setSelectedCloudCoin(cloudUser.id,id);notifyCustomization(type,id)}
-      else {const field={world:'selected_background',character:'selected_obstacle_set',obstacle:'selected_obstacle_set'}[type]
-      const {error}=await sb.from('profiles').update({[field]:id}).eq('id',cloudUser.id)
-      if(!error)notifyCustomization(type,id)}
+      else {
+        const field={world:'selected_background',character:'selected_character',obstacle:'selected_obstacle_set'}[type]
+        const {error}=await sb.from('profiles').update({[field]:id}).eq('id',cloudUser.id)
+        if(!error){
+          if(!cloudProfile)cloudProfile={}
+          cloudProfile[field]=id
+          notifyCustomization(type,id)
+        }
+      }
     }
   }
   function showPackResult(html,good=true){
