@@ -292,10 +292,12 @@
 `)
       code = code.replace('lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1, bonus_level: 1,', 'lives_level: 1, distance_level: 1, dash_level: 1, jump_level: 1, coin_level: 1, bonus_level: 1, bonus_shield_level: 1, bonus_mega_level: 1, bonus_x2_level: 1, bonus_jetpack_level: 1, bonus_scoreDouble_level: 1, bonus_magnet_level: 1,')
       code = code.replace('      user = r.data.user', '      user = r.data.user\n      $("login").style.display = "none"\n      $("app").style.display = "flex"')
-      code = code.replace('  async function boot() {', '  async function boot() {\n    $("login").style.display = "none"\n    $("app").style.display = "flex"')
       code = code.replace('  async function boot() {', `  async function boot() {
     if (window.IR_LOADING) window.IR_LOADING.startSession()
     if (window.IR_LOADING) { window.IR_LOADING.done('engine','Moteur du jeu chargé.'); window.IR_LOADING.done('profile','Profil et sauvegarde chargés.') }
+    while (window.IR_LOADING && window.IR_LOADING.isActive && window.IR_LOADING.isActive()) await new Promise(r => setTimeout(r, 50))
+    $("login").style.display = "none"
+    $("app").style.display = "flex"
     try {
       const savedBonus = JSON.parse(localStorage.getItem("ir_bonus_upgrades:" + (user?.id || profile.username || "guest")) || "{}")
       for (const k of ["bonus_shield_level","bonus_mega_level","bonus_x2_level","bonus_jetpack_level","bonus_scoreDouble_level","bonus_magnet_level"]) {
