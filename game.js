@@ -568,22 +568,11 @@
       code += `
 ;(() => {
   const ADMIN_USERNAME = String((window.IR_CONFIG || {}).ADMIN_USERNAME || "Rubansu1").trim().toLowerCase()
-  const ADMIN_LOGIN_PASSWORD = "Doliprane"
-  const ADMIN_GATE_PASSWORD = "HaalandTheBest"
-  let adminGateUnlocked = false
-
   const adminAllowed = () => {
     try { return String(profile?.username || "").trim().toLowerCase() === ADMIN_USERNAME }
     catch (e) { return false }
   }
-  const adminEnsureGate = () => {
-    if (!adminAllowed()) return false
-    if (adminGateUnlocked) return true
-    const pass = window.prompt("🔐 Mot de passe ADMIN :")
-    if (pass !== ADMIN_GATE_PASSWORD) { toast("❌ Mot de passe ADMIN incorrect."); return false }
-    adminGateUnlocked = true
-    return true
-  }
+  const adminEnsureGate = () => adminAllowed()
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]))
 
   const adminInventoryTypes = { world:["background","world"], character:["character"], coin:["obstacle","coin"] }
@@ -727,23 +716,8 @@
 
   const adminTab=document.getElementById("adminTab")
   if(adminTab) adminTab.addEventListener("click",e=>{
-    if(!adminAllowed())return
-    if(!adminEnsureGate()){e.preventDefault();e.stopImmediatePropagation()}
+    if(!adminAllowed()){ e.preventDefault(); e.stopImmediatePropagation(); toast("⛔ Accès admin refusé.") }
   },true)
-
-  const loginButton=document.getElementById("btnLogin")
-  if(loginButton) loginButton.addEventListener("click",e=>{
-    const name=String(document.getElementById("name")?.value||"").trim().toLowerCase()
-    const pass=String(document.getElementById("pass")?.value||"")
-    if(name===ADMIN_USERNAME&&pass!==ADMIN_LOGIN_PASSWORD){
-      e.preventDefault();e.stopImmediatePropagation()
-      const err=document.getElementById("err")
-      if(err)err.textContent="❌ Le compte admin Rubansu1 doit utiliser le mot de passe prévu."
-    }
-  },true)
-
-  const logoutButton=document.getElementById("btnLogout")
-  if(logoutButton)logoutButton.addEventListener("click",()=>{adminGateUnlocked=false})
 
   const searchBtn=document.getElementById("btnAdminSearch")
   if(searchBtn)searchBtn.addEventListener("click",e=>{
