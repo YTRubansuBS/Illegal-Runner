@@ -39,8 +39,11 @@
       // duel boot rebuild the GUI from the authoritative session.
       if(waiting){
         busy=true
-        sessionStorage.setItem('IR_DUEL_ACCEPTED_SESSION',sid)
-        location.reload()
+        if(typeof window.IR_DUEL_JOIN_SESSION==='function'){
+          window.IR_DUEL_JOIN_SESSION(String(sid))
+        }else{
+          window.dispatchEvent(new CustomEvent('ir:duelAccepted',{detail:{sessionId:String(sid)}}))
+        }
         return
       }
     }catch(e){
