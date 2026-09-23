@@ -324,7 +324,7 @@
       code = code.replace('  function renderUpgrades() {', `  try { const savedBonus = JSON.parse(localStorage.getItem("ir_bonus_upgrades") || "{}"); for (const k of ["bonus_shield_level","bonus_mega_level","bonus_x2_level","bonus_jetpack_level","bonus_scoreDouble_level","bonus_magnet_level"]) if (savedBonus[k]) profile[k] = Math.max(1, Math.min(6, Number(savedBonus[k]))) } catch(e) {}
   function renderUpgrades() {`);
       code = replaceBetween(code, "  function renderUpgrades() {", "  function renderShop() {", `  function renderUpgrades() {
-    const costFor = (v) => [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
+    const upgradeCostFor = (id, v) => id === "jump" ? 5000 : [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
     const durationFor = (id, v) => id === "bonus" ? 0 : (5 + (v - 1) * 2)
     const bonusDurationIds = ["bonus_shield","bonus_mega","bonus_x2","bonus_jetpack","bonus_scoreDouble","bonus_magnet"]
     const bonusDurationKey = id => "ir_bonus_duration:" + (user?.id || profile.username || "guest") + ":" + id
@@ -338,7 +338,7 @@
     }
     const cards = UPGRADES.map(([id, em, n, max, desc]) => {
       const v = Number(profile[id + "_level"] || 1)
-      const cost = costFor(v)
+      const cost = upgradeCostFor(id, v)
       const maxed = v >= max
       const duration = durationFor(id, v)
       const isDuration = bonusDurationIds.includes(id)
@@ -375,7 +375,7 @@
     const key = id + "_level"
     let v = Math.max(1, Number(profile[key] || 1))
     if (v >= max) return toast("Niveau maximum !")
-    const cost = [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
+    const cost = id === "jump" ? 5000 : [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
 
     if (isGuest || !sb || !user) {
       const coins = Math.max(0, Math.floor(Number(profile.coins || 0)))
