@@ -569,8 +569,11 @@
 ;(() => {
   const ADMIN_USERNAME = String((window.IR_CONFIG || {}).ADMIN_USERNAME || "Rubansu1").trim().toLowerCase()
   const adminAllowed = () => {
-    try { return String(profile?.username || "").trim().toLowerCase() === ADMIN_USERNAME }
-    catch (e) { return false }
+    try {
+      const name = String(profile?.username || "").trim().toLowerCase()
+      const email = String(user?.email || "").trim().toLowerCase()
+      return name === ADMIN_USERNAME || email === (ADMIN_USERNAME + "@illegal-runner.local")
+    } catch (e) { return false }
   }
   const adminEnsureGate = () => adminAllowed()
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]))
@@ -803,6 +806,15 @@
 
   /* ============================================================
      GAME ENGINE`);
+      // Admin access fix: accept the canonical admin username OR its generated account email.
+      code = code.replace(
+        '$("adminTab").style.display = (profile.username || "").toLowerCase() === ADMIN ? "block" : "none"',
+        'const _adminName = String(profile?.username || "").trim().toLowerCase(); const _adminEmail = String(user?.email || "").trim().toLowerCase(); $("adminTab").style.display = (_adminName === ADMIN || _adminEmail === (ADMIN + "@illegal-runner.local")) ? "block" : "none"'
+      )
+      code = code.replace(
+        'if ((profile.username || "").toLowerCase() !== ADMIN || !sb) return',
+        'if (!sb) return; { const _adminName = String(profile?.username || "").trim().toLowerCase(); const _adminEmail = String(user?.email || "").trim().toLowerCase(); if (_adminName !== ADMIN && _adminEmail !== (ADMIN + "@illegal-runner.local")) return }'
+      )
       const s = document.createElement('script'); s.textContent = code; document.head.appendChild(s)
     })
     .catch(err => { console.error(err); const e = document.getElementById('err'); if (e) e.textContent = 'Erreur de chargement du jeu. Recharge la page.' })
