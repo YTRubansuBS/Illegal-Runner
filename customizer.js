@@ -160,7 +160,7 @@
   const rarityCards=type=>PACK_CATALOG[type].map((x,i)=>({id:x[0],emoji:x[1],name:x[2],rarity:rarityForIndex(i)}))
   const packLabel=type=>type==='world'?'PACK MONDE':type==='character'?'PACK PERSONNAGE':'PACK PIÈCES'
   const displayCollection=(type)=>{
-    const uid=collectionUid(), data=loadCollection(uid,type), cards=rarityCards(type)
+    const uid=collectionUid(), data=guestMode()?loadCollection(uid,type):cloudCollection(type), cards=rarityCards(type)
     const current=type==='world'?(guestMode()?(localProfile().selected_background||'city'):(cloudProfile?.selected_background||'city')):type==='character'?(guestMode()?(localProfile().selected_character||'runner'):(cloudProfile?.selected_character||'runner')):type==='coin'?(guestMode()?(localProfile().selected_coin||'gold'):getSelectedCloudCoin(cloudUser?.id||'guest')):''
     return RARITY_ORDER.map(r=>{
       const list=cards.filter(x=>x.rarity===r)
@@ -243,17 +243,20 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
     const sell=e.target.closest('[data-sell-type]')
     if(!sell)return
     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()
-    const type=sell.dataset.sellType,id=sell.dataset.sellId,uid=collectionUid(),data=loadCollection(uid,type),cards=rarityCards(type),item=cards.find(x=>x.id===id)
+    const type=sell.dataset.sellType,id=sell.dataset.sellId,uid=collectionUid(),data=guestMode()?loadCollection(uid,type):cloudCollection(type),cards=rarityCards(type),item=cards.find(x=>x.id===id)
     if(!item||!Number(data[id]||0))return toast('❌ Objet indisponible.')
     const reward=RARITIES[item.rarity].sell
-    data[id]=Math.max(0,Number(data[id])-1);saveCollection(uid,type,data)
     if(guestMode()){
+      data[id]=Math.max(0,Number(data[id])-1);saveCollection(uid,type,data)
       const p=localProfile();p.coins=Number(p.coins||0)+reward;saveLocal(p);refreshCoins(p.coins);notifyProfile(p)
     }else if(cloudUser){
+      const removed=await sb.from('inventory').delete().eq('user_id',cloudUser.id).eq('item_type',inventoryType(type)).eq('item_id',id)
+      if(removed.error)return toast('❌ Vente impossible.')
+      cloudInventory=(cloudInventory||[]).filter(x=>!(x.item_type===inventoryType(type)&&x.item_id===id));rebuildCloudCollections()
       const {data:prof}=await sb.from('profiles').select('coins').eq('id',cloudUser.id).single()
       const next=Number(prof?.coins||0)+reward
       const {error}=await sb.from('profiles').update({coins:next}).eq('id',cloudUser.id)
-      if(error){data[id]=Number(data[id]||0)+1;saveCollection(uid,type,data);return toast('❌ Vente impossible.')}
+      if(error){await sb.from('inventory').insert({user_id:cloudUser.id,item_type:inventoryType(type),item_id:id});await getCloud();return toast('❌ Vente impossible.')}
       refreshCoins(next);notifyProfile({coins:next})
     }
     toast('💰 +'+reward.toLocaleString('fr-FR')+' pièces !')
