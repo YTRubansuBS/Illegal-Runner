@@ -9,7 +9,7 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]))
   const show=h=>{layer.innerHTML=h;layer.style.display='flex'}
   const hide=()=>{layer.style.display='none';clearTimers()}
-  const clearTimers=()=>{if(S.timer)clearInterval(S.timer);if(S.poll)clearInterval(S.poll);if(S.sync)clearInterval(S.sync);if(S.broadcast)clearInterval(S.broadcast);S.timer=S.poll=S.sync=S.broadcast=null;pauseBox.style.display='none';if(S.channel){try{sb.removeChannel(S.channel)}catch(_){}S.channel=null}}
+  const clearTimers=()=>{if(S.timer)clearInterval(S.timer);if(S.poll)clearInterval(S.poll);if(S.sync)clearInterval(S.sync);if(S.broadcast)clearInterval(S.broadcast);S.timer=S.poll=S.sync=S.broadcast=null;S.sendBusy=false;pauseBox.style.display='none';if(S.channel){try{sb.removeChannel(S.channel)}catch(_){}S.channel=null}}
   const rpc=async(name,args)=>{if(!sb)throw Error('Supabase indisponible');const r=await sb.rpc(name,args||{});if(r.error)throw r.error;return r.data}
   const meA=s=>s&&s.user_a===S.user.id
   const otherId=s=>meA(s)?s.user_b:s.user_a
@@ -54,6 +54,26 @@
     channel.on('broadcast',{event:'duel_state'},msg=>{
       const p=msg?.payload||{};
       if(String(p.sessionId)!==String(sessionId)||String(p.userId)===String(S.user?.id))return;
+      if(p.kind==='pause_offer'){
+        showPauseOffer(p.username||'Ton ami',String(p.userId||''));
+        return;
+      }
+      if(p.kind==='pause_accept'){
+        applyDuelPause();
+        return;
+      }
+      if(p.kind==='pause_decline'){
+        showPauseNotice('❌ Demande de pause refusée.');
+        return;
+      } 
+      if(p.kind==='pause_cancel'){
+        hidePauseBox();
+        return;
+      }
+      if(p.kind==='pause_resume'){
+        releaseDuelPause();
+        return;
+      }
       const now=performance.now();
       const d=Number(p.distance);
       const y=Number(p.y);
@@ -75,22 +95,6 @@
       if(Number.isFinite(Number(p.lives)))S.opponentLives=Math.max(0,Math.floor(Number(p.lives)));
       if(p.action==='jump'||p.action==='dash'||p.action==='run')S.opponentAction=p.action;
       if(p.character)S.opponentCharacter=String(p.character);
-      if(p.kind==='pause_offer'){
-        showPauseOffer(p.username||'Ton ami',String(p.userId||''));
-        return;
-      }
-      if(p.kind==='pause_accept'){
-        applyDuelPause();
-        return;
-      }
-      if(p.kind==='pause_decline'){
-        showPauseNotice('❌ Demande de pause refusée.');
-        return;
-      }
-      if(p.kind==='pause_resume'){
-        releaseDuelPause();
-        return;
-      }
     });
     try{await channel.subscribe()}catch(_){}
     S.channel=channel;
@@ -130,7 +134,7 @@
     if(!S.channel||!window.IR_DUEL_ACTIVE||window.IR_DUEL_PAUSED)return;
     showPauseNotice('⏳ Demande de pause envoyée…');
     pauseBox.innerHTML='<h3>⏸️ Pause proposée</h3><p>Ton adversaire doit accepter ou refuser.</p><div class="pa"><button id="irPauseCancel">ANNULER</button></div>';
-    pauseBox.querySelector('#irPauseCancel').onclick=()=>{hidePauseBox()};
+    pauseBox.querySelector('#irPauseCancel').onclick=async()=>{hidePauseBox();await broadcastEvent('pause_cancel',{})};
     await broadcastEvent('pause_offer',{});
   }
 
