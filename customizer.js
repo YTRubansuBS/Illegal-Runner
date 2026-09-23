@@ -11,7 +11,7 @@
   const REWARD_MIN=200, REWARD_MAX=850
   const cfg=window.IR_CONFIG||{}
   const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
-  let cloudUser=null,cloudInventory=null,cloudProfile=null,cloudCollections={world:{},character:{},coin:{},obstacle:{}},buying=false
+  let cloudUser=null,cloudInventory=null,cloudProfile=null,buying=false
   const localProfile=()=>{try{const p=JSON.parse(localStorage.getItem('irGuest')||'{}');if(!Array.isArray(p.owned_coins)||!p.owned_coins.length)p.owned_coins=['gold'];if(!p.selected_coin)p.selected_coin='gold';return p}catch{return {owned_coins:['gold'],selected_coin:'gold'}}}
   const saveLocal=p=>localStorage.setItem('irGuest',JSON.stringify(p))
   const guestMode=()=>($('userBadge')?.textContent||'').includes('local')
@@ -22,16 +22,13 @@
   const getSelectedCloudCoin=uid=>{try{return localStorage.getItem(coinStorageKey(uid))||'gold'}catch{return 'gold'}}
   const setSelectedCloudCoin=(uid,id)=>{try{localStorage.setItem(coinStorageKey(uid),id)}catch{}}
   const notifyCustomization=(type,id)=>window.dispatchEvent(new CustomEvent('ir:customizationChanged',{detail:type==='world'?{selected_background:id}:type==='character'?{selected_character:id}:type==='coin'?{selected_coin:id}:{selected_obstacle_set:id}}))
-  const inventoryType=type=>({world:'background',character:'character',coin:'coin',obstacle:'obstacle'})[type]||type
-  const rebuildCloudCollections=()=>{cloudCollections={world:{},character:{},coin:{},obstacle:{}};(cloudInventory||[]).forEach(x=>{const t=x.item_type==='background'?'world':x.item_type==='character'?'character':x.item_type==='coin'?'coin':x.item_type==='obstacle'?'obstacle':null;if(t)cloudCollections[t][x.item_id]=Number(cloudCollections[t][x.item_id]||0)+1})}
-  const cloudCollection=type=>cloudCollections[type]||{}
-  async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;cloudProfile=null;rebuildCloudCollections();return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];cloudProfile=null;rebuildCloudCollections();return false}const [{data:inv},{data:prof}]=await Promise.all([sb.from('inventory').select('item_type,item_id').eq('user_id',user.id),sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',user.id).maybeSingle()]);cloudInventory=inv||[];cloudProfile=prof||{};rebuildCloudCollections();for(const type of ['world','character','coin']){const local=loadCollection(user.id,type);for(const id of Object.keys(local)){if(Number(local[id]||0)>0&&!cloudOwned(type,id)){const saved=await sb.from('inventory').insert({user_id:user.id,item_type:inventoryType(type),item_id:id});if(!saved.error)cloudInventory.push({item_type:inventoryType(type),item_id:id})}}}rebuildCloudCollections();return true}
+  async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;cloudProfile=null;return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];cloudProfile=null;return false}const [{data:inv},{data:prof}]=await Promise.all([sb.from('inventory').select('item_type,item_id').eq('user_id',user.id),sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',user.id).maybeSingle()]);cloudInventory=inv||[];cloudProfile=prof||{};return true}
   const owned=(type,id,p)=>type==='world'?(p.owned_worlds||['city']).includes(id):type==='character'?(p.owned_characters||['runner']).includes(id):type==='coin'?(p.owned_coins||['gold']).includes(id):(p.owned_obstacles||['classic']).includes(id)
-  const cloudOwned=(type,id)=>{if(type==='coin'&&id==='gold')return true;const t=inventoryType(type);return !!cloudInventory?.some(x=>x.item_type===t&&x.item_id===id)}
+  const cloudOwned=(type,id)=>{if(type==='coin'&&id==='gold')return true;const map={world:'background',character:'character',coin:'obstacle',obstacle:'obstacle'};return !!cloudInventory?.some(x=>x.item_type===map[type]&&x.item_id===id)}
   async function isOwned(type,id){
     if(guestMode())return owned(type,id,localProfile())||Number(loadCollection('guest',type)[id]||0)>0
     if(!cloudInventory)await getCloud()
-    return cloudOwned(type,id)||Number(cloudCollection(type)[id]||0)>0
+    return cloudOwned(type,id)||Number(loadCollection(cloudUser?.id||'guest',type)[id]||0)>0
   }
   async function equip(type,id){
     if(!(await isOwned(type,id)))return toast('🔒 Objet non débloqué. Ouvre un pack !')
@@ -160,7 +157,7 @@
   const rarityCards=type=>PACK_CATALOG[type].map((x,i)=>({id:x[0],emoji:x[1],name:x[2],rarity:rarityForIndex(i)}))
   const packLabel=type=>type==='world'?'PACK MONDE':type==='character'?'PACK PERSONNAGE':'PACK PIÈCES'
   const displayCollection=(type)=>{
-    const uid=collectionUid(), data=guestMode()?loadCollection(uid,type):cloudCollection(type), cards=rarityCards(type)
+    const uid=collectionUid(), data=loadCollection(uid,type), cards=rarityCards(type)
     const current=type==='world'?(guestMode()?(localProfile().selected_background||'city'):(cloudProfile?.selected_background||'city')):type==='character'?(guestMode()?(localProfile().selected_character||'runner'):(cloudProfile?.selected_character||'runner')):type==='coin'?(guestMode()?(localProfile().selected_coin||'gold'):getSelectedCloudCoin(cloudUser?.id||'guest')):''
     return RARITY_ORDER.map(r=>{
       const list=cards.filter(x=>x.rarity===r)
@@ -201,9 +198,8 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
       const {error}=await sb.from('profiles').update({coins:coins-cost}).eq('id',user.id)
       if(error)return toast('❌ Achat impossible.')
       refreshCoins(coins-cost);notifyProfile({coins:coins-cost})
-      const savedItem=await sb.from('inventory').insert({user_id:user.id,item_type:inventoryType(type),item_id:item.id})
-      if(savedItem.error){if(!cloudOwned(type,item.id)){await sb.from('profiles').update({coins:coins}).eq('id',user.id);return toast('❌ Impossible d’enregistrer l’objet.')}}else{cloudInventory=cloudInventory||[];cloudInventory.push({item_type:inventoryType(type),item_id:item.id});rebuildCloudCollections()}
-      const data=cloudCollection(type),count=Number(data[item.id]||1)
+      const data=loadCollection(user.id,type);data[item.id]=Number(data[item.id]||0)+1;saveCollection(user.id,type,data)
+      const count=data[item.id]
       showPackResult('<div style="font-size:38px">'+item.emoji+'</div><h3>'+item.name+'</h3><div style="font-weight:900;margin:8px 0">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' — '+RARITIES[rarity].chance+'%</div>'+'<p class="muted">'+(count>1?'DOUBLON → x'+count:'NOUVEAU !')+'</p>')
       toast('🎁 '+RARITIES[rarity].name+' !')
       renderCustomizer()
@@ -243,20 +239,17 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
     const sell=e.target.closest('[data-sell-type]')
     if(!sell)return
     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()
-    const type=sell.dataset.sellType,id=sell.dataset.sellId,uid=collectionUid(),data=guestMode()?loadCollection(uid,type):cloudCollection(type),cards=rarityCards(type),item=cards.find(x=>x.id===id)
+    const type=sell.dataset.sellType,id=sell.dataset.sellId,uid=collectionUid(),data=loadCollection(uid,type),cards=rarityCards(type),item=cards.find(x=>x.id===id)
     if(!item||!Number(data[id]||0))return toast('❌ Objet indisponible.')
     const reward=RARITIES[item.rarity].sell
+    data[id]=Math.max(0,Number(data[id])-1);saveCollection(uid,type,data)
     if(guestMode()){
-      data[id]=Math.max(0,Number(data[id])-1);saveCollection(uid,type,data)
       const p=localProfile();p.coins=Number(p.coins||0)+reward;saveLocal(p);refreshCoins(p.coins);notifyProfile(p)
     }else if(cloudUser){
-      const removed=await sb.from('inventory').delete().eq('user_id',cloudUser.id).eq('item_type',inventoryType(type)).eq('item_id',id)
-      if(removed.error)return toast('❌ Vente impossible.')
-      cloudInventory=(cloudInventory||[]).filter(x=>!(x.item_type===inventoryType(type)&&x.item_id===id));rebuildCloudCollections()
       const {data:prof}=await sb.from('profiles').select('coins').eq('id',cloudUser.id).single()
       const next=Number(prof?.coins||0)+reward
       const {error}=await sb.from('profiles').update({coins:next}).eq('id',cloudUser.id)
-      if(error){await sb.from('inventory').insert({user_id:cloudUser.id,item_type:inventoryType(type),item_id:id});await getCloud();return toast('❌ Vente impossible.')}
+      if(error){data[id]=Number(data[id]||0)+1;saveCollection(uid,type,data);return toast('❌ Vente impossible.')}
       refreshCoins(next);notifyProfile({coins:next})
     }
     toast('💰 +'+reward.toLocaleString('fr-FR')+' pièces !')
