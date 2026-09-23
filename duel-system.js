@@ -2,14 +2,14 @@
   'use strict'
   const cfg=window.IR_CONFIG||{}
   const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
-  const S={user:null,requestId:null,sessionId:null,session:null,nameMap:{},timer:null,poll:null,sync:null,broadcast:null,channel:null,shown:null,ghost:0,ghostTarget:0,ghostFrom:0,ghostStart:0,ghostDuration:170,ghostPacketAt:0,ghostSpeed:420,opponentLives:2,opponentAction:'run',opponentY:0,opponentCharacter:'runner',opponentCharacterLoaded:false,opponentCharacterLoading:false,userCharacter:'runner'}
+  const S={user:null,requestId:null,sessionId:null,session:null,nameMap:{},timer:null,poll:null,sync:null,broadcast:null,channel:null,shown:null,ghost:0,ghostTarget:0,ghostFrom:0,ghostStart:0,ghostDuration:170,ghostPacketAt:0,ghostSpeed:420,sendBusy:false,opponentLives:2,opponentAction:'run',opponentY:0,opponentCharacter:'runner',opponentCharacterLoaded:false,opponentCharacterLoading:false,userCharacter:'runner'}
   const layer=document.createElement('div');layer.id='irDuelLayer';document.body.appendChild(layer)
-  const hud=document.createElement('div');hud.id='irDuelHud';hud.className='duelHud';document.body.appendChild(hud)
-  const style=document.createElement('style');style.textContent=`#irDuelLayer{position:fixed;inset:0;z-index:2147483590;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(2,5,12,.9);backdrop-filter:blur(10px);font-family:Inter,system-ui,sans-serif}#irDuelLayer .dm{width:min(820px,96vw);max-height:94vh;overflow:auto;background:#050b14;color:#fff;border:1px solid #00e5ff66;border-radius:22px;box-shadow:0 0 60px #00e5ff22}#irDuelLayer .dh{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid #ffffff14}#irDuelLayer .db{padding:18px}#irDuelLayer button{border:1px solid #274765;background:#0d1929;color:#fff;border-radius:9px;padding:10px 13px;font-weight:900;cursor:pointer}#irDuelLayer button.primary{background:linear-gradient(90deg,#00a7cf,#d72583);border:0}#irDuelLayer button.danger{color:#ff9bb0;border-color:#633244;background:#1a0d15}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.duelGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.duelCard{padding:14px;border:1px solid #ffffff14;border-radius:15px}.duelTimer,.duelCount,.duelResult{text-align:center;font-weight:900}.duelTimer{font-size:30px;color:#ffd45c;margin:12px}.duelCount{font-size:42px;color:#00e5ff;margin:10px}.duelResult{font-size:28px;margin:18px}.muted{color:#93a0b6}.duelHud{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:2147483500;display:none;padding:9px 14px;border:1px solid #00e5ff66;border-radius:13px;background:#02050cdc;color:#fff;font:900 14px Inter,sans-serif;box-shadow:0 0 18px #00e5ff26;text-align:center}@media(max-width:700px){.duelGrid{grid-template-columns:1fr}}`;document.head.appendChild(style)
+  const hud=document.createElement('div');hud.id='irDuelHud';hud.className='duelHud';document.body.appendChild(hud);const pauseBox=document.createElement('div');pauseBox.id='irDuelPauseBox';document.body.appendChild(pauseBox)
+  const style=document.createElement('style');style.textContent=`#irDuelLayer{position:fixed;inset:0;z-index:2147483590;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(2,5,12,.9);backdrop-filter:blur(10px);font-family:Inter,system-ui,sans-serif}#irDuelLayer .dm{width:min(820px,96vw);max-height:94vh;overflow:auto;background:#050b14;color:#fff;border:1px solid #00e5ff66;border-radius:22px;box-shadow:0 0 60px #00e5ff22}#irDuelLayer .dh{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid #ffffff14}#irDuelLayer .db{padding:18px}#irDuelLayer button{border:1px solid #274765;background:#0d1929;color:#fff;border-radius:9px;padding:10px 13px;font-weight:900;cursor:pointer}#irDuelLayer button.primary{background:linear-gradient(90deg,#00a7cf,#d72583);border:0}#irDuelLayer button.danger{color:#ff9bb0;border-color:#633244;background:#1a0d15}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.duelGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.duelCard{padding:14px;border:1px solid #ffffff14;border-radius:15px}.duelTimer,.duelCount,.duelResult{text-align:center;font-weight:900}.duelTimer{font-size:30px;color:#ffd45c;margin:12px}.duelCount{font-size:42px;color:#00e5ff;margin:10px}.duelResult{font-size:28px;margin:18px}.muted{color:#93a0b6}.duelHud{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:2147483500;display:none;padding:9px 14px;border:1px solid #00e5ff66;border-radius:13px;background:#02050cdc;color:#fff;font:900 14px Inter,sans-serif;box-shadow:0 0 18px #00e5ff26;text-align:center}@media(max-width:700px){.duelGrid{grid-template-columns:1fr}}`;style.textContent+=`#irDuelPauseBox{position:fixed;left:50%;top:76px;transform:translateX(-50%);z-index:2147483585;min-width:300px;max-width:min(92vw,520px);padding:16px 18px;border:1px solid #00e5ff66;border-radius:16px;background:rgba(3,8,18,.96);color:#fff;box-shadow:0 0 32px #00e5ff22;font:900 14px Inter,sans-serif;text-align:center;display:none}#irDuelPauseBox h3{margin:0 0 8px;font-size:20px}#irDuelPauseBox p{margin:0;color:#93a0b6;font-weight:700}#irDuelPauseBox .pa{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}#irDuelPauseBox button{border:1px solid #274765;background:#0d1929;color:#fff;border-radius:9px;padding:9px 13px;font-weight:900;cursor:pointer}#irDuelPauseBox button.primary{background:linear-gradient(90deg,#00a7cf,#d72583);border:0}`;document.head.appendChild(style)
   const esc=v=>String(v??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]))
   const show=h=>{layer.innerHTML=h;layer.style.display='flex'}
   const hide=()=>{layer.style.display='none';clearTimers()}
-  const clearTimers=()=>{if(S.timer)clearInterval(S.timer);if(S.poll)clearInterval(S.poll);if(S.sync)clearInterval(S.sync);if(S.broadcast)clearInterval(S.broadcast);S.timer=S.poll=S.sync=S.broadcast=null;if(S.channel){try{sb.removeChannel(S.channel)}catch(_){}S.channel=null}}
+  const clearTimers=()=>{if(S.timer)clearInterval(S.timer);if(S.poll)clearInterval(S.poll);if(S.sync)clearInterval(S.sync);if(S.broadcast)clearInterval(S.broadcast);S.timer=S.poll=S.sync=S.broadcast=null;pauseBox.style.display='none';if(S.channel){try{sb.removeChannel(S.channel)}catch(_){}S.channel=null}}
   const rpc=async(name,args)=>{if(!sb)throw Error('Supabase indisponible');const r=await sb.rpc(name,args||{});if(r.error)throw r.error;return r.data}
   const meA=s=>s&&s.user_a===S.user.id
   const otherId=s=>meA(s)?s.user_b:s.user_a
@@ -58,36 +58,121 @@
       const d=Number(p.distance);
       const y=Number(p.y);
       if(!Number.isFinite(d))return;
-      S.ghostFrom=S.ghostTarget;
+      const previousPacket=S.ghostPacketAt;
+      const previousTarget=Number.isFinite(Number(S.ghostTarget))?Number(S.ghostTarget):d;
+      const previousTargetY=Number.isFinite(Number(S.ghostTargetY))?Number(S.ghostTargetY):0;
+      S.ghostFrom=previousTarget;
+      S.ghostFromY=previousTargetY;
       S.ghostTarget=d;
+      S.ghostTargetY=Number.isFinite(y)?Math.max(0,Math.min(1,y)):0;
       S.ghostStart=now;
       S.ghostPacketAt=now;
-      S.ghostDuration=120;
-      S.ghostSpeed=Number.isFinite(Number(p.speed))?Number(p.speed):420;
+      const packetGap=previousPacket?Math.max(45,Math.min(100,now-previousPacket)):70;
+      S.ghostDuration=packetGap;
       S.ghost= d;
-      S.ghostTargetY=Number.isFinite(y)?Math.max(0,Math.min(1,y)):0;
+      S.ghostSpeed=Number.isFinite(Number(p.speed))?Number(p.speed):420;
       S.opponentY=S.ghostTargetY;
       if(Number.isFinite(Number(p.lives)))S.opponentLives=Math.max(0,Math.floor(Number(p.lives)));
       if(p.action==='jump'||p.action==='dash'||p.action==='run')S.opponentAction=p.action;
       if(p.character)S.opponentCharacter=String(p.character);
+      if(p.kind==='pause_offer'){
+        showPauseOffer(p.username||'Ton ami',String(p.userId||''));
+        return;
+      }
+      if(p.kind==='pause_accept'){
+        applyDuelPause();
+        return;
+      }
+      if(p.kind==='pause_decline'){
+        showPauseNotice('❌ Demande de pause refusée.');
+        return;
+      }
+      if(p.kind==='pause_resume'){
+        releaseDuelPause();
+        return;
+      }
     });
     try{await channel.subscribe()}catch(_){}
     S.channel=channel;
   }
 
-  async function broadcastOwnState(){
+  async function broadcastEvent(kind,extra={}){
     if(!S.channel||!S.user||!S.sessionId)return;
+    try{
+      await S.channel.send({type:'broadcast',event:'duel_state',payload:{sessionId:S.sessionId,userId:S.user.id,kind,username:S.nameMap[S.user.id]||'Ton ami',...extra}});
+    }catch(_){}
+  }
+
+  async function broadcastOwnState(){
+    if(!S.channel||!S.user||!S.sessionId||S.sendBusy)return;
     const G=window.__IR_G;
     if(!G||!G.player)return;
     const p=G.player;
     const y=Number.isFinite(Number(p.y))&&Number.isFinite(Number(p.h))&&Number.isFinite(Number(G.groundY))&&Number.isFinite(Number(G.H))?Math.max(0,Math.min(1,(G.groundY-(p.y+p.h))/G.H)):0;
+    S.sendBusy=true;
     try{
       await S.channel.send({type:'broadcast',event:'duel_state',payload:{
         sessionId:S.sessionId,userId:S.user.id,distance:Math.max(0,Number(G.dist||0)),lives:Math.max(0,Number(G.lives||0)),
         y,action:G.dashT>0?'dash':(p.ground?'run':'jump'),character:S.userCharacter||'runner',speed:420
       }});
-    }catch(_){}
+    }catch(_){ }
+    finally{S.sendBusy=false}
   }
+
+  function showPauseNotice(message){
+    pauseBox.innerHTML='<h3>⏸️ PAUSE</h3><p>'+esc(message)+'</p>';
+    pauseBox.style.display='block';
+  }
+
+  function hidePauseBox(){pauseBox.style.display='none';pauseBox.innerHTML=''}
+
+  async function requestDuelPause(){
+    if(!S.channel||!window.IR_DUEL_ACTIVE||window.IR_DUEL_PAUSED)return;
+    showPauseNotice('⏳ Demande de pause envoyée…');
+    pauseBox.innerHTML='<h3>⏸️ Pause proposée</h3><p>Ton adversaire doit accepter ou refuser.</p><div class="pa"><button id="irPauseCancel">ANNULER</button></div>';
+    pauseBox.querySelector('#irPauseCancel').onclick=()=>{hidePauseBox()};
+    await broadcastEvent('pause_offer',{});
+  }
+
+  function showPauseOffer(name,userId){
+    if(userId===String(S.user?.id||''))return;
+    pauseBox.innerHTML='<h3>⏸️ Demande de pause</h3><p>'+esc(name)+' te propose de mettre le 1V1 en pause.</p><div class="pa"><button id="irPauseAccept" class="primary">✅ ACCEPTER</button><button id="irPauseDecline">❌ REFUSER</button></div>';
+    pauseBox.style.display='block';
+    pauseBox.querySelector('#irPauseAccept').onclick=async()=>{
+      hidePauseBox();
+      applyDuelPause();
+      await broadcastEvent('pause_accept',{});
+    };
+    pauseBox.querySelector('#irPauseDecline').onclick=async()=>{
+      hidePauseBox();
+      await broadcastEvent('pause_decline',{});
+    };
+  }
+
+  function applyDuelPause(){
+    if(!window.IR_DUEL_PAUSED){
+      window.IR_DUEL_PAUSED=true;
+      window.dispatchEvent(new CustomEvent('ir:duelPauseApply'));
+    }
+    pauseBox.innerHTML='<h3>⏸️ DUEL EN PAUSE</h3><p>Les deux joueurs sont en pause.</p><div class="pa"><button id="irPauseResume" class="primary">▶ REPRENDRE</button></div>';
+    pauseBox.style.display='block';
+    pauseBox.querySelector('#irPauseResume').onclick=async()=>{
+      hidePauseBox();
+      releaseDuelPause();
+      await broadcastEvent('pause_resume',{});
+    };
+  }
+
+  function releaseDuelPause(){
+    if(window.IR_DUEL_PAUSED){
+      window.IR_DUEL_PAUSED=false;
+      window.dispatchEvent(new CustomEvent('ir:duelPauseRelease'));
+    }
+    hidePauseBox();
+  }
+
+  window.addEventListener('ir:duelPauseRequest',requestDuelPause)
+
 
   async function startSession(id){
     const sessionId=String(id||'');
@@ -161,8 +246,8 @@
   function updateGhost(s){loadOpponentCharacter(s);const now=performance.now();const target=Number(meA(s)?s.distance_b:s.distance_a);const targetY=Number(meA(s)?s.y_b:s.y_a)||0;const remoteLives=Number(meA(s)?s.lives_b:s.lives_a);if(Number.isFinite(remoteLives))S.opponentLives=Math.max(0,Math.floor(remoteLives));if(Number.isFinite(target)&&!S.ghostPacketAt){S.ghostTarget=target;S.ghost=target;S.ghostStart=now;S.ghostPacketAt=now;S.ghostTargetY=targetY;S.ghostFromY=targetY}S.opponentAction=meA(s)?s.action_b:s.action_a;S.opponentY=targetY;const fallback=otherCharacter(s);if(fallback&&fallback!=='runner')S.opponentCharacter=fallback}
   function updateHud(s){const myL=meA(s)?s.lives_a:s.lives_b,opL=meA(s)?s.lives_b:s.lives_a,myD=meA(s)?s.distance_a:s.distance_b,opD=meA(s)?s.distance_b:s.distance_a;hud.innerHTML=`⚔️ ${esc(S.nameMap[otherId(s)]||'Adversaire')} · ❤️ ${myL} / ${opL} · 📏 ${Math.floor(myD)}m / ${Math.floor(opD)}m <span style="opacity:.7">${S.opponentAction==='dash'?'⚡ DASH':S.opponentAction==='jump'?'⬆️ SAUT':'🏃'}</span>`}
   function showResult(s){if(S.shown==='result'&&layer.style.display!=='none')return;S.shown='result';window.IR_DUEL_ACTIVE=false;hud.style.display='none';const mine=meA(s),winner=s.winner_id,win=winner===S.user.id;show(`<div class="dm"><div class="dh"><h2>⚔️ FIN DU 1V1</h2></div><div class="db"><div class="duelResult">${win?'🏆 TU AS GAGNÉ !':winner?'💥 '+otherName(s)+' A GAGNÉ':'🤝 DUEL TERMINÉ'}</div><div class="duelGrid"><div class="duelCard"><b>Toi</b><div>❤️ ${mine?s.lives_a:s.lives_b}</div><div>📏 ${Math.floor(mine?s.distance_a:s.distance_b)} m</div></div><div class="duelCard"><b>${otherName(s)}</b><div>❤️ ${mine?s.lives_b:s.lives_a}</div><div>📏 ${Math.floor(mine?s.distance_b:s.distance_a)} m</div></div></div><p class="muted" style="text-align:center">${esc(s.result_reason||'Partie terminée')}</p><div class="actions"><button class="primary" id="back">RETOUR AUX AMIS</button></div></div></div>`);document.getElementById('back').onclick=finishToMenu}
-  function finishToMenu(){clearTimers();S.requestId=null;S.sessionId=null;S.session=null;S.shown=null;window.IR_DUEL_ACTIVE=false;window.IR_DUEL_CONFIG=null;window.__IR_DUEL_SEED=null;window.__IR_DUEL_WORLD_RNG=null;hud.style.display='none';hide();window.dispatchEvent(new CustomEvent('ir:duelExitToMenu'))}
-  window.IR_DUEL_GHOST_DRAW=(ctx,W,H,w,G)=>{if(!window.IR_DUEL_ACTIVE||!S.session)return;const now=performance.now();const sincePacket=Math.min(0.45,Math.max(0,(now-(S.ghostPacketAt||now))/1000));const d=(Number(S.ghostTarget)||0)+sincePacket*(Number(S.ghostSpeed)||420);const yNorm=Number.isFinite(Number(S.ghostTargetY))?Number(S.ghostTargetY):Number(S.opponentY)||0;const yy=(G.groundY||H*.75)-(yNorm*(G.H||H));const my=Number(G.dist||0);const baseX=Number(G?.player?.x);const safeBaseX=Number.isFinite(baseX)?baseX:Math.floor(W*.28);const px=Math.max(45,Math.min(W-45,safeBaseX+Math.max(-240,Math.min(240,(d-my)*0.85))));const action=S.opponentAction==='jump'?'jump':S.opponentAction==='dash'?'dash':'run';const p={x:px-21,y:yy-62,w:42,h:62,sy:1,ground:action==='run',run:now/1000,inv:0};const fake={...G,dist:d,level:0,goal:1,dashT:action==='dash'?0.18:0,shield:false};ctx.save();ctx.globalAlpha=.62;if(window.IR_CHARACTER_DRAW_SKIN)try{window.IR_CHARACTER_DRAW_SKIN(ctx,w,p,fake,S.opponentCharacter||'runner')}catch(_){ }else{ctx.translate(px,yy);ctx.fillStyle='#ff4fa8';ctx.fillRect(-14,-45,28,45);ctx.fillStyle='#ffd5e9';ctx.beginPath();ctx.arc(0,-58,11,0,Math.PI*2);ctx.fill()}ctx.restore()}
+  function finishToMenu(){window.IR_DUEL_PAUSED=false;clearTimers();S.requestId=null;S.sessionId=null;S.session=null;S.shown=null;window.IR_DUEL_ACTIVE=false;window.IR_DUEL_CONFIG=null;window.__IR_DUEL_SEED=null;window.__IR_DUEL_WORLD_RNG=null;hud.style.display='none';hide();window.dispatchEvent(new CustomEvent('ir:duelExitToMenu'))}
+  window.IR_DUEL_GHOST_DRAW=(ctx,W,H,w,G)=>{if(!window.IR_DUEL_ACTIVE||!S.session)return;const now=performance.now();const t=Math.max(0,Math.min(1,(now-(S.ghostStart||now))/(S.ghostDuration||70)));const d=(Number(S.ghostFrom)||0)+((Number(S.ghostTarget)||0)-(Number(S.ghostFrom)||0))*t;const yNorm=(Number(S.ghostFromY)||0)+((Number(S.ghostTargetY)||0)-(Number(S.ghostFromY)||0))*t;const yy=(G.groundY||H*.75)-(yNorm*(G.H||H));const my=Number(G.dist||0);const baseX=Number(G?.player?.x);const safeBaseX=Number.isFinite(baseX)?baseX:Math.floor(W*.28);const px=Math.max(45,Math.min(W-45,safeBaseX+Math.max(-240,Math.min(240,(d-my)*0.85))));const action=S.opponentAction==='jump'?'jump':S.opponentAction==='dash'?'dash':'run';const p={x:px-21,y:yy-62,w:42,h:62,sy:1,ground:action==='run',run:now/1000,inv:0};const fake={...G,dist:d,level:0,goal:1,dashT:action==='dash'?0.18:0,shield:false};ctx.save();ctx.globalAlpha=.62;if(window.IR_CHARACTER_DRAW_SKIN)try{window.IR_CHARACTER_DRAW_SKIN(ctx,w,p,fake,S.opponentCharacter||'runner')}catch(_){ }else{ctx.translate(px,yy);ctx.fillStyle='#ff4fa8';ctx.fillRect(-14,-45,28,45);ctx.fillStyle='#ffd5e9';ctx.beginPath();ctx.arc(0,-58,11,0,Math.PI*2);ctx.fill()}ctx.restore()}
   async function poll(){if(!S.user)return;const rows=await requests();if(S.sessionId)return;const incoming=rows.find(r=>r.status==='pending'&&r.receiver_id===S.user.id);if(incoming){requestGui(incoming);return}}
   async function clearLoginRequests(){
     if(!S.user)return;
