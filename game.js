@@ -167,7 +167,7 @@
             G.acc = 0
           }
           function releaseDuelPause(){
-            if (G.running || !window.IR_DUEL_PAUSED) return
+            if (G.running) return
             G.running = true
             G.last = performance.now()
             G.acc = 0
