@@ -24,6 +24,8 @@
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
       code = code.replace('const G = {', 'const G = window.__IR_G = {')
+      code = code.replace('$("worldGrid").innerHTML =', 'if ($("worldGrid")) $("worldGrid").innerHTML =')
+      code = code.replace('    $("btnQuit").onclick = quit', '    $("btnQuit") && ($("btnQuit").onclick = quit)')
       code = code.replace('      const r = Math.random()','      const r = IR_WORLD_RANDOM()')
       code = code.replace('const r = Math.random()','const r = IR_WORLD_RANDOM()')
       code = code.replace('      const h = rand(46, Math.min(120, 60 + d * 0.02))','      const h = IR_WORLD_RANGE(46, Math.min(120, 60 + d * 0.02))')
