@@ -81,7 +81,30 @@
   function finishToMenu(){clearTimers();S.requestId=null;S.sessionId=null;S.session=null;S.shown=null;window.IR_DUEL_ACTIVE=false;window.IR_DUEL_CONFIG=null;window.__IR_DUEL_SEED=null;window.__IR_DUEL_WORLD_RNG=null;hud.style.display='none';hide();window.dispatchEvent(new CustomEvent('ir:duelExitToMenu'))}
   window.IR_DUEL_GHOST_DRAW=(ctx,W,H,w,G)=>{if(!window.IR_DUEL_ACTIVE||!S.session)return;const d=Number(S.ghostTarget||0);const my=Number(G.dist||0);const px=Math.max(70,Math.min(W-80,w.x+(d-my)*1.1));const gy=G.groundY||H*.75;const yy=gy-(S.opponentY||0)*(G.H||H);ctx.save();ctx.globalAlpha=.55;ctx.translate(px,yy);ctx.fillStyle='#ff3ca6';ctx.fillRect(-14,-45,28,45);ctx.fillStyle='#ffd1e8';ctx.beginPath();ctx.arc(0,-58,11,0,Math.PI*2);ctx.fill();if(S.opponentAction==='jump')ctx.fillText('⬆️',-10,-75);if(S.opponentAction==='dash')ctx.fillText('⚡',-10,-75);ctx.restore()}
   async function poll(){if(!S.user)return;const rows=await requests();if(S.sessionId)return;const incoming=rows.find(r=>r.status==='pending'&&r.receiver_id===S.user.id);if(incoming){requestGui(incoming);return}const outgoing=rows.find(r=>r.status==='accepted'&&r.session_id);if(outgoing)startSession(String(outgoing.session_id))}
-  async function boot(){await refreshUser();if(!S.user)return;clearTimers();S.poll=setInterval(poll,700);poll()}
+  async function clearLoginRequests(){
+    if(!S.user)return;
+    try{
+      const r=await sb.rpc('duel_clear_incoming_requests');
+      if(!r.error)return;
+    }catch(_){}
+    try{
+      const rows=await requests();
+      const stale=(Array.isArray(rows)?rows:[]).filter(r=>r.status==='pending'&&String(r.receiver_id)===String(S.user.id));
+      for(const r of stale){try{await rpc('duel_cancel_request',{p_request_id:String(r.id)})}catch(_){}}
+    }catch(_){}
+  }
+  async function boot(){
+    await refreshUser();
+    if(!S.user)return;
+    clearTimers();
+    // Let the login cleanup run before the first duel poll, so old requests
+    // cannot flash on screen immediately after connecting.
+    await new Promise(resolve=>setTimeout(resolve,450));
+    if(!S.user)return;
+    await clearLoginRequests();
+    S.poll=setInterval(poll,700);
+    await poll();
+  }
   sb?.auth.onAuthStateChange((ev,session)=>{S.user=session?.user||null;if(ev==='SIGNED_IN'||ev==='INITIAL_SESSION'){setTimeout(boot,100)}})
   boot()
 })()
