@@ -2,14 +2,14 @@
   'use strict'
   const cfg=window.IR_CONFIG||{}
   const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
-  const S={user:null,requestId:null,sessionId:null,session:null,nameMap:{},timer:null,poll:null,sync:null,shown:null,ghost:0,ghostTarget:0,ghostFrom:0,ghostStart:0,opponentAction:'run',opponentY:0,opponentCharacter:'runner',opponentCharacterLoaded:false,opponentCharacterLoading:false}
+  const S={user:null,requestId:null,sessionId:null,session:null,nameMap:{},timer:null,poll:null,sync:null,broadcast:null,channel:null,shown:null,ghost:0,ghostTarget:0,ghostFrom:0,ghostStart:0,ghostDuration:170,ghostPacketAt:0,ghostSpeed:420,opponentLives:2,opponentAction:'run',opponentY:0,opponentCharacter:'runner',opponentCharacterLoaded:false,opponentCharacterLoading:false}
   const layer=document.createElement('div');layer.id='irDuelLayer';document.body.appendChild(layer)
   const hud=document.createElement('div');hud.id='irDuelHud';hud.className='duelHud';document.body.appendChild(hud)
   const style=document.createElement('style');style.textContent=`#irDuelLayer{position:fixed;inset:0;z-index:2147483590;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(2,5,12,.9);backdrop-filter:blur(10px);font-family:Inter,system-ui,sans-serif}#irDuelLayer .dm{width:min(820px,96vw);max-height:94vh;overflow:auto;background:#050b14;color:#fff;border:1px solid #00e5ff66;border-radius:22px;box-shadow:0 0 60px #00e5ff22}#irDuelLayer .dh{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid #ffffff14}#irDuelLayer .db{padding:18px}#irDuelLayer button{border:1px solid #274765;background:#0d1929;color:#fff;border-radius:9px;padding:10px 13px;font-weight:900;cursor:pointer}#irDuelLayer button.primary{background:linear-gradient(90deg,#00a7cf,#d72583);border:0}#irDuelLayer button.danger{color:#ff9bb0;border-color:#633244;background:#1a0d15}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.duelGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.duelCard{padding:14px;border:1px solid #ffffff14;border-radius:15px}.duelTimer,.duelCount,.duelResult{text-align:center;font-weight:900}.duelTimer{font-size:30px;color:#ffd45c;margin:12px}.duelCount{font-size:42px;color:#00e5ff;margin:10px}.duelResult{font-size:28px;margin:18px}.muted{color:#93a0b6}.duelHud{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:2147483500;display:none;padding:9px 14px;border:1px solid #00e5ff66;border-radius:13px;background:#02050cdc;color:#fff;font:900 14px Inter,sans-serif;box-shadow:0 0 18px #00e5ff26;text-align:center}@media(max-width:700px){.duelGrid{grid-template-columns:1fr}}`;document.head.appendChild(style)
   const esc=v=>String(v??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]))
   const show=h=>{layer.innerHTML=h;layer.style.display='flex'}
   const hide=()=>{layer.style.display='none';clearTimers()}
-  const clearTimers=()=>{if(S.timer)clearInterval(S.timer);if(S.poll)clearInterval(S.poll);if(S.sync)clearInterval(S.sync);S.timer=S.poll=S.sync=null}
+  const clearTimers=()=>{if(S.timer)clearInterval(S.timer);if(S.poll)clearInterval(S.poll);if(S.sync)clearInterval(S.sync);if(S.broadcast)clearInterval(S.broadcast);S.timer=S.poll=S.sync=S.broadcast=null;if(S.channel){try{sb.removeChannel(S.channel)}catch(_){}S.channel=null}}
   const rpc=async(name,args)=>{if(!sb)throw Error('Supabase indisponible');const r=await sb.rpc(name,args||{});if(r.error)throw r.error;return r.data}
   const meA=s=>s&&s.user_a===S.user.id
   const otherId=s=>meA(s)?s.user_b:s.user_a
@@ -44,6 +44,50 @@
   window.IR_DUEL_CHALLENGE=challenge
   window.IR_DUEL_CANCEL=()=>{if(S.requestId)cancel(S.requestId)}
 
+  async function setupRealtime(sessionId){
+    if(!sb||!sessionId)return;
+    if(S.channel&&S.channel.__irSessionId===String(sessionId))return;
+    if(S.channel){try{await sb.removeChannel(S.channel)}catch(_){}S.channel=null}
+    const channel=sb.channel('ir-duel-'+String(sessionId),{config:{broadcast:{ack:false}}});
+    channel.__irSessionId=String(sessionId);
+    channel.on('broadcast',{event:'duel_state'},msg=>{
+      const p=msg?.payload||{};
+      if(String(p.sessionId)!==String(sessionId)||String(p.userId)===String(S.user?.id))return;
+      const now=performance.now();
+      const d=Number(p.distance);
+      const y=Number(p.y);
+      if(!Number.isFinite(d))return;
+      S.ghostFrom=S.ghostTarget;
+      S.ghostTarget=d;
+      S.ghostStart=now;
+      S.ghostPacketAt=now;
+      S.ghostDuration=120;
+      S.ghostSpeed=Number.isFinite(Number(p.speed))?Number(p.speed):420;
+      S.ghost= d;
+      S.ghostTargetY=Number.isFinite(y)?Math.max(0,Math.min(1,y)):0;
+      S.opponentY=S.ghostTargetY;
+      if(Number.isFinite(Number(p.lives)))S.opponentLives=Math.max(0,Math.floor(Number(p.lives)));
+      if(p.action==='jump'||p.action==='dash'||p.action==='run')S.opponentAction=p.action;
+      if(p.character)S.opponentCharacter=String(p.character);
+    });
+    try{await channel.subscribe()}catch(_){}
+    S.channel=channel;
+  }
+
+  async function broadcastOwnState(){
+    if(!S.channel||!S.user||!S.sessionId)return;
+    const G=window.__IR_G;
+    if(!G||!G.player)return;
+    const p=G.player;
+    const y=Number.isFinite(Number(p.y))&&Number.isFinite(Number(p.h))&&Number.isFinite(Number(G.groundY))&&Number.isFinite(Number(G.H))?Math.max(0,Math.min(1,(G.groundY-(p.y+p.h))/G.H)):0;
+    try{
+      await S.channel.send({type:'broadcast',event:'duel_state',payload:{
+        sessionId:S.sessionId,userId:S.user.id,distance:Math.max(0,Number(G.dist||0)),lives:Math.max(0,Number(G.lives||0)),
+        y,action:G.dashT>0?'dash':(p.ground?'run':'jump'),character:window.IR_DUEL_CONFIG?.character||'runner',speed:420
+      }});
+    }catch(_){}
+  }
+
   async function startSession(id){
     const sessionId=String(id||'');
     if(!sessionId)return;
@@ -58,9 +102,13 @@
     S.opponentCharacter='runner';
     S.opponentCharacterLoaded=false;
     S.opponentCharacterLoading=false;
+    S.opponentLives=2;
+    S.ghostPacketAt=0;
+    await setupRealtime(sessionId);
     try{await sync()}catch(_){}
     if(!S.session || S.session.status==='lobby')showLobby();
-    S.sync=setInterval(sync,140)
+    S.sync=setInterval(sync,140);
+    S.broadcast=setInterval(broadcastOwnState,50)
   }
   async function joinSession(id){
     const sessionId=String(id||'');
@@ -92,11 +140,11 @@
   function showLobby(){show(`<div class="dm"><div class="dh"><h2>⚔️ 1V1</h2><button id="leave">✕</button></div><div class="db"><div class="duelCount">2 / 2</div><div class="duelGrid"><div class="duelCard"><h3>👤 Toi</h3><p id="mine">⏳ Pas prêt</p></div><div class="duelCard"><h3>👤 ${otherName(S.session||{})}</h3><p id="opp">⏳ Pas prêt</p></div></div><p class="muted" style="margin-top:14px">Le 1V1 utilise le parcours commun. Prépare-toi puis le duel démarre automatiquement.</p><div class="actions"><button id="ready" class="primary">✅ PRÊT</button><button id="leave2" class="danger">QUITTER</button></div></div></div>`);document.getElementById('ready').onclick=async()=>{try{await rpc('duel_set_choice',{p_session_id:S.sessionId,p_choice:'ready'})}catch(e){alert('❌ '+e.message)}};document.getElementById('leave').onclick=leave;document.getElementById('leave2').onclick=leave}
   async function leave(){try{if(S.sessionId)await rpc('duel_leave',{p_session_id:S.sessionId})}catch(_){}finishToMenu()}
   function renderSession(s){S.session=s;if(s.status==='lobby'){if(S.shown!=='lobby'){S.shown='lobby';showLobby()}const a=document.getElementById('mine'),b=document.getElementById('opp');if(a)a.textContent=(meA(s)?s.choice_a:s.choice_b)==='ready'?'✅ PRÊT':'⏳ Pas prêt';if(b)b.textContent=(meA(s)?s.choice_b:s.choice_a)==='ready'?'✅ PRÊT':'⏳ Pas prêt';return}if(s.status==='countdown'){if(S.shown!=='countdown'){S.shown='countdown';show(`<div class="dm"><div class="db"><div class="duelCount" id="go">3</div><p class="muted" style="text-align:center">⚔️ Le duel va commencer !</p></div></div>`)}const e=document.getElementById('go');if(e)e.textContent=Math.max(1,Math.ceil(remaining(s.phase_deadline)));return}if(s.status==='playing'){if(S.shown!=='playing'){S.shown='playing';layer.style.display='none';window.IR_DUEL_ACTIVE=true;window.IR_DUEL_CONFIG={lives:2,character:otherCharacter(s),seed:Number(s.random_seed)||1};window.IR_DUEL_SET_WORLD_RNG?.(Number(s.random_seed)||1);hud.style.display='block';window.dispatchEvent(new CustomEvent('ir:duelStartGame'))}updateGhost(s);updateHud(s);return}if(s.status==='completed'||s.status==='cancelled'){showResult(s);return}}
-  function updateGhost(s){loadOpponentCharacter(s);const now=performance.now();const target=Number(meA(s)?s.distance_b:s.distance_a);const targetY=Number(meA(s)?s.y_b:s.y_a)||0;if(Number.isFinite(target)){const current=S.ghostTarget||0;const currentY=S.ghostTargetY||0;S.ghostFrom=Number.isFinite(S.ghost)?S.ghost:current;S.ghostFromY=Number.isFinite(S.opponentY)?S.opponentY:currentY;S.ghostTarget=target;S.ghostTargetY=targetY;S.ghostStart=now;S.ghostDuration=170;S.ghost=target}S.opponentAction=meA(s)?s.action_b:s.action_a;S.opponentY=targetY;const fallback=otherCharacter(s);if(fallback&&fallback!=='runner')S.opponentCharacter=fallback}
+  function updateGhost(s){loadOpponentCharacter(s);const now=performance.now();const target=Number(meA(s)?s.distance_b:s.distance_a);const targetY=Number(meA(s)?s.y_b:s.y_a)||0;const remoteLives=Number(meA(s)?s.lives_b:s.lives_a);if(Number.isFinite(remoteLives))S.opponentLives=Math.max(0,Math.floor(remoteLives));if(Number.isFinite(target)&&!S.ghostPacketAt){S.ghostTarget=target;S.ghost=target;S.ghostStart=now;S.ghostPacketAt=now;S.ghostTargetY=targetY;S.ghostFromY=targetY}S.opponentAction=meA(s)?s.action_b:s.action_a;S.opponentY=targetY;const fallback=otherCharacter(s);if(fallback&&fallback!=='runner')S.opponentCharacter=fallback}
   function updateHud(s){const myL=meA(s)?s.lives_a:s.lives_b,opL=meA(s)?s.lives_b:s.lives_a,myD=meA(s)?s.distance_a:s.distance_b,opD=meA(s)?s.distance_b:s.distance_a;hud.innerHTML=`⚔️ ${esc(S.nameMap[otherId(s)]||'Adversaire')} · ❤️ ${myL} / ${opL} · 📏 ${Math.floor(myD)}m / ${Math.floor(opD)}m <span style="opacity:.7">${S.opponentAction==='dash'?'⚡ DASH':S.opponentAction==='jump'?'⬆️ SAUT':'🏃'}</span>`}
   function showResult(s){if(S.shown==='result'&&layer.style.display!=='none')return;S.shown='result';window.IR_DUEL_ACTIVE=false;hud.style.display='none';const mine=meA(s),winner=s.winner_id,win=winner===S.user.id;show(`<div class="dm"><div class="dh"><h2>⚔️ FIN DU 1V1</h2></div><div class="db"><div class="duelResult">${win?'🏆 TU AS GAGNÉ !':winner?'💥 '+otherName(s)+' A GAGNÉ':'🤝 DUEL TERMINÉ'}</div><div class="duelGrid"><div class="duelCard"><b>Toi</b><div>❤️ ${mine?s.lives_a:s.lives_b}</div><div>📏 ${Math.floor(mine?s.distance_a:s.distance_b)} m</div></div><div class="duelCard"><b>${otherName(s)}</b><div>❤️ ${mine?s.lives_b:s.lives_a}</div><div>📏 ${Math.floor(mine?s.distance_b:s.distance_a)} m</div></div></div><p class="muted" style="text-align:center">${esc(s.result_reason||'Partie terminée')}</p><div class="actions"><button class="primary" id="back">RETOUR AUX AMIS</button></div></div></div>`);document.getElementById('back').onclick=finishToMenu}
   function finishToMenu(){clearTimers();S.requestId=null;S.sessionId=null;S.session=null;S.shown=null;window.IR_DUEL_ACTIVE=false;window.IR_DUEL_CONFIG=null;window.__IR_DUEL_SEED=null;window.__IR_DUEL_WORLD_RNG=null;hud.style.display='none';hide();window.dispatchEvent(new CustomEvent('ir:duelExitToMenu'))}
-  window.IR_DUEL_GHOST_DRAW=(ctx,W,H,w,G)=>{if(!window.IR_DUEL_ACTIVE||!S.session)return;const now=performance.now();const t=Math.max(0,Math.min(1,(now-(S.ghostStart||now))/(S.ghostDuration||170)));const d=(Number(S.ghostFrom)||0)+((Number(S.ghostTarget)||0)-(Number(S.ghostFrom)||0))*t;const yy=(G.groundY||H*.75)-(((Number(S.ghostFromY)||0)+((Number(S.ghostTargetY)||0)-(Number(S.ghostFromY)||0))*t)*(G.H||H));const my=Number(G.dist||0);const baseX=Number(G?.player?.x);const safeBaseX=Number.isFinite(baseX)?baseX:Math.floor(W*.28);const px=Math.max(45,Math.min(W-45,safeBaseX+Math.max(-240,Math.min(240,(d-my)*0.85))));const action=S.opponentAction==='jump'?'jump':S.opponentAction==='dash'?'dash':'run';const p={x:px-21,y:yy-62,w:42,h:62,sy:1,ground:action==='run',run:now/1000,inv:0};const fake={...G,dist:d,level:0,goal:1,dashT:action==='dash'?0.18:0,shield:false};ctx.save();ctx.globalAlpha=.62;if(window.IR_CHARACTER_DRAW_SKIN)try{window.IR_CHARACTER_DRAW_SKIN(ctx,w,p,fake,S.opponentCharacter||'runner')}catch(_){ }else{ctx.translate(px,yy);ctx.fillStyle='#ff4fa8';ctx.fillRect(-14,-45,28,45);ctx.fillStyle='#ffd5e9';ctx.beginPath();ctx.arc(0,-58,11,0,Math.PI*2);ctx.fill()}ctx.restore()}
+  window.IR_DUEL_GHOST_DRAW=(ctx,W,H,w,G)=>{if(!window.IR_DUEL_ACTIVE||!S.session)return;const now=performance.now();const sincePacket=Math.min(0.45,Math.max(0,(now-(S.ghostPacketAt||now))/1000));const d=(Number(S.ghostTarget)||0)+sincePacket*(Number(S.ghostSpeed)||420);const yNorm=Number.isFinite(Number(S.ghostTargetY))?Number(S.ghostTargetY):Number(S.opponentY)||0;const yy=(G.groundY||H*.75)-(yNorm*(G.H||H));const my=Number(G.dist||0);const baseX=Number(G?.player?.x);const safeBaseX=Number.isFinite(baseX)?baseX:Math.floor(W*.28);const px=Math.max(45,Math.min(W-45,safeBaseX+Math.max(-240,Math.min(240,(d-my)*0.85))));const action=S.opponentAction==='jump'?'jump':S.opponentAction==='dash'?'dash':'run';const p={x:px-21,y:yy-62,w:42,h:62,sy:1,ground:action==='run',run:now/1000,inv:0};const fake={...G,dist:d,level:0,goal:1,dashT:action==='dash'?0.18:0,shield:false};ctx.save();ctx.globalAlpha=.62;if(window.IR_CHARACTER_DRAW_SKIN)try{window.IR_CHARACTER_DRAW_SKIN(ctx,w,p,fake,S.opponentCharacter||'runner')}catch(_){ }else{ctx.translate(px,yy);ctx.fillStyle='#ff4fa8';ctx.fillRect(-14,-45,28,45);ctx.fillStyle='#ffd5e9';ctx.beginPath();ctx.arc(0,-58,11,0,Math.PI*2);ctx.fill()}ctx.restore()}
   async function poll(){if(!S.user)return;const rows=await requests();if(S.sessionId)return;const incoming=rows.find(r=>r.status==='pending'&&r.receiver_id===S.user.id);if(incoming){requestGui(incoming);return}}
   async function clearLoginRequests(){
     if(!S.user)return;
