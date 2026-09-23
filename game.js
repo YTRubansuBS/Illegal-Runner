@@ -53,16 +53,13 @@
       code = code.replace('const cost = 100 * v','const cost = [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]')
       code = code.replace('${maxed ? "MAX" : "🪙 " + 100 * v}','${maxed ? "MAX" : "🪙 Acheter " + [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]}')
       code = code.replace('${maxed ? "MAX" : "🪙 " + 100 * v}</button></div>','${maxed ? "MAX" : "🪙 Acheter " + [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]}</button></div>')
-      code = code.replace('const cost = 100 * v','const cost = id === "jump" ? 5000 : 100 * v')
-      code = code.replace('const maxed = v >= max','const maxed = id === "jump" ? v >= 2 : v >= max')
-      code = code.replace('${maxed ? "MAX" : "🪙 " + cost}','${maxed ? "MAX" : "🪙 Acheter " + cost}')
       code = replaceBetween(code, '  async function buyUpgrade(id) {', '  function freePack() {', `  async function buyUpgrade(id) {
     const entry = UPGRADES.find((u) => u[0] === id)
     if (!entry) return
     const max = entry[3]
     const key = id + "_level"
     let v = Math.max(1, Number(profile[key] || 1))
-    if (v >= (id === "jump" ? 2 : max)) return toast("Niveau maximum !")
+    if (v >= max) return toast("Niveau maximum !")
     const cost = [100, 500, 1000, 2500, 5000][Math.min(Math.max(0, v - 1), 4)]
     if (isGuest || !sb || !user) {
       const coins = Math.max(0, Math.floor(Number(profile.coins || 0)))
