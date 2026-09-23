@@ -2,7 +2,7 @@
   'use strict'
   const cfg=window.IR_CONFIG||{}
   const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
-  const S={user:null,requestId:null,sessionId:null,session:null,nameMap:{},timer:null,poll:null,sync:null,broadcast:null,channel:null,shown:null,ghost:0,ghostTarget:0,ghostFrom:0,ghostStart:0,ghostDuration:170,ghostPacketAt:0,ghostSpeed:420,opponentLives:2,opponentAction:'run',opponentY:0,opponentCharacter:'runner',opponentCharacterLoaded:false,opponentCharacterLoading:false}
+  const S={user:null,requestId:null,sessionId:null,session:null,nameMap:{},timer:null,poll:null,sync:null,broadcast:null,channel:null,shown:null,ghost:0,ghostTarget:0,ghostFrom:0,ghostStart:0,ghostDuration:170,ghostPacketAt:0,ghostSpeed:420,opponentLives:2,opponentAction:'run',opponentY:0,opponentCharacter:'runner',opponentCharacterLoaded:false,opponentCharacterLoading:false,userCharacter:'runner'}
   const layer=document.createElement('div');layer.id='irDuelLayer';document.body.appendChild(layer)
   const hud=document.createElement('div');hud.id='irDuelHud';hud.className='duelHud';document.body.appendChild(hud)
   const style=document.createElement('style');style.textContent=`#irDuelLayer{position:fixed;inset:0;z-index:2147483590;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(2,5,12,.9);backdrop-filter:blur(10px);font-family:Inter,system-ui,sans-serif}#irDuelLayer .dm{width:min(820px,96vw);max-height:94vh;overflow:auto;background:#050b14;color:#fff;border:1px solid #00e5ff66;border-radius:22px;box-shadow:0 0 60px #00e5ff22}#irDuelLayer .dh{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid #ffffff14}#irDuelLayer .db{padding:18px}#irDuelLayer button{border:1px solid #274765;background:#0d1929;color:#fff;border-radius:9px;padding:10px 13px;font-weight:900;cursor:pointer}#irDuelLayer button.primary{background:linear-gradient(90deg,#00a7cf,#d72583);border:0}#irDuelLayer button.danger{color:#ff9bb0;border-color:#633244;background:#1a0d15}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.duelGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.duelCard{padding:14px;border:1px solid #ffffff14;border-radius:15px}.duelTimer,.duelCount,.duelResult{text-align:center;font-weight:900}.duelTimer{font-size:30px;color:#ffd45c;margin:12px}.duelCount{font-size:42px;color:#00e5ff;margin:10px}.duelResult{font-size:28px;margin:18px}.muted{color:#93a0b6}.duelHud{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:2147483500;display:none;padding:9px 14px;border:1px solid #00e5ff66;border-radius:13px;background:#02050cdc;color:#fff;font:900 14px Inter,sans-serif;box-shadow:0 0 18px #00e5ff26;text-align:center}@media(max-width:700px){.duelGrid{grid-template-columns:1fr}}`;document.head.appendChild(style)
@@ -46,6 +46,7 @@
 
   async function setupRealtime(sessionId){
     if(!sb||!sessionId)return;
+    await loadUserCharacter();
     if(S.channel&&S.channel.__irSessionId===String(sessionId))return;
     if(S.channel){try{await sb.removeChannel(S.channel)}catch(_){}S.channel=null}
     const channel=sb.channel('ir-duel-'+String(sessionId),{config:{broadcast:{ack:false}}});
@@ -68,6 +69,7 @@
       S.opponentY=S.ghostTargetY;
       if(Number.isFinite(Number(p.lives)))S.opponentLives=Math.max(0,Math.floor(Number(p.lives)));
       if(p.action==='jump'||p.action==='dash'||p.action==='run')S.opponentAction=p.action;
+      if(p.character)S.opponentCharacter=String(p.character);
     });
     try{await channel.subscribe()}catch(_){}
     S.channel=channel;
@@ -82,7 +84,7 @@
     try{
       await S.channel.send({type:'broadcast',event:'duel_state',payload:{
         sessionId:S.sessionId,userId:S.user.id,distance:Math.max(0,Number(G.dist||0)),lives:Math.max(0,Number(G.lives||0)),
-        y,action:G.dashT>0?'dash':(p.ground?'run':'jump'),speed:420
+        y,action:G.dashT>0?'dash':(p.ground?'run':'jump'),character:S.userCharacter||'runner',speed:420
       }});
     }catch(_){}
   }
@@ -100,6 +102,7 @@
     S.opponentAction='run';
     S.opponentCharacter='runner';
     S.opponentCharacterLoaded=false;
+    await loadUserCharacter();
     S.opponentCharacterLoading=false;
     S.opponentLives=2;
     S.ghostPacketAt=0;
@@ -119,6 +122,22 @@
     const sid=e?.detail?.sessionId;
     if(sid)joinSession(sid);
   });
+  async function loadUserCharacter(){
+    if(!S.user)return 'runner';
+    try{
+      const q=await sb.from('profiles').select('selected_character').eq('id',S.user.id).maybeSingle();
+      const picked=q?.data?.selected_character;
+      if(picked)S.userCharacter=String(picked);
+    }catch(_){}
+    if(!S.userCharacter||S.userCharacter==='runner'){
+      try{
+        const local=JSON.parse(localStorage.getItem('irGuest')||'{}');
+        if(local.selected_character)S.userCharacter=String(local.selected_character);
+      }catch(_){}
+    }
+    return S.userCharacter||'runner';
+  }
+
   async function loadOpponentCharacter(s){
     if(S.opponentCharacterLoaded||S.opponentCharacterLoading||!S.user||!s)return;
     const id=otherId(s);
@@ -128,7 +147,7 @@
       const q=await sb.from('profiles').select('selected_character').eq('id',id).maybeSingle();
       const picked=q?.data?.selected_character;
       if(picked)S.opponentCharacter=String(picked);
-    }catch(e){console.warn('[IR] duel opponent skin:',e)}
+    }catch(_){}
     S.opponentCharacterLoaded=true;
     S.opponentCharacterLoading=false;
   }
