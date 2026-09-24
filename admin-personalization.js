@@ -137,7 +137,7 @@
       return
     }
 
-    if (data !== true) {
+    if (data !== true && data !== 'true') {
       status.textContent = '❌ Attribution refusée.'
       return
     }
@@ -147,8 +147,8 @@
   }
 
   function buildPanel(editor) {
-    if (!editor || editor.querySelector('#adminPersonalization')) return
-    if (!isAdminEditorOpen()) return
+    if (!editor || !isAdminEditorOpen()) return
+    if (editor.querySelector('#adminPersonalizationTrigger')) return
 
     const catalog = getCatalog()
     const panel = document.createElement('div')
@@ -181,12 +181,31 @@
       '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">' + sections + '</div>' +
       '<div id="adminPersonalizationStatus" class="muted" style="margin-top:10px"></div>'
 
+    panel.style.display = 'none'
+
+    const trigger = document.createElement('button')
+    trigger.type = 'button'
+    trigger.id = 'adminPersonalizationTrigger'
+    trigger.className = 'primary'
+    trigger.textContent = '🎁 PERSONNALISATION'
+    trigger.style.cssText = 'width:100%;margin-top:12px;font-size:16px;font-weight:900'
+
     const saveButton = editor.querySelector('#btnAdminSave') || editor.querySelector('#adminSaveEdit')
     if (saveButton?.parentElement) {
+      saveButton.parentElement.before(trigger)
       saveButton.parentElement.before(panel)
     } else {
+      editor.appendChild(trigger)
       editor.appendChild(panel)
     }
+
+    trigger.addEventListener('click', e => {
+      e.preventDefault()
+      e.stopPropagation()
+      const open = panel.style.display !== 'none'
+      panel.style.display = open ? 'none' : 'block'
+      trigger.textContent = open ? '🎁 PERSONNALISATION' : '🔽 FERMER PERSONNALISATION'
+    })
 
     const status = panel.querySelector('#adminPersonalizationStatus')
     panel.querySelectorAll('[data-ap-give]').forEach(button => {
