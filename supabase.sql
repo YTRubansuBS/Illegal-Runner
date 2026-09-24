@@ -56,7 +56,7 @@ returns boolean
 language plpgsql
 security definer
 set search_path=public,auth
-as $
+as $$
 declare
   admin_ok boolean;
 begin
@@ -75,7 +75,7 @@ begin
 
   return true;
 end;
-$;
+$$;
 
 revoke all on function public.admin_grant_inventory(uuid,text,text) from public,anon;
 grant execute on function public.admin_grant_inventory(uuid,text,text) to authenticated;
