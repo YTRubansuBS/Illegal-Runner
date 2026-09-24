@@ -126,7 +126,7 @@
   function render(ctx,w,p,G,overrideId){
     const id=overrideId||selected||'runner', m=COLORS[id]||COLORS.runner, rarity=RARITY[id]||0, t=performance.now()/50
     ctx.save()
-    if(G.dashT>0)for(let i=1;i<=5;i++){ctx.globalAlpha=.12*(6-i);ctx.fillStyle=m[1];ctx.fillRect(p.x-i*16,p.y+8,p.w,p.h-12)}
+    // No generic Dash trail: Dash visuals are handled exclusively by the selected Dash style.
     ctx.globalAlpha=1;ctx.save();ctx.translate(p.x+p.w/2,p.y+p.h);const sy=clamp(p.sy,.6,1.25);ctx.scale(1/Math.sqrt(sy),sy);ctx.translate(-p.w/2,-p.h);ctx.scale(p.w/42,p.h/62)
     if(p.inv>0&&Math.floor(p.inv*12)%2)ctx.globalAlpha=.35
     aura(ctx,rarity,m[1],t);draw(ctx,id,m[0],m[1],p,t)
