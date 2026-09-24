@@ -565,7 +565,7 @@
       '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">' +
       fields.map(f => '<label style="display:flex;flex-direction:column;gap:6px"><span>' + f[1] + '</span><input type="number" min="' + f[3] + '" data-admin-field="' + f[0] + '" value="' + Number(f[2] ?? 0) + '"></label>').join("") +
       '</div>' +
-      '<div class="row" style="margin-top:14px"><button class="primary" id="btnAdminSave">💾 ENREGISTRER</button><button id="btnAdminCancel">ANNULER</button></div>' +
+      '<div class="row" style="margin-top:14px"><button class="primary" id="btnAdminSave">💾 ENREGISTRER</button><button id="btnAdminCancel">ANNULER</button><button type="button" id="adminPersonalizationTrigger">🎁 PERSONNALISATION</button></div>' +
       '<div id="adminEditStatus" class="muted" style="margin-top:8px"></div>' +
       '</div>'
     const save = document.getElementById("btnAdminSave")
