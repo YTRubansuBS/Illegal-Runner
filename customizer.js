@@ -7,7 +7,7 @@
   const CHARS = {runner:{emoji:'🧑',name:'RUNNER'},ninja:{emoji:'🥷',name:'NINJA'},robot:{emoji:'🤖',name:'ROBOT'},ghost:{emoji:'👻',name:'GHOST'},cyber:{emoji:'🦾',name:'CYBER'}}
   const OBS = {classic:{emoji:'🔺',name:'CLASSIC'},tech:{emoji:'🧱',name:'TECH'},drone:{emoji:'🚁',name:'DRONES'},energy:{emoji:'⚡',name:'ENERGY'},chaos:{emoji:'☠️',name:'CHAOS'}}
   const COINS = {gold:{emoji:'🪙',name:'GOLD'},diamond:{emoji:'💎',name:'DIAMOND'},ruby:{emoji:'🔴',name:'RUBY'},emerald:{emoji:'🟢',name:'EMERALD'},neon:{emoji:'💠',name:'NEON'}}
-  const COSTS={world:1000,character:1000,coin:1000,reward:500}
+  const COSTS={world:1000,character:1000,coin:1000,dash:1000,reward:500}
   const REWARD_MIN=200, REWARD_MAX=850
   const cfg=window.IR_CONFIG||{}
   const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
@@ -21,10 +21,10 @@
   const coinStorageKey=uid=>'irSelectedCoin_'+uid
   const getSelectedCloudCoin=uid=>cloudSelectedCoin||(()=>{try{return localStorage.getItem(coinStorageKey(uid))||'gold'}catch{return 'gold'}})()
   const setSelectedCloudCoin=(uid,id)=>{cloudSelectedCoin=id;try{localStorage.setItem(coinStorageKey(uid),id)}catch{}}
-  const notifyCustomization=(type,id)=>window.dispatchEvent(new CustomEvent('ir:customizationChanged',{detail:type==='world'?{selected_background:id}:type==='character'?{selected_character:id}:type==='coin'?{selected_coin:id}:{selected_obstacle_set:id}}))
+  const notifyCustomization=(type,id)=>window.dispatchEvent(new CustomEvent('ir:customizationChanged',{detail:type==='world'?{selected_background:id}:type==='character'?{selected_character:id}:type==='coin'?{selected_coin:id}:type==='dash'?{selected_dash:id}:{selected_obstacle_set:id}}))
   async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;cloudProfile=null;cloudSelectedCoin='gold';return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];cloudProfile=null;cloudSelectedCoin='gold';return false}const [{data:inv},{data:prof}]=await Promise.all([sb.from('inventory').select('item_type,item_id').eq('user_id',user.id),sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',user.id).maybeSingle()]);cloudInventory=inv||[];cloudProfile=prof||{};cloudSelectedCoin=String(user.user_metadata?.selected_coin||'').trim()||(()=>{try{return localStorage.getItem(coinStorageKey(user.id))||'gold'}catch{return 'gold'}})();try{localStorage.setItem(coinStorageKey(user.id),cloudSelectedCoin)}catch{};cloudProfile.selected_coin=cloudSelectedCoin;return true}
   const owned=(type,id,p)=>type==='world'?(p.owned_worlds||['city']).includes(id):type==='character'?(p.owned_characters||['runner']).includes(id):type==='coin'?(p.owned_coins||['gold']).includes(id):(p.owned_obstacles||['classic']).includes(id)
-  const cloudInventoryTypes=type=>type==='world'?['background','world']:type==='character'?['character']:type==='coin'?['obstacle','coin']:['obstacle']
+  const cloudInventoryTypes=type=>type==='world'?['background','world']:type==='character'?['character']:type==='coin'?['obstacle','coin']:type==='dash'?['dash']:['obstacle']
   const cloudOwned=(type,id)=>{if((type==='world'&&id==='city')||(type==='character'&&id==='runner')||(type==='coin'&&id==='gold')||(type==='obstacle'&&id==='classic'))return true;const allowed=cloudInventoryTypes(type);return !!cloudInventory?.some(x=>allowed.includes(String(x.item_type))&&String(x.item_id)===String(id))}
   async function saveCloudOwnership(userId,type,id){
     if(!sb||!userId)return false
@@ -49,12 +49,16 @@
       if(type==='character')p.selected_character=id;
       if(type==='obstacle')p.selected_obstacle_set=id;
       if(type==='coin')p.selected_coin=id;
+      if(type==='dash'){try{localStorage.setItem('irSelectedDash_guest',id)}catch{}}
       if(type==='world')p.owned_worlds=Array.from(new Set([...(p.owned_worlds||[]),id]));
       if(type==='character')p.owned_characters=Array.from(new Set([...(p.owned_characters||[]),id]));
       if(type==='coin')p.owned_coins=Array.from(new Set([...(p.owned_coins||[]),id]));
       saveLocal(p);notifyCustomization(type,id);notifyProfile(p)
     } else if(cloudUser){
-      if(type==='coin'){
+      if(type==='dash'){
+        try{localStorage.setItem('irSelectedDash_'+cloudUser.id,id)}catch{}
+        notifyCustomization(type,id)
+      } else if(type==='coin'){
         const {error}=await sb.auth.updateUser({data:{...((cloudUser&&cloudUser.user_metadata)||{}),selected_coin:id}})
         if(error)return toast('❌ Impossible d’enregistrer la pièce.')
         setSelectedCloudCoin(cloudUser.id,id)
@@ -68,7 +72,7 @@
       cloudProfile[field]=id
       notifyCustomization(type,id)}
     }
-    toast('✅ '+(type==='world'?'Monde':type==='character'?'Personnage':'Pièce')+' équipé !')
+    toast('✅ '+(type==='world'?'Monde':type==='character'?'Personnage':type==='coin'?'Pièce':'Dash')+' équipé !')
     await renderCustomizer()
   }
   async function autoEquip(type,id,p){
@@ -182,7 +186,7 @@
     mythic:'border:2px solid #ff4d6d;background:rgba(255,77,109,.12)',
     secret:'border:2px solid #00e5ff;background:linear-gradient(135deg,rgba(0,229,255,.12),rgba(255,0,200,.12))'
   }[id]||'')
-  const rarityCards=type=>PACK_CATALOG[type].map((x,i)=>({id:x[0],emoji:x[1],name:x[2],rarity:rarityForIndex(i)}))
+  const rarityCards=type=>type==='dash'?DASH_STYLES.map(x=>({id:x[0],emoji:x[1],name:x[2],rarity:x[3]})):PACK_CATALOG[type].map((x,i)=>({id:x[0],emoji:x[1],name:x[2],rarity:rarityForIndex(i)}))
   const packLabel=type=>type==='world'?'PACK MONDE':type==='character'?'PACK PERSONNAGE':'PACK PIÈCES'
   const displayCollection=(type)=>{
     const uid=collectionUid(), data=loadCollection(uid,type), cards=rarityCards(type)
@@ -202,16 +206,24 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
 
 
   function displayDashStyles(){
+    const uid=collectionUid(), data=loadCollection(uid,'dash')
+    let current=''
+    try{current=localStorage.getItem('irSelectedDash_'+uid)||''}catch{}
     return RARITY_ORDER.map(r=>{
       const list=DASH_STYLES.filter(x=>x[3]===r)
       if(!list.length)return ''
-      return '<div class="custom-section ir-rarity-section" style="margin:18px 0;padding:14px;border-radius:16px;'+rarityStyle(r)+'"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px"><h3 style="margin:0">'+RARITIES[r].icon+' '+RARITIES[r].name+'</h3><span class="muted" style="font-size:12px">'+RARITIES[r].chance+'%</span></div><div class="grid">'+list.map(x=>'<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:hidden;min-height:150px"><div style="position:absolute;top:8px;right:8px;font-size:11px;font-weight:900;opacity:.8">🔒</div><div class="emoji" style="font-size:42px;margin-top:8px">'+x[1]+'</div><h3 style="margin:6px 0">'+x[2]+'</h3><p class="muted" style="margin:4px 0 0">Dash · '+RARITIES[r].name+'</p></div>').join('')+'</div></div>'
+      return '<div class="custom-section ir-rarity-section" style="margin:18px 0;padding:14px;border-radius:16px;'+rarityStyle(r)+'"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px"><h3 style="margin:0">'+RARITIES[r].icon+' '+RARITIES[r].name+'</h3><span class="muted" style="font-size:12px">'+RARITIES[r].chance+'%</span></div><div class="grid">'+list.map(x=>{
+        const n=Number(data[x[0]]||0), equipped=current===x[0]
+        const action=equipped
+          ? '<button type="button" disabled style="width:100%;opacity:1;cursor:default;border:2px solid #19ff88;background:linear-gradient(180deg,rgba(25,255,136,.22),rgba(25,255,136,.08));color:#19ff88;font-weight:1000;box-shadow:0 0 14px rgba(25,255,136,.22)">✓ ÉQUIPÉ</button>'
+          : (n ? '<button type="button" data-equip-type="dash" data-equip-id="'+x[0]+'" style="width:100%;font-weight:1000">ÉQUIPER</button>' : '<button type="button" disabled style="width:100%;opacity:.38;cursor:not-allowed">🔒 VERROUILLÉ</button>')
+        return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:hidden;min-height:170px"><div style="position:absolute;top:8px;right:8px;font-size:11px;font-weight:900;opacity:.8">'+(n?'x'+n:'🔒')+'</div><div class="emoji" style="font-size:42px;margin-top:8px">'+x[1]+'</div><h3 style="margin:6px 0">'+x[2]+'</h3><p class="muted" style="margin:4px 0 12px">'+(n?RARITIES[r].name:'Pas encore obtenu')+'</p>'+(n?'<div style="display:flex;flex-direction:column;gap:6px">'+action+'</div>':'')+'</div>'
+      }).join('')+'</div></div>'
     }).join('')
   }
 
-
   async function buyPack(type){
-    if(!['world','character','coin'].includes(type)||buying)return
+    if(!['world','character','coin','dash'].includes(type)||buying)return
     buying=true
     try{
       const cost=COSTS[type]||1000
