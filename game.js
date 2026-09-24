@@ -702,8 +702,9 @@
     box.innerHTML='<div class="card">⏳ Chargement des joueurs...</div>'
     let q=sb.from("profiles").select("id,username,coins,best_distance,total_distance,highest_level,lives_level,distance_level,dash_level,jump_level,coin_level,bonus_level,bonus_shield_level,bonus_mega_level,bonus_x2_level,bonus_jetpack_level,bonus_scoreDouble_level,bonus_magnet_level,selected_background,selected_character").order("username",{ascending:true}).limit(100)
     if(qname) q=q.ilike("username","%"+qname+"%")
-    if(q.error){box.innerHTML='<div class="card">❌ '+esc(q.error.message)+'</div>';return}
-    const rows=q.data||[]
+    const result=await q
+    if(result.error){box.innerHTML='<div class="card">❌ '+esc(result.error.message)+'</div>';return}
+    const rows=result.data||[]
     if(!rows.length){box.innerHTML='<div class="card">Aucun joueur trouvé.</div>';return}
     box.innerHTML=rows.map(p=>'<div class="card admin-player" data-admin-player="'+esc(p.id)+'" style="cursor:pointer;margin-bottom:10px"><div class="row" style="align-items:center"><div style="flex:1"><b>👤 '+esc(p.username)+'</b><div class="muted">🪙 '+Number(p.coins||0).toLocaleString("fr-FR")+' · 🏆 '+Number(p.best_distance||0)+'m · LV '+Number(p.highest_level||1)+'</div></div><button type="button" data-admin-edit="'+esc(p.id)+'">🛠️ MODIFIER</button></div></div>').join("")
     box.querySelectorAll("[data-admin-edit]").forEach(btn=>btn.onclick=e=>{
