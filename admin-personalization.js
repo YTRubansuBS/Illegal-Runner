@@ -80,7 +80,10 @@
 
   // The real security check is done by the Supabase RPC. On the client we only
   // use Admin's already-rendered editor as the signal that the user opened it.
-  const isAdminEditorOpen = () => !!document.getElementById('adminEditor')
+  const isAdminEditorOpen = () => {
+    const editor = document.getElementById('adminEditor')
+    return !!editor && editor.offsetParent !== null
+  }
 
   function rememberPlayer(e) {
     const target = e.target
@@ -147,14 +150,50 @@
   }
 
   function buildPanel(editor) {
-    if (!editor || !isAdminEditorOpen()) return
-    if (editor.querySelector('#adminPersonalizationTrigger')) return
+    if (!editor) return
 
     const catalog = getCatalog()
-    const panel = document.createElement('div')
+
+    let trigger = editor.querySelector('#adminPersonalizationTrigger')
+    let panel = editor.querySelector('#adminPersonalization')
+
+    if (!trigger) {
+      trigger = document.createElement('button')
+      trigger.type = 'button'
+      trigger.id = 'adminPersonalizationTrigger'
+      trigger.textContent = '🎁'
+      trigger.setAttribute('aria-label', 'Personnalisation')
+      trigger.title = 'Personnalisation'
+      trigger.style.cssText = 'display:inline-flex !important;visibility:visible !important;opacity:1 !important;align-items:center;justify-content:center;min-width:58px;height:42px;margin-left:8px;padding:0 14px;font-size:22px;font-weight:900;cursor:pointer'
+
+      const saveButton = editor.querySelector('#btnAdminSave') || editor.querySelector('#adminSaveEdit')
+      if (saveButton && saveButton.parentElement) {
+        saveButton.parentElement.appendChild(trigger)
+      } else {
+        const heading = editor.querySelector('h3')
+        if (heading && heading.nextSibling) heading.parentElement.insertBefore(trigger, heading.nextSibling)
+        else if (heading) heading.parentElement.appendChild(trigger)
+        else editor.insertBefore(trigger, editor.firstChild)
+      }
+
+      trigger.onclick = e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const p = editor.querySelector('#adminPersonalization')
+        if (!p) return
+        const open = p.style.display !== 'none'
+        p.style.display = open ? 'none' : 'block'
+        trigger.textContent = open ? '🎁' : '✖️'
+        trigger.title = open ? 'Personnalisation' : 'Fermer'
+      }
+    }
+
+    if (panel) return
+
+    panel = document.createElement('div')
     panel.id = 'adminPersonalization'
     panel.className = 'card'
-    panel.style.cssText = 'margin-top:14px;border:1px solid #00e5ff;box-shadow:0 0 18px rgba(0,229,255,.12)'
+    panel.style.cssText = 'display:none;margin-top:12px;border:2px solid #00e5ff;box-shadow:0 0 18px rgba(0,229,255,.18);padding:14px'
 
     const sections = Object.keys(catalog).map(type => {
       const title = {
@@ -164,54 +203,30 @@
         obstacle: '💥 OBSTACLES'
       }[type]
 
-      const options = catalog[type]
-        .map(item => '<option value="' + esc(item[0]) + '">' + esc(item[1] + ' ' + item[2]) + '</option>')
-        .join('')
+      const options = catalog[type].map(item =>
+        '<option value="' + esc(item[0]) + '">' + esc(item[1] + ' ' + item[2]) + '</option>'
+      ).join('')
 
-      return '<div>' +
-        '<label style="display:block;margin-bottom:6px;font-weight:800">' + title + '</label>' +
+      return '<div style="display:flex;flex-direction:column;gap:6px">' +
+        '<label style="font-weight:900">' + title + '</label>' +
         '<select data-ap-type="' + type + '" style="width:100%;box-sizing:border-box">' + options + '</select>' +
-        '<button type="button" data-ap-give="' + type + '" style="width:100%;margin-top:7px">🎁 DONNER</button>' +
+        '<button type="button" data-ap-give="' + type + '" style="width:100%;font-weight:900">🎁 DONNER</button>' +
         '</div>'
     }).join('')
 
     panel.innerHTML =
-      '<h3>🎨 DONNER DE LA PERSONNALISATION</h3>' +
-      '<p class="muted">Donne directement au joueur sélectionné des mondes, personnages, pièces ou styles d’obstacles.</p>' +
-      '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">' + sections + '</div>' +
+      '<h3 style="margin-top:0">🎨 PERSONNALISATION</h3>' +
+      '<p class="muted">Donner directement des éléments au joueur sélectionné.</p>' +
+      '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">' + sections + '</div>' +
       '<div id="adminPersonalizationStatus" class="muted" style="margin-top:10px"></div>'
 
-    panel.style.display = 'none'
-
-    const trigger = document.createElement('button')
-    trigger.type = 'button'
-    trigger.id = 'adminPersonalizationTrigger'
-    trigger.className = 'primary'
-    trigger.textContent = '🎁 PERSONNALISATION'
-    trigger.style.cssText = 'width:100%;margin-top:12px;font-size:16px;font-weight:900'
-
     const saveButton = editor.querySelector('#btnAdminSave') || editor.querySelector('#adminSaveEdit')
-    const actionRow = saveButton?.parentElement
-    if (actionRow) {
-      trigger.style.cssText = 'font-size:16px;font-weight:900'
-      actionRow.appendChild(trigger)
-      actionRow.after(panel)
-    } else {
-      editor.appendChild(trigger)
-      editor.appendChild(panel)
-    }
-
-    trigger.addEventListener('click', e => {
-      e.preventDefault()
-      e.stopPropagation()
-      const open = panel.style.display !== 'none'
-      panel.style.display = open ? 'none' : 'block'
-      trigger.textContent = open ? '🎁' : '🔼 🎁'
-    })
+    if (saveButton && saveButton.parentElement) saveButton.parentElement.after(panel)
+    else editor.appendChild(panel)
 
     const status = panel.querySelector('#adminPersonalizationStatus')
     panel.querySelectorAll('[data-ap-give]').forEach(button => {
-      button.addEventListener('click', async e => {
+      button.onclick = async e => {
         e.preventDefault()
         e.stopPropagation()
         const type = button.dataset.apGive
@@ -219,7 +234,7 @@
         button.disabled = true
         await give(type, select?.value, status)
         button.disabled = false
-      })
+      }
     })
   }
 
@@ -243,6 +258,13 @@
     if (!document.body) return
     observer.observe(document.body, {childList:true, subtree:true})
     buildForCurrentEditor()
+
+    let tries = 0
+    const timer = setInterval(() => {
+      buildForCurrentEditor()
+      tries++
+      if (tries >= 40) clearInterval(timer)
+    }, 250)
   }
 
   if (document.readyState === 'loading') {
