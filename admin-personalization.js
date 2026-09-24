@@ -18,7 +18,9 @@
   const isAdmin = () => {
     try {
       const wanted = String(cfg.ADMIN_USERNAME || 'Rubansu1').trim().toLowerCase()
-      return String(window.profile?.username || '').trim().toLowerCase() === wanted
+      const badge = String(document.getElementById('userBadge')?.textContent || '').trim().toLowerCase()
+      const entered = String(document.getElementById('name')?.value || '').trim().toLowerCase()
+      return badge.includes(wanted) || entered === wanted
     } catch { return false }
   }
 
@@ -33,8 +35,12 @@
 
   function rememberPlayer(e) {
     const btn = e.target?.closest?.('[data-admin-edit]')
-    if (!btn) return
-    selectedPlayerId = btn.dataset.adminEdit || null
+    if (btn) {
+      selectedPlayerId = btn.dataset.adminEdit || null
+      return
+    }
+    const card = e.target?.closest?.('[data-admin-player]')
+    if (card) selectedPlayerId = card.dataset.adminPlayer || null
   }
 
   async function give(type, id, status) {
@@ -42,17 +48,13 @@
     if (!sb || !selectedPlayerId || !id) return
     const itemType = itemTypes[type]
     status.textContent = '⏳ Attribution...'
-    const { data: existing, error: findError } = await sb.from('inventory')
-      .select('id')
-      .eq('user_id', selectedPlayerId)
-      .eq('item_type', itemType)
-      .eq('item_id', id)
-      .maybeSingle()
-    if (findError) { status.textContent = '❌ ' + findError.message; return }
-    if (!existing) {
-      const { error } = await sb.from('inventory').insert({ user_id:selectedPlayerId, item_type:itemType, item_id:id })
-      if (error) { status.textContent = '❌ ' + error.message; return }
-    }
+    const { data, error } = await sb.rpc('admin_grant_inventory', {
+      p_target_user: selectedPlayerId,
+      p_item_type: itemType,
+      p_item_id: id
+    })
+    if (error) { status.textContent = '❌ ' + error.message; return }
+    if (data !== true) { status.textContent = '❌ Attribution refusée.'; return }
     status.textContent = '✅ Objet donné !'
     toast('🎁 ' + id + ' débloqué pour le joueur !')
   }
