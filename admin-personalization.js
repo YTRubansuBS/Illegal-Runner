@@ -191,9 +191,11 @@
     trigger.style.cssText = 'width:100%;margin-top:12px;font-size:16px;font-weight:900'
 
     const saveButton = editor.querySelector('#btnAdminSave') || editor.querySelector('#adminSaveEdit')
-    if (saveButton?.parentElement) {
-      saveButton.parentElement.before(trigger)
-      saveButton.parentElement.before(panel)
+    const actionRow = saveButton?.parentElement
+    if (actionRow) {
+      trigger.style.cssText = 'font-size:16px;font-weight:900'
+      actionRow.appendChild(trigger)
+      actionRow.after(panel)
     } else {
       editor.appendChild(trigger)
       editor.appendChild(panel)
@@ -204,7 +206,7 @@
       e.stopPropagation()
       const open = panel.style.display !== 'none'
       panel.style.display = open ? 'none' : 'block'
-      trigger.textContent = open ? '🎁 PERSONNALISATION' : '🔽 FERMER PERSONNALISATION'
+      trigger.textContent = open ? '🎁' : '🔼 🎁'
     })
 
     const status = panel.querySelector('#adminPersonalizationStatus')
