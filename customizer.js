@@ -124,6 +124,15 @@
     mythic:{name:'MYTHIQUE',chance:0.9,sell:7500,icon:'🔴'},
     secret:{name:'SECRET',chance:0.1,sell:10000,icon:'🌈'}
   }
+  const DASH_STYLES=[
+    ['classic','⚡','CLASSIC','common'],['flame','🔥','FLAME','common'],['ice','❄️','ICE','common'],['thunder','⚡','THUNDER','common'],['toxic','☢️','TOXIC','common'],['neon','💠','NEON','common'],['rainbow','🌈','RAINBOW','common'],['galaxy','🌌','GALAXY','common'],['cosmic','☄️','COSMIC','common'],['void','🕳️','VOID','common'],
+    ['shadow','🌑','SHADOW','uncommon'],['plasma','🔮','PLASMA','uncommon'],['electric','⚡','ELECTRIC','uncommon'],['inferno','🌋','INFERNO','uncommon'],['frost','🧊','FROST','uncommon'],['aqua','🌊','AQUA','uncommon'],['nature','🌿','NATURE','uncommon'],['wind','💨','WIND','uncommon'],
+    ['star','⭐','STAR','rare'],['moon','🌙','MOON','rare'],['sun','☀️','SUN','rare'],['crystal','💎','CRYSTAL','rare'],['golden','🪙','GOLDEN','rare'],['royal','👑','ROYAL','rare'],
+    ['dragon','🐉','DRAGON','epic'],['phoenix','🔥','PHOENIX','epic'],['cyber','💻','CYBER','epic'],['glitch','👾','GLITCH','epic'],
+    ['portal','🌀','PORTAL','legendary'],['matrix','🟩','MATRIX','legendary'],['pink','💗','PINK','legendary'],
+    ['quantum','⚛️','QUANTUM','mythic'],['infinite','♾️','INFINITE','mythic'],
+    ['secret','🔐','SECRET','secret']
+  ]
   const RARITY_ORDER=['common','uncommon','rare','epic','legendary','mythic','secret']
   const PACK_CATALOG={
     world:[
@@ -192,6 +201,15 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
   }
 
 
+  function displayDashStyles(){
+    return RARITY_ORDER.map(r=>{
+      const list=DASH_STYLES.filter(x=>x[3]===r)
+      if(!list.length)return ''
+      return '<div class="custom-section ir-rarity-section" style="margin:18px 0;padding:14px;border-radius:16px;'+rarityStyle(r)+'"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px"><h3 style="margin:0">'+RARITIES[r].icon+' '+RARITIES[r].name+'</h3><span class="muted" style="font-size:12px">'+RARITIES[r].chance+'%</span></div><div class="grid">'+list.map(x=>'<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:hidden;min-height:150px"><div style="position:absolute;top:8px;right:8px;font-size:11px;font-weight:900;opacity:.8">🔒</div><div class="emoji" style="font-size:42px;margin-top:8px">'+x[1]+'</div><h3 style="margin:6px 0">'+x[2]+'</h3><p class="muted" style="margin:4px 0 0">Dash · '+RARITIES[r].name+'</p></div>').join('')+'</div></div>'
+    }).join('')
+  }
+
+
   async function buyPack(type){
     if(!['world','character','coin'].includes(type)||buying)return
     buying=true
@@ -256,7 +274,8 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
       '<div class="custom-section" style="padding:14px;border-radius:16px;border:1px solid rgba(0,229,255,.35);background:linear-gradient(135deg,rgba(0,229,255,.07),rgba(5,8,15,.9))"><h3 style="margin-top:0">📊 RARETÉS</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px">'+RARITY_ORDER.map(r=>'<div style="padding:10px;border-radius:11px;'+rarityStyle(r)+'"><b>'+RARITIES[r].icon+' '+RARITIES[r].name+'</b><br><span class="muted">'+RARITIES[r].chance+'% · '+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</span></div>').join('')+'</div></div>'+
       '<div class="custom-section"><h3>🌍 MONDES</h3>'+displayCollection('world')+'</div>'+
       '<div class="custom-section"><h3>🧑 PERSONNAGES</h3>'+displayCollection('character')+'</div>'+
-      '<div class="custom-section"><h3>🪙 PIÈCES</h3>'+displayCollection('coin')+'</div>';
+      '<div class="custom-section"><h3>🪙 PIÈCES</h3>'+displayCollection('coin')+'</div>'+
+      '<div class="custom-section"><h3>⚡ DASH</h3><p class="muted">34 styles Dash classés par rareté.</p>'+displayDashStyles()+'</div>';
     notifyCustomization('world',selected.world);notifyCustomization('character',selected.character);notifyCustomization('coin',selected.coin)
   }
 
