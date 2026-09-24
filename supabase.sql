@@ -1,3 +1,4 @@
+drop function if exists public.finish_run(text,integer,integer,integer,integer,integer) cascade;
 create extension if not exists pgcrypto;
 
 create table if not exists public.profiles (
@@ -173,7 +174,6 @@ declare b bigint;
 begin update public.profiles set coins=greatest(0,coins+amount),updated_at=now() where id=auth.uid() returning coins into b; if b is null then raise exception 'Profile not found'; end if; return b; end;
 $$;
 
-drop function if exists public.finish_run(text,integer,integer,integer,integer,integer) cascade;
 
 create function public.finish_run(p_mode text,p_level integer,p_distance integer,p_coins integer,p_seconds integer,p_highest_level integer)
 returns jsonb language plpgsql security invoker set search_path=public as $$
