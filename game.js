@@ -269,9 +269,9 @@
   function dash() {
 `)
       code = code.replace('    G.dashCd = 1.6', '    G.dashCd = getDashCooldown()')
+      code = code.replace('    for (let i = 0; i < 14; i++) burst(G.player.x, G.player.y + rand(0, G.player.h), G.world.accent, 1)', '    // Default Dash particles disabled: selected Dash FX is the only Dash visual.')
       code = code.replace(`        if (G.dashT > 0 && DESTRUCTIBLE[o.type]) {
           o.dead = true
-          burst(o.x + o.w / 2, o.y + o.h / 2, G.world.accent, 14)
           SFX.dash()
         } else if (G.dashT > 0) {
           // dash phases through walls/cars: no damage, no destroy
