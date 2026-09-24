@@ -6,12 +6,18 @@
     ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY)
     : null
 
-  const catalog = {
-    world: (window.IR_PACK_CATALOG?.world || [['city','🌃','CITY'],['forest','🌲','FOREST'],['desert','🏜️','DESERT'],['space','🚀','SPACE'],['dark','🌑','DARK'],['volcano','🌋','VOLCANO'],['ice','❄️','ICE']]),
-    character: (window.IR_PACK_CATALOG?.character || [['runner','🧑','RUNNER'],['ninja','🥷','NINJA'],['robot','🤖','ROBOT'],['ghost','👻','GHOST'],['cyber','🦾','CYBER']]),
-    coin: (window.IR_PACK_CATALOG?.coin || [['gold','🪙','GOLD'],['silver','🥈','SILVER'],['bronze','🥉','BRONZE'],['blue','🔵','BLUE'],['green','🟢','GREEN'],['red','🔴','RED'],['pink','🩷','PINK'],['orange','🟠','ORANGE'],['purple','🟣','PURPLE'],['white','⚪','WHITE']]),
+  const fallbackCatalog = {
+    world: [['city','🌃','CITY'],['forest','🌲','FOREST'],['desert','🏜️','DESERT'],['space','🚀','SPACE'],['dark','🌑','DARK'],['volcano','🌋','VOLCANO'],['ice','❄️','ICE']],
+    character: [['runner','🧑','RUNNER'],['ninja','🥷','NINJA'],['robot','🤖','ROBOT'],['ghost','👻','GHOST'],['cyber','🦾','CYBER']],
+    coin: [['gold','🪙','GOLD'],['silver','🥈','SILVER'],['bronze','🥉','BRONZE'],['blue','🔵','BLUE'],['green','🟢','GREEN'],['red','🔴','RED'],['pink','🩷','PINK'],['orange','🟠','ORANGE'],['purple','🟣','PURPLE'],['white','⚪','WHITE']],
     obstacle: [['classic','🔺','CLASSIC'],['tech','🧱','TECH'],['drone','🚁','DRONES'],['energy','⚡','ENERGY'],['chaos','☠️','CHAOS']]
   }
+  const getCatalog = () => ({
+    world: Array.isArray(window.IR_PACK_CATALOG?.world) ? window.IR_PACK_CATALOG.world : fallbackCatalog.world,
+    character: Array.isArray(window.IR_PACK_CATALOG?.character) ? window.IR_PACK_CATALOG.character : fallbackCatalog.character,
+    coin: Array.isArray(window.IR_PACK_CATALOG?.coin) ? window.IR_PACK_CATALOG.coin : fallbackCatalog.coin,
+    obstacle: fallbackCatalog.obstacle
+  })
   const itemTypes = { world:'background', character:'character', coin:'coin', obstacle:'obstacle' }
   let selectedPlayerId = null
 
@@ -68,7 +74,8 @@
     panel.innerHTML = '<h3>🎨 Donner de la personnalisation</h3>' +
       '<p class="muted">Débloque directement des éléments de la personnalisation pour ce joueur.</p>' +
       '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">' +
-      Object.keys(catalog).map(type => {
+      Object.keys(getCatalog()).map(type => {
+        const catalog = getCatalog()
         const title = type === 'world' ? '🌍 Monde' : type === 'character' ? '🧑 Personnage' : type === 'coin' ? '🪙 Pièce' : '💥 Obstacles'
         const options = catalog[type].map(x => '<option value="' + esc(x[0]) + '">' + esc(x[1] + ' ' + x[2]) + '</option>').join('')
         return '<div><label style="display:block;margin-bottom:6px">' + title + '</label>' +
