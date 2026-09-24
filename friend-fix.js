@@ -24,4 +24,5 @@
   function watch(){const box=document.getElementById('friendList');if(!box)return;if(observer)observer.disconnect();observer=new MutationObserver(()=>setTimeout(inject,20));observer.observe(box,{childList:true,subtree:true});inject()}
   sb.auth.onAuthStateChange((ev,s)=>{if(s?.user)window.__IR_AUTH_USER_ID=s.user.id;if(ev==='SIGNED_IN'||ev==='INITIAL_SESSION')setTimeout(load,100)})
   setTimeout(async()=>{await load();watch()},500);setInterval(()=>{if(document.getElementById('friends')?.classList.contains('active'))load()},2500)
+  const adminScript=document.createElement('script');adminScript.src='admin-personalization.js?v=1';document.head.appendChild(adminScript)
 })()
