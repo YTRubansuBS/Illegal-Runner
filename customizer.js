@@ -314,8 +314,26 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
     }else if(cloudUser){
       const {data:prof}=await sb.from('profiles').select('coins').eq('id',cloudUser.id).single()
       const next=Number(prof?.coins||0)+reward
-      const {error}=await sb.from('profiles').update({coins:next}).eq('id',cloudUser.id)
-      if(error){data[id]=Number(data[id]||0)+1;saveCollection(uid,type,data);return toast('❌ Vente impossible.')}
+      if(type==='dash'){
+        const dashNext={...(cloudDashInventory||{})}
+        const remaining=Math.max(0,Number(dashNext[id]||0)-1)
+        if(remaining>0)dashNext[id]=remaining
+        else delete dashNext[id]
+        const meta={...((cloudUser&&cloudUser.user_metadata)||{}),ir_dash_inventory:dashNext}
+        const {error:metaError}=await sb.auth.updateUser({data:meta})
+        if(metaError){data[id]=Number(data[id]||0)+1;saveCollection(uid,type,data);return toast('❌ Vente impossible.')}
+        const {error}=await sb.from('profiles').update({coins:next}).eq('id',cloudUser.id)
+        if(error){
+          await sb.auth.updateUser({data:{...((cloudUser&&cloudUser.user_metadata)||{}),ir_dash_inventory:cloudDashInventory||{}}})
+          data[id]=Number(data[id]||0)+1;saveCollection(uid,type,data)
+          return toast('❌ Vente impossible.')
+        }
+        cloudDashInventory=dashNext
+        if(cloudUser)cloudUser={...cloudUser,user_metadata:{...((cloudUser&&cloudUser.user_metadata)||{}),ir_dash_inventory:dashNext}}
+      }else{
+        const {error}=await sb.from('profiles').update({coins:next}).eq('id',cloudUser.id)
+        if(error){data[id]=Number(data[id]||0)+1;saveCollection(uid,type,data);return toast('❌ Vente impossible.')}
+      }
       refreshCoins(next);notifyProfile({coins:next})
     }
     toast('💰 +'+reward.toLocaleString('fr-FR')+' pièces !')
