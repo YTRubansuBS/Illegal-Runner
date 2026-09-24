@@ -145,42 +145,6 @@
     ['quantum','⚛️','QUANTUM','mythic'],['infinite','♾️','INFINITE','mythic'],
     ['secret','🔐','SECRET','secret']
   ]
-  const DASH_DESCRIPTIONS={
-    classic:"Un effet simple et propre avec de petites particules lumineuses qui apparaissent brièvement autour du joueur.",
-    flame:"De petites flammes apparaissent derrière le joueur pendant qu'il avance, avec quelques braises qui s'envolent.",
-    ice:"De petits cristaux de glace apparaissent autour du joueur et disparaissent rapidement dans une légère brume froide.",
-    thunder:"De petits éclairs apparaissent occasionnellement autour du joueur pendant ses déplacements.",
-    toxic:"De petites particules vertes et quelques bulles toxiques apparaissent derrière le joueur.",
-    neon:"Une petite lumière néon entoure le joueur et laisse une courte traînée lumineuse derrière lui.",
-    rainbow:"De petites particules colorées apparaissent successivement derrière le joueur dans différentes couleurs de l'arc-en-ciel.",
-    galaxy:"De minuscules étoiles apparaissent autour du joueur et disparaissent après quelques instants.",
-    cosmic:"De petites particules cosmiques et quelques mini-comètes apparaissent derrière le joueur.",
-    void:"De petites particules noires apparaissent autour du joueur et semblent brièvement absorber la lumière.",
-    shadow:"Une fumée sombre suit le joueur et laisse une légère traînée noire derrière lui.",
-    plasma:"Des particules d'énergie violette et bleue tournent autour du joueur avec de petits arcs d'énergie.",
-    electric:"Des éclairs plus nombreux parcourent régulièrement le contour du joueur et laissent de petites étincelles.",
-    inferno:"Des flammes plus grandes entourent le joueur avec des braises qui s'envolent continuellement derrière lui.",
-    frost:"Une brume glaciale accompagne le joueur avec des cristaux de glace qui apparaissent sur son chemin.",
-    aqua:"Des gouttes d'eau et de petites vagues lumineuses apparaissent derrière le joueur, donnant l'impression qu'il traverse de l'eau.",
-    nature:"Des feuilles, petites fleurs et particules vertes apparaissent autour du joueur puis disparaissent derrière lui.",
-    wind:"Des courants d'air visibles entourent le joueur et créent une traînée blanche lorsqu'il se déplace rapidement.",
-    star:"De nombreuses petites étoiles apparaissent autour du joueur et certaines tournent brièvement autour de lui avant de disparaître.",
-    moon:"Une aura bleu nuit accompagne le joueur avec des croissants de lune et de petites poussières d'étoiles flottant derrière lui.",
-    sun:"Une aura dorée lumineuse entoure le joueur. De petits rayons apparaissent régulièrement autour de lui.",
-    crystal:"Des cristaux brillants apparaissent sur la trajectoire du joueur et éclatent en plusieurs petites particules lumineuses.",
-    golden:"Une traînée dorée suit le joueur avec des pièces et des particules dorées qui apparaissent brièvement derrière lui.",
-    royal:"Une aura dorée et violette accompagne le joueur. De petites couronnes lumineuses apparaissent régulièrement dans sa traînée.",
-    dragon:"Une énergie de dragon entoure le joueur. Une silhouette de dragon apparaît parfois dans la traînée avant de disparaître dans des flammes.",
-    phoenix:"Des flammes dorées et rouges entourent le joueur tandis que des plumes enflammées apparaissent derrière lui.",
-    cyber:"Un effet numérique avancé avec des lignes de code, des hologrammes et des particules néon qui suivent les mouvements du joueur.",
-    glitch:"La traînée du joueur se déforme avec des effets de glitch. Des fragments de couleurs apparaissent et se décalent brièvement avant de disparaître.",
-    portal:"De petits portails apparaissent sur la trajectoire du joueur. Ils s'ouvrent brièvement puis se referment en laissant des particules lumineuses.",
-    matrix:"Des caractères numériques verts tombent autour du joueur tandis que sa traînée se transforme en lignes de code.",
-    pink:"Une immense aura rose lumineuse accompagne le joueur avec des cœurs, des particules brillantes et une traînée rose animée.",
-    quantum:"Un effet extrêmement complexe avec des particules énergétiques, des fragments de matière, des mini-portails et des distorsions autour du joueur. L'espace semble légèrement se déformer lorsqu'il avance.",
-    infinite:"L'effet ultime. Il combine plusieurs effets rares et mythiques : étoiles, galaxies, éclairs, flammes, portails, particules néon et énergie cosmique. Toutes les particules tournent autour du joueur et la traînée change constamment d'apparence.",
-    secret:"Un effet totalement mystérieux et unique. La traînée change constamment entre plusieurs formes inconnues, avec des particules, des symboles, des distorsions et des éléments de différents effets. Certains éléments apparaissent puis disparaissent instantanément, comme si l'effet lui-même était instable. Aucun autre effet ne doit ressembler au SECRET."
-  }
   const RARITY_ORDER=['common','uncommon','rare','epic','legendary','mythic','secret']
   const PACK_CATALOG={
     world:[
@@ -261,7 +225,8 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
         const action=equipped
           ? '<button type="button" disabled style="width:100%;opacity:1;cursor:default;border:2px solid #19ff88;background:linear-gradient(180deg,rgba(25,255,136,.22),rgba(25,255,136,.08));color:#19ff88;font-weight:1000;box-shadow:0 0 14px rgba(25,255,136,.22)">✓ ÉQUIPÉ</button>'
           : (n ? '<button type="button" data-equip-type="dash" data-equip-id="'+x[0]+'" style="width:100%;font-weight:1000">ÉQUIPER</button>' : '<button type="button" disabled style="width:100%;opacity:.38;cursor:not-allowed">🔒 VERROUILLÉ</button>')
-        return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:hidden;min-height:190px"><div style="position:absolute;top:8px;right:8px;font-size:11px;font-weight:900;opacity:.8">'+(n?'x'+n:'🔒')+'</div><div class="emoji" style="font-size:42px;margin-top:8px">'+x[1]+'</div><h3 style="margin:6px 0">'+x[2]+'</h3><p class="muted" style="margin:4px 0 8px">'+(n?RARITIES[r].name:'Pas encore obtenu')+'</p><p class="muted" style="font-size:12px;line-height:1.45;min-height:52px;margin:0 0 12px">'+(DASH_DESCRIPTIONS[x[0]]||'')+'</p>'+(n?'<div style="display:flex;flex-direction:column;gap:6px">'+action+'</div>':'')+'</div>'
+        const sell=n?'<button type="button" data-sell-type="dash" data-sell-id="'+x[0]+'">VENDRE +'+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</button>':''
+        return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:hidden;min-height:190px"><div style="position:absolute;top:8px;right:8px;font-size:11px;font-weight:900;opacity:.8">'+(n?'x'+n:'🔒')+'</div><div class="emoji" style="font-size:42px;margin-top:8px">'+x[1]+'</div><h3 style="margin:6px 0">'+x[2]+'</h3><p class="muted" style="margin:4px 0 12px">'+(n?RARITIES[r].name:'Pas encore obtenu')+'</p>'+(n?'<div style="display:flex;flex-direction:column;gap:6px">'+action+sell+'</div>':'')+'</div>'
       }).join('')+'</div></div>'
     }).join('')
   }
