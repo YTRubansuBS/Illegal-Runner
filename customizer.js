@@ -241,6 +241,7 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
       card('<div class="emoji">🌍</div><h3>PACK MONDE</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="world" type="button">OUVRIR</button>')+
       card('<div class="emoji">🧑</div><h3>PACK PERSONNAGE</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="character" type="button">OUVRIR</button>')+
       card('<div class="emoji">🪙</div><h3>PACK PIÈCES</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="coin" type="button">OUVRIR</button>')+
+      card('<div class="emoji">⚡</div><h3>PACK DASH</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="dash" type="button">OUVRIR</button>')+
       '</div><div id="packResult" class="card" style="display:none"></div>'
     root.querySelectorAll('.pack-buy').forEach(btn=>btn.onclick=e=>{e.preventDefault();buyPack(btn.dataset.pack)})
   }
