@@ -175,7 +175,7 @@ $$;
 
 drop function if exists public.finish_run(text,integer,integer,integer,integer,integer);
 
-create or replace function public.finish_run(p_mode text,p_level integer,p_distance integer,p_coins integer,p_seconds integer,p_highest_level integer)
+create function public.finish_run(p_mode text,p_level integer,p_distance integer,p_coins integer,p_seconds integer,p_highest_level integer)
 returns jsonb language plpgsql security invoker set search_path=public as $$
 declare b integer; td bigint; c bigint; qd integer; qc integer; qg integer; hl integer;
 begin
