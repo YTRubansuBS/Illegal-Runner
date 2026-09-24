@@ -998,3 +998,54 @@ begin
  if s.status='final_vote' then
    if s.final_vote_a='exit' or s.final_vote_b='exit' then
      update public.duel_sessions set status='cancelled',result_reason='vote_exit',ended_at=now(),updated_at=now() where id=s.id;
+   elsif s.user_a=auth.uid() and s.heartbeat_b<now_ts-interval '10 seconds' then winner:=s.user_a;
+   elsif s.user_b=auth.uid() and s.heartbeat_a<now_ts-interval '10 seconds' then winner:=s.user_b;
+   else winner:=null;
+   end if;
+   if winner is not null then
+     if s.stakes_locked and s.bet_mode then
+       if (s.heartbeat_a is not null and s.heartbeat_a<now_ts-interval '10 seconds') or (s.heartbeat_b is not null and s.heartbeat_b<now_ts-interval '10 seconds') then
+         prize:=case when winner=s.user_a then s.bet_a+(s.bet_b*2) else s.bet_b+(s.bet_a*2) end;
+       else
+         prize:=s.bet_a+s.bet_b;
+       end if;
+       update public.profiles set coins=coins+prize,updated_at=now() where id=winner;
+     end if;
+     update public.duel_sessions set status='completed',winner_id=winner,result_reason=case when s.heartbeat_a<now_ts-interval '10 seconds' or s.heartbeat_b<now_ts-interval '10 seconds' then 'disconnect' else 'defeat' end,payout=prize,ended_at=now(),updated_at=now() where id=s.id;
+     update public.duel_requests set status='completed',updated_at=now() where id=s.request_id;
+   end if;
+ end if;
+
+ select * into s from public.duel_sessions where id=s.id;
+ return jsonb_build_object(
+   'id',s.id,'request_id',s.request_id,'user_a',s.user_a,'user_b',s.user_b,'status',s.status,
+   'choice_a',s.choice_a,'choice_b',s.choice_b,'bet_a',s.bet_a,'bet_b',s.bet_b,
+   'final_vote_a',s.final_vote_a,'final_vote_b',s.final_vote_b,'bet_mode',s.bet_mode,
+   'stakes_locked',s.stakes_locked,'phase_deadline',s.phase_deadline,'started_at',s.started_at,
+   'winner_id',s.winner_id,'result_reason',s.result_reason,'payout',s.payout,
+   'lives_a',s.lives_a,'lives_b',s.lives_b,'distance_a',s.distance_a,'distance_b',s.distance_b
+ );
+end;
+$$;
+
+revoke all on function public.duel_create_request(uuid) from public,anon;
+revoke all on function public.duel_cancel_request(uuid) from public,anon;
+revoke all on function public.duel_respond_request(uuid,boolean) from public,anon;
+revoke all on function public.duel_poll_requests() from public,anon;
+revoke all on function public.duel_set_choice(uuid,text) from public,anon;
+revoke all on function public.duel_set_bet(uuid,bigint) from public,anon;
+revoke all on function public.duel_set_final_vote(uuid,text) from public,anon;
+revoke all on function public.duel_tick(uuid,bigint,integer) from public,anon;
+revoke all on function public.duel_leave(uuid) from public,anon;
+
+grant execute on function public.duel_create_request(uuid) to authenticated;
+grant execute on function public.duel_cancel_request(uuid) to authenticated;
+grant execute on function public.duel_respond_request(uuid,boolean) to authenticated;
+grant execute on function public.duel_poll_requests() to authenticated;
+grant execute on function public.duel_set_choice(uuid,text) to authenticated;
+grant execute on function public.duel_set_bet(uuid,bigint) to authenticated;
+grant execute on function public.duel_set_final_vote(uuid,text) to authenticated;
+grant execute on function public.duel_tick(uuid,bigint,integer) to authenticated;
+grant execute on function public.duel_leave(uuid) to authenticated;
+
+NOTIFY pgrst, 'reload schema';
