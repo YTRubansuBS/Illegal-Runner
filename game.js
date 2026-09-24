@@ -698,10 +698,10 @@
   async function adminSearch() {
     if(!adminAllowed()||!adminEnsureGate()) return
     const box=document.getElementById("adminResults"),input=document.getElementById("adminSearch"),qname=String(input?.value||"").trim()
-    if(!qname)return toast("Entre un pseudo.")
     if(!sb)return toast("☁️ Supabase indisponible.")
-    box.innerHTML='<div class="card">⏳ Recherche...</div>'
-    const q=await sb.from("profiles").select("id,username,coins,best_distance,total_distance,highest_level,lives_level,distance_level,dash_level,jump_level,coin_level,bonus_level,bonus_shield_level,bonus_mega_level,bonus_x2_level,bonus_jetpack_level,bonus_scoreDouble_level,bonus_magnet_level,selected_background,selected_character").ilike("username","%"+qname+"%").limit(20)
+    box.innerHTML='<div class="card">⏳ Chargement des joueurs...</div>'
+    let q=sb.from("profiles").select("id,username,coins,best_distance,total_distance,highest_level,lives_level,distance_level,dash_level,jump_level,coin_level,bonus_level,bonus_shield_level,bonus_mega_level,bonus_x2_level,bonus_jetpack_level,bonus_scoreDouble_level,bonus_magnet_level,selected_background,selected_character").order("username",{ascending:true}).limit(100)
+    if(qname) q=q.ilike("username","%"+qname+"%")
     if(q.error){box.innerHTML='<div class="card">❌ '+esc(q.error.message)+'</div>';return}
     const rows=q.data||[]
     if(!rows.length){box.innerHTML='<div class="card">Aucun joueur trouvé.</div>';return}
