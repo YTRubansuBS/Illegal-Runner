@@ -157,25 +157,24 @@
     let trigger = editor.querySelector('#adminPersonalizationTrigger')
     let panel = editor.querySelector('#adminPersonalization')
 
+    // Garantit que le bouton existe même si l'éditeur Admin l'a créé lui-même.
     if (!trigger) {
       trigger = document.createElement('button')
       trigger.type = 'button'
       trigger.id = 'adminPersonalizationTrigger'
-      trigger.textContent = '🎁'
-      trigger.setAttribute('aria-label', 'Personnalisation')
-      trigger.title = 'Personnalisation'
-      trigger.style.cssText = 'display:inline-flex !important;visibility:visible !important;opacity:1 !important;align-items:center;justify-content:center;min-width:58px;height:42px;margin-left:8px;padding:0 14px;font-size:22px;font-weight:900;cursor:pointer'
-
       const saveButton = editor.querySelector('#btnAdminSave') || editor.querySelector('#adminSaveEdit')
-      if (saveButton && saveButton.parentElement) {
-        saveButton.parentElement.appendChild(trigger)
-      } else {
-        const heading = editor.querySelector('h3')
-        if (heading && heading.nextSibling) heading.parentElement.insertBefore(trigger, heading.nextSibling)
-        else if (heading) heading.parentElement.appendChild(trigger)
-        else editor.insertBefore(trigger, editor.firstChild)
-      }
+      if (saveButton?.parentElement) saveButton.parentElement.appendChild(trigger)
+      else editor.insertBefore(trigger, editor.firstChild)
+    }
 
+    trigger.textContent = '🎁 PERSONNALISATION'
+    trigger.setAttribute('aria-label', 'Personnalisation')
+    trigger.title = 'Personnalisation'
+    trigger.style.cssText = 'display:inline-flex !important;visibility:visible !important;opacity:1 !important;align-items:center;justify-content:center;min-height:42px;margin-left:8px;padding:0 14px;font-size:16px;font-weight:900;cursor:pointer'
+
+    // Rebind à chaque passage : fonctionne aussi quand le bouton vient de game.js.
+    if (trigger.dataset.apBound !== '1') {
+      trigger.dataset.apBound = '1'
       trigger.onclick = e => {
         e.preventDefault()
         e.stopPropagation()
@@ -183,7 +182,7 @@
         if (!p) return
         const open = p.style.display !== 'none'
         p.style.display = open ? 'none' : 'block'
-        trigger.textContent = open ? '🎁' : '✖️'
+        trigger.textContent = open ? '🎁 PERSONNALISATION' : '✖️ FERMER'
         trigger.title = open ? 'Personnalisation' : 'Fermer'
       }
     }
@@ -221,7 +220,7 @@
       '<div id="adminPersonalizationStatus" class="muted" style="margin-top:10px"></div>'
 
     const saveButton = editor.querySelector('#btnAdminSave') || editor.querySelector('#adminSaveEdit')
-    if (saveButton && saveButton.parentElement) saveButton.parentElement.after(panel)
+    if (saveButton?.parentElement) saveButton.parentElement.after(panel)
     else editor.appendChild(panel)
 
     const status = panel.querySelector('#adminPersonalizationStatus')
