@@ -8,19 +8,41 @@
   }
   const $=id=>document.getElementById(id)
   let canvas,ctx,last=0
+  let selectedDashId='classic'
   function selected(){
+    if(NAMES.includes(selectedDashId))return selectedDashId
     const keys=['irSelectedDash','ir_selected_dash','selectedDash','selected_dash','irDashSelected']
     for(const k of keys){try{const v=localStorage.getItem(k);if(v&&NAMES.includes(String(v).toLowerCase()))return String(v).toLowerCase()}catch(e){}}
-    try{const p=JSON.parse(localStorage.getItem('irGuest')||'{}');if(p.selected_dash&&NAMES.includes(String(p.selected_dash).toLowerCase()))return String(p.selected_dash).toLowerCase()}catch(e){}
+    try{
+      const p=JSON.parse(localStorage.getItem('irGuest')||'{}')
+      if(p.selected_dash&&NAMES.includes(String(p.selected_dash).toLowerCase()))return String(p.selected_dash).toLowerCase()
+    }catch(e){}
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i)||''
+        if(k.startsWith('irSelectedDash_')){
+          const v=localStorage.getItem(k)
+          if(v&&NAMES.includes(String(v).toLowerCase()))return String(v).toLowerCase()
+        }
+      }
+    }catch(e){}
     const el=document.querySelector('[data-selected-dash="true"],[data-dash-selected="true"].active,.dash-card.selected,.dash-item.selected')
     const v=el?.dataset?.dash||el?.dataset?.id
     return v&&NAMES.includes(v.toLowerCase())?v.toLowerCase():'classic'
   }
+  window.addEventListener('ir:customizationChanged',e=>{
+    const id=String(e.detail?.selected_dash||'').toLowerCase()
+    if(NAMES.includes(id))selectedDashId=id
+  })
+  window.addEventListener('ir:profileLoaded',e=>{
+    const id=String(e.detail?.selected_dash||'').toLowerCase()
+    if(NAMES.includes(id))selectedDashId=id
+  })
   function fit(){if(!canvas)return;const c=$('c');if(!c)return;const r=c.getBoundingClientRect();const d=devicePixelRatio||1;canvas.width=Math.max(1,Math.round(r.width*d));canvas.height=Math.max(1,Math.round(r.height*d));canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';ctx.setTransform(d,0,0,d,0,0)}
   function setup(){
     const c=$('c');if(!c)return setTimeout(setup,250)
     if(canvas)return
-    canvas=document.createElement('canvas');canvas.id='dashFxOverlay';canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;'
+    canvas=document.createElement('canvas');canvas.id='dashFxOverlay';canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;'
     c.parentElement.appendChild(canvas);ctx=canvas.getContext('2d');fit();addEventListener('resize',fit)
     requestAnimationFrame(loop)
   }
