@@ -20,7 +20,31 @@
   async function refreshUser(){if(!sb)return;S.user=(await sb.auth.getSession()).data?.session?.user||null}
   async function requests(){
     if(!S.user)return []
-    try{const rows=await rpc('duel_poll_requests');return Array.isArray(rows)?rows:[]}catch(_){return []}
+    try{
+      const rows=await rpc('duel_poll_requests')
+      return Array.isArray(rows)?rows:[]
+    }catch(err){
+      const msg=String(err?.message||err||'')
+      if(!/ambiguous|column reference/i.test(msg))return []
+      try{
+        const q=await sb.from('duel_requests')
+          .select('id,sender_id,receiver_id,status,created_at,expires_at')
+          .or('sender_id.eq.'+S.user.id+',receiver_id.eq.'+S.user.id)
+          .order('created_at',{ascending:false})
+          .limit(30)
+        if(q.error)throw q.error
+        const rows=Array.isArray(q.data)?q.data:[]
+        const ids=rows.map(x=>x.id).filter(Boolean)
+        let sessions=[]
+        if(ids.length){
+          const sq=await sb.from('duel_sessions').select('id,request_id').in('request_id',ids)
+          if(!sq.error&&Array.isArray(sq.data))sessions=sq.data
+        }
+        const sm=new Map(sessions.map(x=>[String(x.request_id),x.id]))
+        const out=rows.map(x=>({...x,session_id:sm.get(String(x.id))||null}))
+        return out
+      }catch(_){return []}
+    }
   }
   function requestGui(r){
     const id=String(r?.id||'');if(!id||!S.user)return
