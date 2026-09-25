@@ -372,7 +372,7 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
       const data=loadCollection(user.id,type);data[item.id]=Number(data[item.id]||0)+1;saveCollection(user.id,type,data)
       const count=data[item.id]
       persistProfilePatch({coins:coins-cost})
-      showPackResult('<div style="font-size:38px">'+item.emoji+'</div><h3>'+item.name+'</h3><div style="font-weight:900;margin:8px 0">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' — '+RARITIES[rarity].chance+'%</div>'+'<p class="muted">'+(count>1?'DOUBLON → x'+count:'NOUVEAU !')+'</p>')
+      showPackResult('<div style="font-size:22px;font-weight:1000">'+item.emoji+' '+item.name+'</div><div style="font-weight:1000;margin:4px 0;color:#fff">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' <span style="opacity:.7">— '+RARITIES[rarity].chance+'%</span></div><div style="display:inline-block;padding:5px 9px;border-radius:8px;background:'+(count>1?'rgba(255,180,0,.18)':'rgba(25,255,136,.14)')+';border:1px solid '+(count>1?'#ffc44d':'#19ff88')+';color:'+(count>1?'#ffd166':'#19ff88')+';font-size:12px;font-weight:1000;letter-spacing:.7px">'+(count>1?'DOUBLON · x'+count:'NOUVEAU !')+'</div>')
       toast('🎁 '+RARITIES[rarity].name+' !')
       renderCustomizer()
     }finally{buying=false}
