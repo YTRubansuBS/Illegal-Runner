@@ -437,14 +437,38 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
   },true)
 
   function setup(){
-    document.querySelector('#tabs button[data-tab="pack"]')?.remove();$('pack')?.remove()
-    const wt=document.querySelector('#tabs button[data-tab="world"]');if(wt)wt.textContent='🎨 Personnaliser'
-    const wh=$('#world h2');if(wh)wh.textContent='🎨 PERSONNALISER'
-    $('worldGrid')?.style.setProperty('display','none')
-    if(!$('customizerRoot')){const r=document.createElement('div');r.id='customizerRoot';$('#world')?.querySelector('.panel')?.appendChild(r)}
+    const tabs=$('#tabs')
+    if(tabs){
+      document.querySelector('#tabs button[data-tab="pack"]')?.remove()
+      $('pack')?.remove()
+      let wt=document.querySelector('#tabs button[data-tab="world"]')
+      if(!wt){
+        wt=document.createElement('button')
+        wt.type='button'
+        wt.dataset.tab='world'
+        wt.textContent='🎨 Personnaliser'
+        const after=tabs.querySelector('button[data-tab="upgrades"]')
+        if(after)after.insertAdjacentElement('afterend',wt);else tabs.appendChild(wt)
+      }else wt.textContent='🎨 Personnaliser'
+      wt.style.display=''
+      wt.disabled=false
+    }
+    const world=$('#world')
+    if(world){
+      world.style.display=''
+      const wh=world.querySelector('h2');if(wh)wh.textContent='🎨 PERSONNALISER'
+      $('worldGrid')?.style.setProperty('display','none')
+      if(!$('customizerRoot')){const r=document.createElement('div');r.id='customizerRoot';world.querySelector('.panel')?.appendChild(r)}
+    }
     renderPacks()
-    const r=$('customizerRoot');if(r&&!r.dataset.ready){r.dataset.ready='1';renderCustomizer()}
+    const r=$('customizerRoot')
+    if(r){
+      r.dataset.ready='1'
+      renderCustomizer().catch(e=>console.error('[IR] customizer render:',e))
+    }
   }
+  window.addEventListener('ir:profileLoaded',()=>setTimeout(setup,0))
+  window.addEventListener('ir:profileChanged',()=>setTimeout(()=>{if(!$('customizerRoot'))setup()},0))
   document.addEventListener('click',async e=>{
     const eq=e.target.closest('[data-equip-type]');if(eq){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();await equip(eq.dataset.equipType,eq.dataset.equipId);return}
     const pack=e.target.closest('#customPacks .pack-buy');if(pack){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();if(!buying)await buyPack(pack.dataset.pack);return}
