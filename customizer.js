@@ -108,16 +108,29 @@
     if(type==='dash'){
       const next={...(cloudDashInventory||{})}
       next[id]=Number(next[id]||0)+1
-      const {error}=await sb.auth.updateUser({data:{...((cloudUser&&cloudUser.user_metadata)||{}),ir_dash_inventory:next}})
+      const {data,error}=await sb.auth.updateUser({data:{...((cloudUser&&cloudUser.user_metadata)||{}),ir_dash_inventory:next}})
       if(error)return false
       cloudDashInventory=next
+      if(cloudUser)cloudUser={...cloudUser,user_metadata:{...(cloudUser.user_metadata||{}),...(data?.user?.user_metadata||{}),ir_dash_inventory:next}}
       return true
     }
     if(cloudOwned(type,id))return true
     const types=cloudInventoryTypes(type)
     for(const itemType of types){
-      const {error}=await sb.from('inventory').insert({user_id:userId,item_type:itemType,item_id:id})
-      if(!error){cloudInventory=[...(cloudInventory||[]),{item_type:itemType,item_id:id,user_id:userId}];return true}
+      const payload={user_id:userId,item_type:itemType,item_id:id}
+      const ins=await sb.from('inventory').insert(payload)
+      if(!ins.error){
+        cloudInventory=[...(cloudInventory||[]),payload]
+        return true
+      }
+      // A duplicate/RLS race should not turn a successful pack into an error.
+      try{
+        const check=await sb.from('inventory').select('item_type,item_id').eq('user_id',userId).eq('item_type',itemType).eq('item_id',id).limit(1)
+        if(!check.error&&Array.isArray(check.data)&&check.data.length){
+          cloudInventory=[...(cloudInventory||[]),...check.data]
+          return true
+        }
+      }catch(e){}
     }
     return false
   }
@@ -323,8 +336,7 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
         const rarity=weightedRarity(), cards=rarityCards(type).filter(x=>x.rarity===rarity), item=cards[Math.floor(Math.random()*cards.length)]
         p.coins-=cost;saveLocal(p);refreshCoins(p.coins);notifyProfile(p)
         const data=loadCollection('guest',type);data[item.id]=Number(data[item.id]||0)+1;saveCollection('guest',type,data)
-        persistProfilePatch({coins:coins-cost})
-      const count=data[item.id]
+        const count=data[item.id]
         showPackResult('<div style="font-size:38px">'+item.emoji+'</div><h3>'+item.name+'</h3><div style="font-weight:900;margin:8px 0">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' — '+RARITIES[rarity].chance+'%</div>'+'<p class="muted">'+(count>1?'DOUBLON → x'+count:'NOUVEAU !')+'</p>')
         toast('🎁 '+RARITIES[rarity].name+' !')
         renderCustomizer();return
@@ -340,11 +352,13 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
       refreshCoins(coins-cost);notifyProfile({coins:coins-cost})
       const cloudSaved=await saveCloudOwnership(user.id,type,item.id)
       if(!cloudSaved){
-        await sb.from('profiles').update({coins:coins}).eq('id',user.id)
-        return toast('❌ Impossible d’enregistrer l’objet gagné. Aucun achat débité.')
+        const refund=await sb.from('profiles').update({coins:coins}).eq('id',user.id)
+        if(refund.error)console.error('[IR] pack refund:',refund.error)
+        return toast('❌ Le pack n’a pas pu être enregistré. Tes pièces n’ont pas été conservées comme dépense.')
       }
       const data=loadCollection(user.id,type);data[item.id]=Number(data[item.id]||0)+1;saveCollection(user.id,type,data)
       const count=data[item.id]
+      persistProfilePatch({coins:coins-cost})
       showPackResult('<div style="font-size:38px">'+item.emoji+'</div><h3>'+item.name+'</h3><div style="font-weight:900;margin:8px 0">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' — '+RARITIES[rarity].chance+'%</div>'+'<p class="muted">'+(count>1?'DOUBLON → x'+count:'NOUVEAU !')+'</p>')
       toast('🎁 '+RARITIES[rarity].name+' !')
       renderCustomizer()
