@@ -19,20 +19,25 @@
   const toast=t=>{const e=$('toast');if(!e)return;e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1900)}
   const refreshCoins=n=>{if(n!==undefined&&$('coins'))$('coins').textContent=String(n)}
   const notifyProfile=p=>window.dispatchEvent(new CustomEvent('ir:profileChanged',{detail:p}))
-  let profileSaveTimer=null
+  let profileSaveChain=Promise.resolve()
   const profileFields=['coins','best_distance','total_distance','highest_level','lives_level','distance_level','dash_level','jump_level','coin_level','bonus_level','bonus_shield_level','bonus_mega_level','bonus_x2_level','bonus_jetpack_level','bonus_scoreDouble_level','bonus_magnet_level','daily_login_streak','last_login_reward','quest_distance','quest_coins','quest_games','quest_distance_claimed','quest_coins_claimed','quest_games_claimed','last_quest_reset','selected_background','selected_character','selected_obstacle_set']
   const persistProfilePatch=patch=>{
     if(guestMode()||!sb||!cloudUser||!patch||typeof patch!=='object')return
     const clean={}
     for(const key of profileFields)if(Object.prototype.hasOwnProperty.call(patch,key))clean[key]=patch[key]
     if(!Object.keys(clean).length)return
-    clearTimeout(profileSaveTimer)
-    profileSaveTimer=setTimeout(async()=>{
+    const uid=cloudUser.id
+    // Queue writes so a fast sequence of purchases/upgrades cannot race and
+    // overwrite a newer value with an older request.
+    profileSaveChain=profileSaveChain.then(async()=>{
       try{
-        const {error}=await sb.from('profiles').update(clean).eq('id',cloudUser.id)
-        if(error)console.error('[IR] profile backup save:',error)
-      }catch(e){console.error('[IR] profile backup save:',e)}
-    },120)
+        const {error}=await sb.from('profiles').update(clean).eq('id',uid)
+        if(error)throw error
+      }catch(e){console.error('[IR] profile save:',e)}
+    })
+  }
+  window.IR_FLUSH_PROFILE_SAVES=async()=>{
+    try{await profileSaveChain}catch(e){console.error('[IR] profile save flush:',e)}
   }
   window.addEventListener('ir:profileChanged',e=>persistProfilePatch(e.detail||{}))
   const coinStorageKey=uid=>'irSelectedCoin_'+uid
