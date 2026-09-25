@@ -209,15 +209,26 @@
     let box=$('packResult')
     if(!box){box=document.createElement('div');box.id='packResult';root.appendChild(box)}
     box.style.display='block'
-    box.style.marginTop='14px'
-    box.style.padding='18px'
-    box.style.border='1px solid #00e5ff'
-    box.style.borderRadius='14px'
-    box.style.background='linear-gradient(135deg, rgba(0,229,255,.16), rgba(4,7,12,.92))'
-    box.style.boxShadow='0 0 24px rgba(0,229,255,.22)'
-    box.style.textAlign='center'
-    box.innerHTML=`<div style="font-size:12px;letter-spacing:1px;color:#8fe9ff;margin-bottom:8px">${good?'PACK OUVERT':'ACHAT IMPOSSIBLE'}</div>${html}`
-    box.scrollIntoView({behavior:'smooth',block:'nearest'})
+    box.style.marginTop='16px'
+    box.style.padding='12px'
+    box.style.border='2px solid rgba(0,229,255,.9)'
+    box.style.borderRadius='16px'
+    box.style.background='linear-gradient(135deg,rgba(0,120,255,.28),rgba(0,30,70,.96) 55%,rgba(3,8,18,.98))'
+    box.style.boxShadow='0 0 28px rgba(0,160,255,.28), inset 0 0 24px rgba(0,229,255,.08)'
+    box.style.textAlign='left'
+    box.style.overflow='hidden'
+    box.style.transform='none'
+    box.style.animation='none'
+    box.innerHTML='<div style="display:flex;align-items:center;gap:12px">'+
+      '<div style="min-width:78px;width:78px;height:78px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#087cff,#063d92);border:2px solid #49d8ff;box-shadow:0 0 22px rgba(0,190,255,.42);font-size:44px;flex:none">'+
+      (good?'🎁':'❌')+
+      '</div>'+
+      '<div style="min-width:0;flex:1">'+
+      '<div style="font-size:11px;letter-spacing:1.4px;color:#8fe9ff;font-weight:900;margin-bottom:3px">'+(good?'OBJET OBTENU':'ACHAT IMPOSSIBLE')+'</div>'+
+      '<div style="font-weight:1000;font-size:16px;margin-bottom:4px">'+html+'</div>'+
+      '</div>'+
+      '</div>'
+    // Do not scroll or otherwise move the page when a pack is opened.
   }
   function packName(type){return type==='world'?'PACK MONDE':type==='character'?'PACK PERSONNAGE':type==='coin'?'PACK PIÈCES':'PACK RÉCOMPENSE'}
 
@@ -337,7 +348,7 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
         p.coins-=cost;saveLocal(p);refreshCoins(p.coins);notifyProfile(p)
         const data=loadCollection('guest',type);data[item.id]=Number(data[item.id]||0)+1;saveCollection('guest',type,data)
         const count=data[item.id]
-        showPackResult('<div style="font-size:38px">'+item.emoji+'</div><h3>'+item.name+'</h3><div style="font-weight:900;margin:8px 0">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' — '+RARITIES[rarity].chance+'%</div>'+'<p class="muted">'+(count>1?'DOUBLON → x'+count:'NOUVEAU !')+'</p>')
+        showPackResult('<div style="font-size:22px;font-weight:1000">'+item.emoji+' '+item.name+'</div><div style="font-weight:1000;margin:4px 0;color:#fff">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' <span style="opacity:.7">— '+RARITIES[rarity].chance+'%</span></div><div style="display:inline-block;padding:5px 9px;border-radius:8px;background:'+(count>1?'rgba(255,180,0,.18)':'rgba(25,255,136,.14)')+';border:1px solid '+(count>1?'#ffc44d':'#19ff88')+';color:'+(count>1?'#ffd166':'#19ff88')+';font-size:12px;font-weight:1000;letter-spacing:.7px">'+(count>1?'DOUBLON · x'+count:'NOUVEAU !')+'</div>')
         toast('🎁 '+RARITIES[rarity].name+' !')
         renderCustomizer();return
       }
