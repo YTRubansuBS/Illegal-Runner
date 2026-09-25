@@ -12,6 +12,7 @@
   const cfg=window.IR_CONFIG||{}
   const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
   let cloudUser=null,cloudInventory=null,cloudProfile=null,cloudSelectedCoin='gold',cloudDashInventory={},buying=false
+  let lastPackResult=null
   const localProfile=()=>{try{const p=JSON.parse(localStorage.getItem('irGuest')||'{}');if(!Array.isArray(p.owned_coins)||!p.owned_coins.length)p.owned_coins=['gold'];if(!p.selected_coin)p.selected_coin='gold';return p}catch{return {owned_coins:['gold'],selected_coin:'gold'}}}
   const saveLocal=p=>localStorage.setItem('irGuest',JSON.stringify(p))
   const guestMode=()=>($('userBadge')?.textContent||'').includes('local')
@@ -219,6 +220,7 @@
     box.style.overflow='hidden'
     box.style.transform='none'
     box.style.animation='none'
+    lastPackResult={html,good}
     box.innerHTML='<div style="display:flex;align-items:center;gap:12px">'+
       '<div style="min-width:78px;width:78px;height:78px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#087cff,#063d92);border:2px solid #49d8ff;box-shadow:0 0 22px rgba(0,190,255,.42);font-size:44px;flex:none">'+
       (good?'🎁':'❌')+
@@ -389,6 +391,9 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
       card('<div class="emoji">🪙</div><h3>PACK PIÈCES</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="coin" type="button">OUVRIR</button>')+
       card('<div class="emoji">⚡</div><h3>PACK DASH</h3><p><b>🪙 1 000</b></p><button class="primary pack-buy" data-pack="dash" type="button">OUVRIR</button>')+
       '</div><div id="packResult" class="card" style="display:none"></div>'
+    if(lastPackResult){
+      showPackResult(lastPackResult.html,lastPackResult.good)
+    }
     root.querySelectorAll('.pack-buy').forEach(btn=>btn.onclick=e=>{e.preventDefault();buyPack(btn.dataset.pack)})
   }
 
