@@ -382,18 +382,48 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
   }
 
 
-  async function renderCustomizer(){
+  function renderCustomizerShell(){
     const root=$('customizerRoot');if(!root)return
-    await getCloud()
     const p=localProfile()
-    const selected={world:guestMode()?(p.selected_background||'city'):(cloudProfile?.selected_background||'city'),character:guestMode()?(p.selected_character||'runner'):(cloudProfile?.selected_character||'runner'),coin:guestMode()?(p.selected_coin||'gold'):(cloudProfile?.selected_coin||getSelectedCloudCoin(cloudUser?.id||'guest'))}
+    const selected={
+      world:guestMode()?(p.selected_background||'city'):(cloudProfile?.selected_background||'city'),
+      character:guestMode()?(p.selected_character||'runner'):(cloudProfile?.selected_character||'runner'),
+      coin:guestMode()?(p.selected_coin||'gold'):(cloudProfile?.selected_coin||getSelectedCloudCoin(cloudUser?.id||'guest'))
+    }
     root.innerHTML='<div style="padding:18px 0 8px"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><h2 style="margin:0">🎨 PERSONNALISATION</h2><p class="muted" style="margin:6px 0">Équipe tes objets débloqués et construis ton style Illegal Runner.</p></div><div style="padding:8px 12px;border:1px solid #00e5ff;border-radius:12px;background:rgba(0,229,255,.08);font-weight:900">⚡ '+[selected.world,selected.character,selected.coin].join(' · ')+'</div></div></div>'+
       '<div class="custom-section" style="padding:14px;border-radius:16px;border:1px solid rgba(0,229,255,.35);background:linear-gradient(135deg,rgba(0,229,255,.07),rgba(5,8,15,.9))"><h3 style="margin-top:0">📊 RARETÉS</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px">'+RARITY_ORDER.map(r=>'<div style="padding:10px;border-radius:11px;'+rarityStyle(r)+'"><b>'+RARITIES[r].icon+' '+RARITIES[r].name+'</b><br><span class="muted">'+RARITIES[r].chance+'% · '+RARITIES[r].sell.toLocaleString('fr-FR')+' 🪙</span></div>').join('')+'</div></div>'+
       '<div class="custom-section"><h3>🌍 MONDES</h3>'+displayCollection('world')+'</div>'+
       '<div class="custom-section"><h3>🧑 PERSONNAGES</h3>'+displayCollection('character')+'</div>'+
       '<div class="custom-section"><h3>🪙 PIÈCES</h3>'+displayCollection('coin')+'</div>'+
-      '<div class="custom-section"><h3>⚡ DASH</h3><p class="muted">34 styles Dash classés par rareté.</p>'+displayDashStyles()+'</div>';
-    notifyCustomization('world',selected.world);notifyCustomization('character',selected.character);notifyCustomization('coin',selected.coin)
+      '<div class="custom-section"><h3>⚡ DASH</h3><p class="muted">34 styles Dash classés par rareté.</p>'+displayDashStyles()+'</div>'
+  }
+  async function renderCustomizer(){
+    const root=$('customizerRoot');if(!root)return
+    // Always paint the page first; cloud loading must never leave the panel blank.
+    try{renderCustomizerShell()}catch(e){
+      console.error('[IR] customizer shell:',e)
+      root.innerHTML='<div class="card"><h3>🎨 PERSONNALISATION</h3><p class="muted">Chargement des objets…</p></div>'
+      return
+    }
+    try{
+      await Promise.race([
+        getCloud(),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('Cloud timeout')),5000))
+      ])
+    }catch(e){
+      console.warn('[IR] customizer cloud sync:',e)
+      return
+    }
+    try{
+      renderCustomizerShell()
+      const p=localProfile()
+      const selected={
+        world:guestMode()?(p.selected_background||'city'):(cloudProfile?.selected_background||'city'),
+        character:guestMode()?(p.selected_character||'runner'):(cloudProfile?.selected_character||'runner'),
+        coin:guestMode()?(p.selected_coin||'gold'):(cloudProfile?.selected_coin||getSelectedCloudCoin(cloudUser?.id||'guest'))
+      }
+      notifyCustomization('world',selected.world);notifyCustomization('character',selected.character);notifyCustomization('coin',selected.coin)
+    }catch(e){console.error('[IR] customizer refresh:',e)}
   }
 
 
@@ -468,7 +498,17 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
     }
   }
   window.addEventListener('ir:profileLoaded',()=>setTimeout(setup,0))
-  window.addEventListener('ir:profileChanged',()=>setTimeout(()=>{if(!$('customizerRoot'))setup()},0))
+  window.addEventListener('ir:profileChanged',()=>setTimeout(()=>{setup()},0))
+  document.addEventListener('click',e=>{
+    const tab=e.target.closest('#tabs button[data-tab="world"]')
+    if(!tab)return
+    setTimeout(()=>{
+      setup()
+      const world=$('#world')
+      const root=$('customizerRoot')
+      if(world&&root)renderCustomizer().catch(err=>console.error('[IR] customizer tab:',err))
+    },0)
+  },true)
   document.addEventListener('click',async e=>{
     const eq=e.target.closest('[data-equip-type]');if(eq){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();await equip(eq.dataset.equipType,eq.dataset.equipId);return}
     const pack=e.target.closest('#customPacks .pack-buy');if(pack){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();if(!buying)await buyPack(pack.dataset.pack);return}
