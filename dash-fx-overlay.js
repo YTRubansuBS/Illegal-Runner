@@ -8,7 +8,7 @@
   }
   const $=id=>document.getElementById(id)
   let canvas,ctx,last=0
-  let selectedDashId='classic'
+  let selectedDashId=''
   let dashWasActive=false
   let dashStartedAt=0
   function selected(){
