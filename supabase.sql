@@ -825,9 +825,9 @@ begin
  if auth.uid() is null then raise exception 'Not authenticated'; end if;
  if p_friend_id is null or p_friend_id=auth.uid() then raise exception 'Invalid friend'; end if;
  if not exists(select 1 from public.friends f where f.status='accepted' and ((f.user_id=auth.uid() and f.friend_id=p_friend_id) or (f.user_id=p_friend_id and f.friend_id=auth.uid()))) then raise exception 'You are not friends'; end if;
- update public.duel_requests set status='cancelled',updated_at=now() where status='pending' and expires_at<=now() and (sender_id=auth.uid() or receiver_id=auth.uid());
- select id into rid from public.duel_requests where status='pending' and expires_at>now()
-   and ((sender_id=auth.uid() and receiver_id=p_friend_id) or (sender_id=p_friend_id and receiver_id=auth.uid()))
+ update public.duel_requests dr set status='cancelled',updated_at=now() where dr.status='pending' and dr.expires_at<=now() and (dr.sender_id=auth.uid() or dr.receiver_id=auth.uid());
+ select id into rid from public.duel_requests dr where dr.status='pending' and dr.expires_at>now()
+   and ((dr.sender_id=auth.uid() and dr.receiver_id=p_friend_id) or (dr.sender_id=p_friend_id and dr.receiver_id=auth.uid()))
    order by created_at desc limit 1;
  if rid is not null then return rid; end if;
  insert into public.duel_requests(sender_id,receiver_id,expires_at) values(auth.uid(),p_friend_id,now()+interval '30 seconds') returning id into rid;
@@ -863,7 +863,7 @@ create or replace function public.duel_poll_requests()
 returns table(id uuid,sender_id uuid,receiver_id uuid,status text,created_at timestamptz,expires_at timestamptz,sender_username text,receiver_username text,session_id uuid)
 language plpgsql security definer set search_path=public,auth set row_security=off as $$
 begin
- update public.duel_requests set status='cancelled',updated_at=now() where status='pending' and expires_at<=now() and (sender_id=auth.uid() or receiver_id=auth.uid());
+ update public.duel_requests dr set status='cancelled',updated_at=now() where dr.status='pending' and dr.expires_at<=now() and (dr.sender_id=auth.uid() or dr.receiver_id=auth.uid());
  return query
  select r.id,r.sender_id,r.receiver_id,r.status,r.created_at,r.expires_at,
    coalesce(nullif(btrim(ps.username),''),nullif(btrim(us.raw_user_meta_data->>'username'),''),split_part(coalesce(us.email,''),'@',1),'Joueur'),
