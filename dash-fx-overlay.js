@@ -9,6 +9,8 @@
   const $=id=>document.getElementById(id)
   let canvas,ctx,last=0
   let selectedDashId='classic'
+  let dashWasActive=false
+  let dashStartedAt=0
   function selected(){
     if(NAMES.includes(selectedDashId))return selectedDashId
     const keys=['irSelectedDash','ir_selected_dash','selectedDash','selected_dash','irDashSelected']
@@ -50,11 +52,47 @@
   function ring(x,y,r,c,w=3,a=.9){ctx.globalAlpha=a;ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke()}
   function line(x1,y1,x2,y2,c,w=3,a=.9){ctx.globalAlpha=a;ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
   function burst(x,y,c1,c2,t,count=30,size=4){for(let i=0;i<count;i++){const a=i*2.399+t*(.8+(i%5)*.07),d=(i%9)*7+Math.abs(Math.sin(t*2+i))*25;dot(x-Math.cos(a)*d,y+Math.sin(a)*d,size+(i%4)*1.2,i%2?c1:c2,.65)}}
-  function trail(x,y,c1,c2,t,count=42,spread=28){for(let i=0;i<count;i++){const d=8+i*7,a=t*(1+(i%4)*.13)+i*1.9;dot(x-18-i*8+Math.sin(a)*spread,y+Math.cos(a*1.2+i)*spread*.55,(i%5)+2,i%2?c1:c2,.72-(i/count)*.3)}}
-  function draw(id,x,y,t){
+  function trail(x,y,c1,c2,t,count=18,spread=20){for(let i=0;i<count;i++){const a=t*(1.2+(i%4)*.12)+i*1.9;const d=18+i*5;const px=x-d;const py=y+Math.cos(a*1.35+i)*spread*.6;const len=10+(i%5)*5;line(px,py,px-len,py+Math.sin(a)*2.5,i%2?c1:c2,2.2+(i%3)*.9,.34-(i/count)*.16)}}
+  function dashSpeedBurst(x,y,c1,c2,t,age){
+    const intro=Math.max(0,1-age/0.22)
+    const drift=((t*260)%34)
+    ctx.save();ctx.globalCompositeOperation='lighter';ctx.lineCap='round'
+    for(let i=0;i<26;i++){
+      const yy=y+(i-12)*4.2+Math.sin(t*18+i)*3
+      const len=(42+(i%7)*18+drift)*(0.75+intro*.7)
+      const xx=x-10-(i%5)*3
+      ctx.globalAlpha=(.18+(i%4)*.08)*(0.6+intro*.9)
+      ctx.strokeStyle=i%3===0?c2:c1
+      ctx.lineWidth=2+(i%5)*.9+intro*2
+      ctx.beginPath();ctx.moveTo(xx,yy);ctx.lineTo(xx-len,yy+((i%3)-1)*2);ctx.stroke()
+    }
+    // Strong white-hot impulse at the player, so it reads as a burst rather than a trail.
+    ctx.globalAlpha=.18+.45*intro;ctx.fillStyle=c2;ctx.shadowBlur=30;ctx.shadowColor=c1
+    ctx.beginPath();ctx.ellipse(x,y,30+intro*18,18+intro*12,0,0,Math.PI*2);ctx.fill()
+    for(let k=0;k<3;k++){ctx.globalAlpha=(.28-k*.06)*(0.7+intro);ctx.strokeStyle=k%2?c1:c2;ctx.lineWidth=3-k*.6;ctx.beginPath();ctx.arc(x,y,24+k*14+intro*26,-.5,Math.PI*1.5);ctx.stroke()}
+    ctx.restore()
+  }
+
+  function dashAfterimages(x,y,c1,c2,age){
+    const fade=Math.max(0,1-age/0.34)
+    ctx.save();ctx.globalCompositeOperation='lighter'
+    for(let i=1;i<=3;i++){
+      const ox=-i*17
+      ctx.globalAlpha=fade*(.16-.035*i)
+      ctx.strokeStyle=i%2?c1:c2;ctx.lineWidth=5-i
+      ctx.shadowBlur=14;ctx.shadowColor=i%2?c1:c2
+      ctx.beginPath();ctx.arc(x+ox,y,12+i*2,0,Math.PI*2);ctx.stroke()
+    }
+    ctx.restore()
+  }
+
+  function draw(id,x,y,t,age=0){
     const [c1,c2]=palettes[id]||palettes.classic
     ctx.save();ctx.globalCompositeOperation='lighter';ctx.shadowBlur=18;ctx.shadowColor=c2
-    trail(x,y,c1,c2,t,56,34)
+    // Short, sharp motion language: burst first, then a compact streak.
+    dashSpeedBurst(x,y,c1,c2,t,age)
+    dashAfterimages(x,y,c1,c2,age)
+    trail(x,y,c1,c2,t,18,20)
     switch(id){
       case'classic': burst(x,y,c1,c2,t,42,4); ring(x,y,28+Math.sin(t*8)*5,c1,4); break
       case'flame': for(let i=0;i<28;i++){const a=i*.7+t*3;dot(x-12-i%8*8,y+Math.sin(a)*24-20,5+(i%4)*2,i%2?c1:c2,.9)} break
@@ -100,7 +138,9 @@
     const d=devicePixelRatio||1;ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight)
     // The engine keeps the player in canvas coordinates; use its live position so the FX follows exactly.
     const x=p.x+p.w*.42,y=p.y+p.h*.5
-    draw(selected(),x,y,now/1000)
+    if(G.dashT>0 && !dashWasActive){dashWasActive=true;dashStartedAt=now}
+    if(G.dashT<=0 && dashWasActive){dashWasActive=false}
+    draw(selected(),x,y,now/1000,Math.max(0,(now-dashStartedAt)/1000))
     last=now
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setup()
