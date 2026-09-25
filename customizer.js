@@ -22,10 +22,38 @@
   const getSelectedCloudCoin=uid=>cloudSelectedCoin||(()=>{try{return localStorage.getItem(coinStorageKey(uid))||'gold'}catch{return 'gold'}})()
   const setSelectedCloudCoin=(uid,id)=>{cloudSelectedCoin=id;try{localStorage.setItem(coinStorageKey(uid),id)}catch{}}
   const notifyCustomization=(type,id)=>window.dispatchEvent(new CustomEvent('ir:customizationChanged',{detail:type==='world'?{selected_background:id}:type==='character'?{selected_character:id}:type==='coin'?{selected_coin:id}:type==='dash'?{selected_dash:id}:{selected_obstacle_set:id}}))
-  async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;cloudProfile=null;cloudSelectedCoin='gold';cloudDashInventory={};return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];cloudProfile=null;cloudSelectedCoin='gold';cloudDashInventory={};return false}const [{data:inv},{data:prof}]=await Promise.all([sb.from('inventory').select('item_type,item_id').eq('user_id',user.id),sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',user.id).maybeSingle()]);cloudInventory=inv||[];cloudProfile=prof||{};const rawDashInventory=user.user_metadata?.ir_dash_inventory;cloudDashInventory=rawDashInventory&&typeof rawDashInventory==='object'&&!Array.isArray(rawDashInventory)?rawDashInventory:{};try{const localDash=loadCollection(user.id,'dash');for(const [id,count] of Object.entries(cloudDashInventory)){localDash[id]=Math.max(Number(localDash[id]||0),Number(count||0))}if(Object.keys(cloudDashInventory).length)saveCollection(user.id,'dash',localDash)}catch{};cloudSelectedCoin=String(user.user_metadata?.selected_coin||'').trim()||(()=>{try{return localStorage.getItem(coinStorageKey(user.id))||'gold'}catch{return 'gold'}})();try{localStorage.setItem(coinStorageKey(user.id),cloudSelectedCoin)}catch{};cloudProfile.selected_coin=cloudSelectedCoin;return true}
+  async function getCloud(){if(!sb||guestMode()){cloudUser=null;cloudInventory=null;cloudProfile=null;cloudSelectedCoin='gold';cloudDashInventory={};return false}const {data:{user}}=await sb.auth.getUser();cloudUser=user;if(!user){cloudInventory=[];cloudProfile=null;cloudSelectedCoin='gold';cloudDashInventory={};return false}const [{data:inv},{data:prof}]=await Promise.all([sb.from('inventory').select('item_type,item_id').eq('user_id',user.id),sb.from('profiles').select('selected_background,selected_character,selected_obstacle_set').eq('id',user.id).maybeSingle()]);cloudInventory=inv||[];cloudProfile=prof||{};const rawDashInventory=user.user_metadata?.ir_dash_inventory;cloudDashInventory=rawDashInventory&&typeof rawDashInventory==='object'&&!Array.isArray(rawDashInventory)?rawDashInventory:{};syncCloudCollections();cloudSelectedCoin=String(user.user_metadata?.selected_coin||'').trim()||(()=>{try{return localStorage.getItem(coinStorageKey(user.id))||'gold'}catch{return 'gold'}})();try{localStorage.setItem(coinStorageKey(user.id),cloudSelectedCoin)}catch{};cloudProfile.selected_coin=cloudSelectedCoin;return true}
   const owned=(type,id,p)=>type==='world'?(p.owned_worlds||['city']).includes(id):type==='character'?(p.owned_characters||['runner']).includes(id):type==='coin'?(p.owned_coins||['gold']).includes(id):(p.owned_obstacles||['classic']).includes(id)
   const cloudInventoryTypes=type=>type==='world'?['background','world']:type==='character'?['character']:type==='coin'?['obstacle','coin']:type==='dash'?['dash']:['obstacle']
   const cloudOwned=(type,id)=>{if(type==='dash')return Number(cloudDashInventory?.[id]||0)>0;if((type==='world'&&id==='city')||(type==='character'&&id==='runner')||(type==='coin'&&id==='gold')||(type==='obstacle'&&id==='classic'))return true;const allowed=cloudInventoryTypes(type);return !!cloudInventory?.some(x=>allowed.includes(String(x.item_type))&&String(x.item_id)===String(id))}
+  const syncCloudCollections=()=>{
+    if(!cloudUser||!Array.isArray(cloudInventory))return
+    for(const type of ['world','character','coin','obstacle']){
+      const data=loadCollection(cloudUser.id,type)
+      const cards=rarityCards(type)
+      const ids=new Set(cards.map(x=>String(x.id)))
+      let changed=false
+      for(const row of cloudInventory){
+        const itemType=String(row.item_type||'')
+        const itemId=String(row.item_id||'')
+        if(!cloudInventoryTypes(type).includes(itemType)||!ids.has(itemId))continue
+        const before=Number(data[itemId]||0)
+        data[itemId]=Math.max(before,1)
+        if(data[itemId]!==before)changed=true
+      }
+      if(changed)saveCollection(cloudUser.id,type,data)
+    }
+    if(cloudDashInventory&&typeof cloudDashInventory==='object'){
+      const data=loadCollection(cloudUser.id,'dash')
+      let changed=false
+      for(const [id,count] of Object.entries(cloudDashInventory)){
+        const before=Number(data[id]||0), next=Math.max(before,Number(count||0))
+        if(next!==before){data[id]=next;changed=true}
+      }
+      if(changed)saveCollection(cloudUser.id,'dash',data)
+    }
+  }
+
   async function saveCloudOwnership(userId,type,id){
     if(!sb||!userId)return false
     if(type==='dash'){
