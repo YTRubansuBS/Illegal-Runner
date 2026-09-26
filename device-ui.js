@@ -5,7 +5,6 @@
   let overlay = null
   let shownForSession = false
   let hideTimer = null
-  let transitionTimer = null
 
   function detectDevice() {
     const ua = navigator.userAgent || ''
@@ -18,15 +17,19 @@
   }
 
   function label(type) {
-    if (type === 'mobile') return { icon: '📱', name: 'MOBILE', text: 'Interface agrandie et optimisée pour ton téléphone.' }
-    if (type === 'tablet') return { icon: '📲', name: 'TABLETTE', text: 'Interface agrandie et adaptée à ta tablette.' }
+    if (type === 'mobile') return { icon: '📱', name: 'MOBILE', text: 'Interface compacte pour utiliser plus facilement tout l’espace de ton téléphone.' }
+    if (type === 'tablet') return { icon: '📲', name: 'TABLETTE', text: 'Interface adaptée à la taille de ta tablette.' }
     return { icon: '💻', name: 'PC', text: 'Interface optimisée pour un écran PC.' }
   }
 
   function applyDevice(type) {
-    document.documentElement.dataset.device = type
-    document.body.dataset.device = type
-    document.documentElement.style.setProperty('--ir-ui-scale', type === 'mobile' ? '1.16' : type === 'tablet' ? '1.10' : '1')
+    const root = document.documentElement
+    const body = document.body
+    root.dataset.device = type
+    body.dataset.device = type
+    // Sur téléphone/tablette, on réduit l’interface pour laisser davantage d’espace visible.
+    // Le gameplay/canvas n’est pas redimensionné.
+    root.style.setProperty('--ir-ui-scale', type === 'mobile' ? '0.82' : type === 'tablet' ? '0.90' : '1')
     try { localStorage.setItem(DEVICE_KEY, type) } catch {}
   }
 
@@ -35,23 +38,36 @@
     overlay = document.createElement('section')
     overlay.id = 'irDeviceScreen'
     overlay.setAttribute('aria-live', 'polite')
-    overlay.innerHTML = `<div class="ir-device-grid"></div><div class="ir-device-card"><div class="ir-device-kicker">// APPAREIL DÉTECTÉ</div><div id="irDeviceIcon" class="ir-device-icon">💻</div><h1 id="irDeviceName">PC</h1><p id="irDeviceText">Interface optimisée pour un écran PC.</p><div class="ir-device-bar"><i></i></div><small>ADAPTATION DE L'INTERFACE…</small></div>`
+    overlay.innerHTML = `
+      <div class="ir-device-grid"></div>
+      <div class="ir-device-card">
+        <div class="ir-device-kicker">// APPAREIL DÉTECTÉ</div>
+        <div id="irDeviceIcon" class="ir-device-icon">💻</div>
+        <h1 id="irDeviceName">PC</h1>
+        <p id="irDeviceText">Interface optimisée pour un écran PC.</p>
+        <div class="ir-device-bar"><i></i></div>
+        <small>ADAPTATION DE L'INTERFACE…</small>
+      </div>`
+
     const style = document.createElement('style')
     style.textContent = `
-#irDeviceScreen{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,#10182b 0,#050810 48%,#02040a 100%);color:#f4f7ff;font-family:Inter,system-ui,sans-serif;overflow:hidden;padding:18px;box-sizing:border-box;opacity:0;pointer-events:none;transition:opacity .18s ease}
+#irDeviceScreen{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,#10182b 0,#050810 48%,#02040a 100%);color:#f4f7ff;font-family:Inter,system-ui,sans-serif;overflow:hidden;padding:18px;box-sizing:border-box;opacity:0;pointer-events:none;transition:opacity .2s ease}
 #irDeviceScreen .ir-device-grid{position:absolute;inset:0;opacity:.14;background-image:linear-gradient(rgba(0,229,255,.22) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.22) 1px,transparent 1px);background-size:42px 42px;transform:perspective(500px) rotateX(55deg) scale(1.35);transform-origin:center bottom}
 #irDeviceScreen .ir-device-card{position:relative;width:min(560px,100%);padding:34px 28px;text-align:center;border:1px solid rgba(0,229,255,.32);border-radius:24px;background:rgba(4,7,14,.94);box-shadow:0 0 60px rgba(0,229,255,.12),inset 0 0 30px rgba(255,55,199,.05);backdrop-filter:blur(12px)}
-#irDeviceScreen .ir-device-kicker{color:#ff4aa8;font-size:11px;font-weight:900;letter-spacing:2px;margin-bottom:12px}#irDeviceScreen .ir-device-icon{font-size:58px;line-height:1;margin:5px 0 12px}#irDeviceScreen h1{margin:0;font-size:30px;letter-spacing:2px;font-weight:900}#irDeviceScreen p{margin:10px 0 20px;color:#9aa8c2;font-size:14px}#irDeviceScreen .ir-device-bar{height:7px;border-radius:99px;background:#131b2c;overflow:hidden}#irDeviceScreen .ir-device-bar i{display:block;width:0;height:100%;background:linear-gradient(90deg,#00e5ff,#ff37c7);animation:irDeviceProgress 1.05s ease forwards}#irDeviceScreen small{display:block;margin-top:12px;color:#71809a;font-size:10px;font-weight:900;letter-spacing:1.5px}@keyframes irDeviceProgress{to{width:100%}}
-/* Do NOT use CSS zoom: it can make a phone layout look smaller because it changes the effective viewport. Enlarge the actual controls instead. */
-html[data-device="mobile"] #app{--ir-font-mult:1.16}html[data-device="tablet"] #app{--ir-font-mult:1.10}html[data-device="pc"] #app{--ir-font-mult:1}
-html[data-device="mobile"] #app button{font-size:calc(14px * var(--ir-font-mult));min-height:calc(44px * var(--ir-font-mult));padding:calc(10px * var(--ir-font-mult)) calc(14px * var(--ir-font-mult))}
-html[data-device="tablet"] #app button{font-size:calc(14px * var(--ir-font-mult));min-height:calc(44px * var(--ir-font-mult));padding:calc(10px * var(--ir-font-mult)) calc(14px * var(--ir-font-mult))}
-html[data-device="mobile"] #app input,html[data-device="mobile"] #app select{font-size:calc(15px * var(--ir-font-mult));min-height:calc(44px * var(--ir-font-mult));padding:calc(10px * var(--ir-font-mult)) calc(12px * var(--ir-font-mult))}
-html[data-device="tablet"] #app input,html[data-device="tablet"] #app select{font-size:calc(15px * var(--ir-font-mult));min-height:calc(44px * var(--ir-font-mult));padding:calc(10px * var(--ir-font-mult)) calc(12px * var(--ir-font-mult))}
-html[data-device="mobile"] #app .panel,html[data-device="tablet"] #app .panel{font-size:calc(1em * var(--ir-font-mult))}
-html[data-device="mobile"] #app h1{font-size:calc(28px * var(--ir-font-mult))}html[data-device="mobile"] #app h2{font-size:calc(22px * var(--ir-font-mult))}html[data-device="mobile"] #app h3{font-size:calc(18px * var(--ir-font-mult))}
-html[data-device="tablet"] #app h1{font-size:calc(28px * var(--ir-font-mult))}html[data-device="tablet"] #app h2{font-size:calc(22px * var(--ir-font-mult))}html[data-device="tablet"] #app h3{font-size:calc(18px * var(--ir-font-mult))}
+#irDeviceScreen .ir-device-kicker{color:#ff4aa8;font-size:11px;font-weight:900;letter-spacing:2px;margin-bottom:12px}
+#irDeviceScreen .ir-device-icon{font-size:58px;line-height:1;margin:5px 0 12px;filter:drop-shadow(0 0 16px rgba(0,229,255,.35))}
+#irDeviceScreen h1{margin:0;font-size:30px;letter-spacing:2px;font-weight:900}
+#irDeviceScreen p{margin:10px 0 20px;color:#9aa8c2;font-size:14px}
+#irDeviceScreen .ir-device-bar{height:7px;border-radius:99px;background:#131b2c;overflow:hidden}
+#irDeviceScreen .ir-device-bar i{display:block;width:0;height:100%;background:linear-gradient(90deg,#00e5ff,#ff37c7);box-shadow:0 0 18px rgba(0,229,255,.55);animation:irDeviceProgress 1.25s ease forwards}
+#irDeviceScreen small{display:block;margin-top:12px;color:#71809a;font-size:10px;font-weight:900;letter-spacing:1.5px}
+@keyframes irDeviceProgress{to{width:100%}}
 @media(max-width:520px){#irDeviceScreen{padding:14px}#irDeviceScreen .ir-device-card{padding:28px 20px}#irDeviceScreen .ir-device-icon{font-size:50px}#irDeviceScreen h1{font-size:25px}}
+
+/* Device-aware GUI sizing: mobile/tablet compact, PC normal. */
+html[data-device="mobile"] #app{transform:scale(.82);transform-origin:top left;width:121.95%;height:121.95%}
+html[data-device="tablet"] #app{transform:scale(.90);transform-origin:top left;width:111.12%;height:111.12%}
+html[data-device="pc"] #app{transform:none;width:100%;height:100%}
 `
     document.head.appendChild(style)
     document.body.appendChild(overlay)
@@ -69,19 +85,19 @@ html[data-device="tablet"] #app h1{font-size:calc(28px * var(--ir-font-mult))}ht
     overlay.style.opacity = '1'
     overlay.style.pointerEvents = 'auto'
     clearTimeout(hideTimer)
-    hideTimer = setTimeout(hide, 1200)
-    return type
+    hideTimer = setTimeout(hide, 1350)
   }
 
   function hide() {
     if (!overlay) return
     overlay.style.opacity = '0'
     overlay.style.pointerEvents = 'none'
-    setTimeout(() => { if (overlay) overlay.style.display = 'none' }, 200)
+    setTimeout(() => { if (overlay) overlay.style.display = 'none' }, 220)
   }
 
   function isLoggedIn() {
-    const login = document.getElementById('login'), app = document.getElementById('app')
+    const login = document.getElementById('login')
+    const app = document.getElementById('app')
     if (!login || !app) return false
     const loginHidden = getComputedStyle(login).display === 'none' || login.classList.contains('hidden') || login.hidden
     const appVisible = getComputedStyle(app).display !== 'none' && !app.hidden
@@ -96,14 +112,9 @@ html[data-device="tablet"] #app h1{font-size:calc(28px * var(--ir-font-mult))}ht
   function boot() {
     create()
     applyDevice(detectDevice())
-    document.addEventListener('click', e => {
-      const target = e.target?.closest?.('#btnLogin,#btnCreate,#btnGuest,#btnAccount')
-      if (!target) return
-      if (!shownForSession) show()
-    }, true)
     const observer = new MutationObserver(checkTransition)
     observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] })
-    window.addEventListener('resize', () => { if (!shownForSession) applyDevice(detectDevice()) })
+    window.addEventListener('resize', () => applyDevice(detectDevice()))
     setInterval(checkTransition, 250)
     checkTransition()
   }
