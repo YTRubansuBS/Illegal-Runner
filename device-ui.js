@@ -27,8 +27,6 @@
     const body = document.body
     root.dataset.device = type
     body.dataset.device = type
-    // Sur téléphone/tablette, on réduit l’interface pour laisser davantage d’espace visible.
-    // Le gameplay/canvas n’est pas redimensionné.
     root.style.setProperty('--ir-ui-scale', type === 'mobile' ? '0.82' : type === 'tablet' ? '0.90' : '1')
     try { localStorage.setItem(DEVICE_KEY, type) } catch {}
   }
@@ -64,10 +62,22 @@
 @keyframes irDeviceProgress{to{width:100%}}
 @media(max-width:520px){#irDeviceScreen{padding:14px}#irDeviceScreen .ir-device-card{padding:28px 20px}#irDeviceScreen .ir-device-icon{font-size:50px}#irDeviceScreen h1{font-size:25px}}
 
-/* Device-aware GUI sizing: mobile/tablet compact, PC normal. */
-html[data-device="mobile"] #app{transform:scale(.82);transform-origin:top left;width:121.95%;height:121.95%}
-html[data-device="tablet"] #app{transform:scale(.90);transform-origin:top left;width:111.12%;height:111.12%}
-html[data-device="pc"] #app{transform:none;width:100%;height:100%}
+/* Compacte uniquement l'interface du menu. Le canvas/game reste à 100% pour garder les coordonnées tactiles correctes. */
+html[data-device="mobile"] #app{--ir-ui-compact:.82}
+html[data-device="tablet"] #app{--ir-ui-compact:.90}
+html[data-device="pc"] #app{--ir-ui-compact:1}
+html[data-device="mobile"] #app .top,
+html[data-device="tablet"] #app .top{padding:calc(12px * var(--ir-ui-compact)) calc(16px * var(--ir-ui-compact))}
+html[data-device="mobile"] #app .tabs,
+html[data-device="tablet"] #app .tabs{padding:calc(12px * var(--ir-ui-compact)) calc(16px * var(--ir-ui-compact));gap:calc(8px * var(--ir-ui-compact))}
+html[data-device="mobile"] #app .tabs button,
+html[data-device="tablet"] #app .tabs button{font-size:calc(13px * var(--ir-ui-compact));padding:calc(12px * var(--ir-ui-compact)) calc(16px * var(--ir-ui-compact))}
+html[data-device="mobile"] #app .content,
+html[data-device="tablet"] #app .content{padding:calc(16px * var(--ir-ui-compact)) calc(16px * var(--ir-ui-compact)) 40px}
+html[data-device="mobile"] #app .panel,
+html[data-device="tablet"] #app .panel{padding:calc(22px * var(--ir-ui-compact))}
+html[data-device="mobile"] #app button,
+html[data-device="tablet"] #app button{font-size:calc(16px * var(--ir-ui-compact));padding:calc(12px * var(--ir-ui-compact)) calc(16px * var(--ir-ui-compact))}
 `
     document.head.appendChild(style)
     document.body.appendChild(overlay)
