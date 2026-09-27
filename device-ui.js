@@ -23,11 +23,9 @@
   }
 
   function applyDevice(type) {
-    const root = document.documentElement
-    const body = document.body
-    root.dataset.device = type
-    body.dataset.device = type
-    root.style.setProperty('--ir-ui-scale', type === 'mobile' ? '0.82' : type === 'tablet' ? '0.90' : '1')
+    document.documentElement.dataset.device = type
+    document.body.dataset.device = type
+    document.documentElement.style.setProperty('--ir-ui-scale', type === 'mobile' ? '0.82' : type === 'tablet' ? '0.90' : '1')
     try { localStorage.setItem(DEVICE_KEY, type) } catch {}
   }
 
@@ -61,8 +59,6 @@
 #irDeviceScreen small{display:block;margin-top:12px;color:#71809a;font-size:10px;font-weight:900;letter-spacing:1.5px}
 @keyframes irDeviceProgress{to{width:100%}}
 @media(max-width:520px){#irDeviceScreen{padding:14px}#irDeviceScreen .ir-device-card{padding:28px 20px}#irDeviceScreen .ir-device-icon{font-size:50px}#irDeviceScreen h1{font-size:25px}}
-
-/* Menu compact, game canvas untouched. */
 html[data-device="mobile"] #app{--ir-ui-compact:.82}
 html[data-device="tablet"] #app{--ir-ui-compact:.90}
 html[data-device="pc"] #app{--ir-ui-compact:1}
@@ -71,8 +67,6 @@ html[data-device="mobile"] #app .tabs,html[data-device="tablet"] #app .tabs{padd
 html[data-device="mobile"] #app .tabs button,html[data-device="tablet"] #app .tabs button{font-size:calc(13px * var(--ir-ui-compact));padding:calc(12px * var(--ir-ui-compact)) calc(16px * var(--ir-ui-compact))}
 html[data-device="mobile"] #app .content,html[data-device="tablet"] #app .content{padding:calc(16px * var(--ir-ui-compact)) calc(16px * var(--ir-ui-compact)) 40px}
 html[data-device="mobile"] #app .panel,html[data-device="tablet"] #app .panel{padding:calc(22px * var(--ir-ui-compact))}
-
-/* Game/touch safety: never transform or zoom the game layer. */
 html[data-device="mobile"] #game,html[data-device="tablet"] #game,html[data-device="pc"] #game{transform:none!important;zoom:1!important;touch-action:none}
 html[data-device="mobile"] #c,html[data-device="tablet"] #c,html[data-device="pc"] #c{transform:none!important;zoom:1!important;width:100%!important;height:100%!important;touch-action:none}
 `
@@ -130,27 +124,10 @@ html[data-device="mobile"] #c,html[data-device="tablet"] #c,html[data-device="pc
     game.style.touchAction = 'none'
   }
 
-  function purchaseGuard(e) {
-    const target = e.target && e.target.closest ? e.target.closest('#shop button,#upgradeGrid button,#shopGrid button,#packGrid button,#btnFreePack') : null
-    if (!target || target.disabled) return
-    const now = Date.now()
-    if (target.dataset.irPurchaseLock === '1') {
-      e.preventDefault()
-      e.stopImmediatePropagation()
-      return
-    }
-    target.dataset.irPurchaseLock = '1'
-    setTimeout(() => {
-      if (target.isConnected) delete target.dataset.irPurchaseLock
-    }, 500)
-  }
-
   function boot() {
     create()
     applyDevice(detectDevice())
     fixGameLayer()
-    document.addEventListener('pointerdown', purchaseGuard, true)
-    document.addEventListener('touchstart', purchaseGuard, { capture: true, passive: false })
     const observer = new MutationObserver(() => { checkTransition(); fixGameLayer() })
     observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] })
     window.addEventListener('resize', () => { applyDevice(detectDevice()); fixGameLayer() })
