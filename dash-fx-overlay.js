@@ -49,23 +49,23 @@
     requestAnimationFrame(loop)
   }
   function dot(x,y,r,c,a=1){
-    r=Math.max(0.55,r*0.38)
+    r=Math.max(0.35,r*0.22)
     ctx.save()
     ctx.globalCompositeOperation='lighter'
-    ctx.globalAlpha=Math.min(1,a*1.35)
+    ctx.globalAlpha=Math.min(1,a*1.55)
     ctx.fillStyle=c
-    ctx.shadowBlur=9
+    ctx.shadowBlur=6
     ctx.shadowColor=c
     ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()
     ctx.shadowBlur=0
-    ctx.globalAlpha=Math.min(1,a*.92)
+    ctx.globalAlpha=Math.min(1,a*1.25)
     ctx.fillStyle='#ffffff'
-    ctx.beginPath();ctx.arc(x,y,Math.max(.28,r*.34),0,Math.PI*2);ctx.fill()
+    ctx.beginPath();ctx.arc(x,y,Math.max(0.18,r*.42),0,Math.PI*2);ctx.fill()
     ctx.restore()
   }
   function ring(x,y,r,c,w=3,a=.9){ctx.save();ctx.globalAlpha=Math.min(1,a*1.15);ctx.strokeStyle=c;ctx.lineWidth=w;ctx.shadowBlur=12;ctx.shadowColor=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();ctx.restore()}
   function line(x1,y1,x2,y2,c,w=3,a=.9){ctx.globalAlpha=a;ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
-  function burst(x,y,c1,c2,t,count=30,size=4){for(let i=0;i<count;i++){const a=i*2.399+t*(.8+(i%5)*.07),d=(i%9)*7+Math.abs(Math.sin(t*2+i))*25;dot(x-Math.cos(a)*d,y+Math.sin(a)*d,size+(i%4)*1.2,i%2?c1:c2,.65)}}
+  function burst(x,y,c1,c2,t,count=30,size=4){for(let i=0;i<count;i++){const a=i*2.399+t*(.8+(i%5)*.07),d=(i%9)*7+Math.abs(Math.sin(t*2+i))*25;dot(x-Math.cos(a)*d,y+Math.sin(a)*d,Math.max(1,size*.45)+(i%4)*.28,i%2?c1:c2,.78)}}
   function trail(x,y,c1,c2,t,count=18,spread=20){for(let i=0;i<count;i++){const a=t*(1.2+(i%4)*.12)+i*1.9;const d=18+i*5;const px=x-d;const py=y+Math.cos(a*1.35+i)*spread*.6;const len=10+(i%5)*5;line(px,py,px-len,py+Math.sin(a)*2.5,i%2?c1:c2,2.2+(i%3)*.9,.34-(i/count)*.16)}}
   function dashSpeedBurst(x,y,c1,c2,t,age){
     const intro=Math.max(0,1-age/0.22)
@@ -110,9 +110,9 @@
     switch(id){
       case'classic': burst(x,y,c1,c2,t,42,4); ring(x,y,28+Math.sin(t*8)*5,c1,4); break
       case'flame': for(let i=0;i<28;i++){const a=i*.7+t*3;dot(x-12-i%8*8,y+Math.sin(a)*24-20,5+(i%4)*2,i%2?c1:c2,.9)} break
-      case'ice': for(let i=0;i<14;i++){const a=i*.45+t;const px=x-Math.abs(Math.sin(i))*55-10,py=y+Math.sin(a)*45;ctx.fillStyle=i%2?c1:c2;ctx.beginPath();ctx.moveTo(px,py-12);ctx.lineTo(px+8,py);ctx.lineTo(px,py+12);ctx.lineTo(px-8,py);ctx.closePath();ctx.fill()} break
+      case'ice': for(let i=0;i<14;i++){const a=i*.45+t;const px=x-Math.abs(Math.sin(i))*55-10,py=y+Math.sin(a)*45;ctx.fillStyle=i%2?c1:c2;ctx.globalAlpha=.72;ctx.beginPath();ctx.moveTo(px,py-7);ctx.lineTo(px+5,py);ctx.lineTo(px,py+7);ctx.lineTo(px-5,py);ctx.closePath();ctx.fill();ctx.globalAlpha=1} break
       case'thunder': for(let i=0;i<7;i++){const ox=Math.sin(t*9+i)*35,oy=Math.cos(t*7+i)*35;line(x+ox,y+oy,x+ox+Math.sin(i+t)*18,y+oy+45,c1,5,.9)} break
-      case'toxic': for(let i=0;i<20;i++){const r=4+(i%5)*2;dot(x-i*8,y+Math.sin(t+i)*35,r,c1,.65);ring(x-i*8,y+Math.sin(t+i)*35,r,c2,2,.7)} break
+      case'toxic': for(let i=0;i<20;i++){const r=3+(i%5)*1.2;dot(x-i*8,y+Math.sin(t+i)*35,r,c1,.78);ring(x-i*8,y+Math.sin(t+i)*35,r,c2,1.2,.72)} break
       case'neon': ring(x,y,34+Math.sin(t*6)*8,c1,8);ring(x,y,48+Math.sin(t*4)*10,c2,3);break
       case'rainbow': {const cs=['#ef4444','#f97316','#facc15','#22c55e','#22d3ee','#3b82f6','#a855f7'];for(let i=0;i<35;i++)dot(x-i*9,y+Math.sin(t*4+i*.5)*28,5,cs[i%cs.length],.9);break}
       case'galaxy': ring(x,y,42,c2,3);for(let i=0;i<22;i++){const a=t*(.7+i*.02)+i*.8;dot(x+Math.cos(a)*35,y+Math.sin(a)*35,3+(i%3),i%2?c1:c2,.9)}break
