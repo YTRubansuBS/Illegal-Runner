@@ -12,6 +12,7 @@
   const cfg=window.IR_CONFIG||{}
   const sb=window.supabase&&cfg.SUPABASE_URL?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null
   let cloudUser=null,cloudInventory=null,cloudProfile=null,cloudSelectedCoin='gold',cloudDashInventory={},buying=false
+  let buyCooldownUntil=0
   let lastPackResult=null
   const localProfile=()=>{try{const p=JSON.parse(localStorage.getItem('irGuest')||'{}');if(!Array.isArray(p.owned_coins)||!p.owned_coins.length)p.owned_coins=['gold'];if(!p.selected_coin)p.selected_coin='gold';return p}catch{return {owned_coins:['gold'],selected_coin:'gold'}}}
   const saveLocal=p=>localStorage.setItem('irGuest',JSON.stringify(p))
@@ -343,9 +344,22 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
     }).join('')
   }
 
+  function setPackButtonsBusy(state){
+    document.querySelectorAll('#customPacks .pack-buy').forEach(btn=>{
+      btn.disabled=!!state
+      btn.dataset.busy=state?'1':'0'
+      btn.style.pointerEvents=state?'none':'auto'
+      btn.style.opacity=state?'.55':''
+      btn.textContent=state?'⏳ OUVERTURE...':'OUVRIR'
+    })
+  }
+
   async function buyPack(type){
-    if(!['world','character','coin','dash'].includes(type)||buying)return
+    if(!['world','character','coin','dash'].includes(type))return
+    const now=Date.now()
+    if(buying || now<buyCooldownUntil)return
     buying=true
+    setPackButtonsBusy(true)
     try{
       const cost=COSTS[type]||1000
       if(guestMode()){
@@ -380,7 +394,11 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
       showPackResult('<div style="font-size:22px;font-weight:1000">'+item.emoji+' '+item.name+'</div><div style="font-weight:1000;margin:4px 0;color:#fff">'+RARITIES[rarity].icon+' '+RARITIES[rarity].name+' <span style="opacity:.7">— '+RARITIES[rarity].chance+'%</span></div><div style="display:inline-block;padding:5px 9px;border-radius:8px;background:'+(count>1?'rgba(255,180,0,.18)':'rgba(25,255,136,.14)')+';border:1px solid '+(count>1?'#ffc44d':'#19ff88')+';color:'+(count>1?'#ffd166':'#19ff88')+';font-size:12px;font-weight:1000;letter-spacing:.7px">'+(count>1?'DOUBLON · x'+count:'NOUVEAU !')+'</div>')
       toast('🎁 '+RARITIES[rarity].name+' !')
       renderCustomizer()
-    }finally{buying=false}
+    }finally{
+      buying=false
+      buyCooldownUntil=Date.now()+250
+      setPackButtonsBusy(false)
+    }
   }
 
   const card=html=>`<div class="card">${html}</div>`
@@ -399,7 +417,7 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
     if(lastPackResult){
       showPackResult(lastPackResult.html,lastPackResult.good)
     }
-    root.querySelectorAll('.pack-buy').forEach(btn=>btn.onclick=e=>{e.preventDefault();buyPack(btn.dataset.pack)})
+    root.querySelectorAll('.pack-buy').forEach(btn=>{ btn.onclick=null })
   }
 
 
@@ -532,7 +550,7 @@ return '<div class="card" style="'+rarityStyle(r)+';position:relative;overflow:h
   },true)
   document.addEventListener('click',async e=>{
     const eq=e.target.closest('[data-equip-type]');if(eq){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();await equip(eq.dataset.equipType,eq.dataset.equipId);return}
-    const pack=e.target.closest('#customPacks .pack-buy');if(pack){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();if(!buying)await buyPack(pack.dataset.pack);return}
+    const pack=e.target.closest('#customPacks .pack-buy');if(pack){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();if(pack.disabled||pack.dataset.busy==='1'||buying)return;await buyPack(pack.dataset.pack);return}
   },true)
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setTimeout(setup,0)
 })()
