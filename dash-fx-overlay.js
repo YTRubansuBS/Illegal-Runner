@@ -48,7 +48,21 @@
     c.parentElement.appendChild(canvas);ctx=canvas.getContext('2d');fit();addEventListener('resize',fit)
     requestAnimationFrame(loop)
   }
-  function dot(x,y,r,c,a=1){r=Math.max(0.9,r*0.62);ctx.globalAlpha=a;ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
+  function dot(x,y,r,c,a=1){
+    r=Math.max(0.55,r*0.38)
+    ctx.save()
+    ctx.globalCompositeOperation='lighter'
+    ctx.globalAlpha=Math.min(1,a*1.35)
+    ctx.fillStyle=c
+    ctx.shadowBlur=9
+    ctx.shadowColor=c
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()
+    ctx.shadowBlur=0
+    ctx.globalAlpha=Math.min(1,a*.92)
+    ctx.fillStyle='#ffffff'
+    ctx.beginPath();ctx.arc(x,y,Math.max(.28,r*.34),0,Math.PI*2);ctx.fill()
+    ctx.restore()
+  }
   function ring(x,y,r,c,w=3,a=.9){ctx.save();ctx.globalAlpha=Math.min(1,a*1.15);ctx.strokeStyle=c;ctx.lineWidth=w;ctx.shadowBlur=12;ctx.shadowColor=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();ctx.restore()}
   function line(x1,y1,x2,y2,c,w=3,a=.9){ctx.globalAlpha=a;ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
   function burst(x,y,c1,c2,t,count=30,size=4){for(let i=0;i<count;i++){const a=i*2.399+t*(.8+(i%5)*.07),d=(i%9)*7+Math.abs(Math.sin(t*2+i))*25;dot(x-Math.cos(a)*d,y+Math.sin(a)*d,size+(i%4)*1.2,i%2?c1:c2,.65)}}
