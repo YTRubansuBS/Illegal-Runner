@@ -4,7 +4,7 @@
   'use strict'
   const NAMES=['classic','flame','ice','thunder','toxic','neon','rainbow','galaxy','cosmic','void','shadow','plasma','electric','inferno','frost','aqua','nature','wind','star','moon','sun','crystal','golden','royal','dragon','phoenix','cyber','glitch','portal','matrix','pink','quantum','infinite','secret']
   const palettes={
-    classic:['#020204','#5a5a66'],flame:['#160402','#8f2410'],ice:['#01121d','#1f6f8f'],thunder:['#171500','#8f8800'],toxic:['#051405','#3f8f00'],neon:['#010a0f','#00808f'],rainbow:['#140316','#7d268f'],galaxy:['#080316','#51308f'],cosmic:['#01181d','#8a5b91'],void:['#000000','#35135f'],shadow:['#010205','#3f4653'],plasma:['#0a0214','#6c2d91'],electric:['#131300','#8f8f00'],inferno:['#160300','#9e2b00'],frost:['#031017','#3d6f8f'],aqua:['#01151a','#0c7280'],nature:['#02150a','#3e7d16'],wind:['#070a0f','#55718f'],star:['#0b0800','#8f7610'],moon:['#030711','#526b91'],sun:['#160a00','#8f6410'],crystal:['#021019','#7569a8'],golden:['#160b00','#8f7017'],royal:['#0b0313','#7d3d91'],dragon:['#120203','#9a4b16'],phoenix:['#160600','#a07016'],cyber:['#010d11','#8a1e78'],glitch:['#020d11','#8a1e78'],portal:['#080315','#4d2c8f'],matrix:['#010c04','#27733a'],pink:['#15030e','#9b3e6f'],quantum:['#021318','#8f3d72'],infinite:['#031017','#8f7610'],secret:['#010305','#9b2b6f']
+    classic:['#202633','#ffffff'],flame:['#3a0804','#ff4d1a'],ice:['#06243a','#54d8ff'],thunder:['#3b3500','#fff34a'],toxic:['#0b2a09','#73ff18'],neon:['#03232d','#19f6ff'],rainbow:['#2c092d','#ff4fd8'],galaxy:['#12072f','#a36bff'],cosmic:['#062c38','#f2a6ff'],void:['#000000','#b24dff'],shadow:['#080b13','#8795b2'],plasma:['#18052b','#c05cff'],electric:['#292900','#f4ff42'],inferno:['#350700','#ff5c17'],frost:['#072937','#76c9ff'],aqua:['#04313d','#35e8ff'],nature:['#072614','#8cf23b'],wind:['#0c111a','#a4d7ff'],star:['#151000','#ffe45e'],moon:['#071126','#9bc5ff'],sun:['#3b2100','#ffd85c'],crystal:['#082633','#c3b2ff'],golden:['#3a2400','#ffe08a'],royal:['#200833','#d06cff'],dragon:['#300506','#ff9a3d'],phoenix:['#351000','#ffe45a'],cyber:['#03212b','#ff58e8'],glitch:['#03232b','#ff55e7'],portal:['#15052c','#5fe9ff'],matrix:['#03210d','#5dff8b'],pink:['#33091f','#ff8fca'],quantum:['#062934','#ff74c8'],infinite:['#06212f','#ffe15c'],secret:['#04111a','#ff5de1']
   }
   const $=id=>document.getElementById(id)
   let canvas,ctx,last=0
@@ -49,7 +49,7 @@
     requestAnimationFrame(loop)
   }
   function dot(x,y,r,c,a=1){r=Math.max(0.9,r*0.62);ctx.globalAlpha=a;ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
-  function ring(x,y,r,c,w=3,a=.9){ctx.globalAlpha=a;ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke()}
+  function ring(x,y,r,c,w=3,a=.9){ctx.save();ctx.globalAlpha=Math.min(1,a*1.15);ctx.strokeStyle=c;ctx.lineWidth=w;ctx.shadowBlur=12;ctx.shadowColor=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();ctx.restore()}
   function line(x1,y1,x2,y2,c,w=3,a=.9){ctx.globalAlpha=a;ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
   function burst(x,y,c1,c2,t,count=30,size=4){for(let i=0;i<count;i++){const a=i*2.399+t*(.8+(i%5)*.07),d=(i%9)*7+Math.abs(Math.sin(t*2+i))*25;dot(x-Math.cos(a)*d,y+Math.sin(a)*d,size+(i%4)*1.2,i%2?c1:c2,.65)}}
   function trail(x,y,c1,c2,t,count=18,spread=20){for(let i=0;i<count;i++){const a=t*(1.2+(i%4)*.12)+i*1.9;const d=18+i*5;const px=x-d;const py=y+Math.cos(a*1.35+i)*spread*.6;const len=10+(i%5)*5;line(px,py,px-len,py+Math.sin(a)*2.5,i%2?c1:c2,2.2+(i%3)*.9,.34-(i/count)*.16)}}
