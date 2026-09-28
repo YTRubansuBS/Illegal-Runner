@@ -25,6 +25,8 @@
     .then(r => { if (!r.ok) throw new Error('Impossible de charger le moteur du jeu'); return r.text() })
     .then(code => {
       code = code.replace('const G = {', 'const G = window.__IR_G = {')
+      // Remove the shared skyline so generic buildings never hide the world view.
+      code = code.replace('    // far parallax skyline\n    drawSkyline(ctx, W, H, w.far, 0.12, 80, 150, 46)\n    drawSkyline(ctx, W, H, w.mid, 0.26, 55, 210, 64)', '    // Shared skyline disabled: keep the world view clear.\n')
       code = code.replace('      const r = Math.random()','      const r = IR_WORLD_RANDOM()')
       code = code.replace('const r = Math.random()','const r = IR_WORLD_RANDOM()')
       code = code.replace('      const h = rand(46, Math.min(120, 60 + d * 0.02))','      const h = IR_WORLD_RANGE(46, Math.min(120, 60 + d * 0.02))')
